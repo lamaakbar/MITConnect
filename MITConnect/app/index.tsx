@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable, Alert, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [role, setRole] = useState('employee'); // default to employee
 
   React.useEffect(() => {
-    // Load saved credentials if Remember Me was checked
     AsyncStorage.getItem('rememberedCredentials').then((data) => {
       if (data) {
         const creds = JSON.parse(data);
@@ -33,8 +35,14 @@ export default function LoginScreen() {
       } else {
         await AsyncStorage.removeItem('rememberedCredentials');
       }
-      // Simulate login success
-      Alert.alert('Success', 'Logged in!');
+      // Navigate to the correct home screen based on role
+      if (role === 'admin') {
+        router.replace('/admin-home');
+      } else if (role === 'employee') {
+        router.replace('/employee-home');
+      } else {
+        router.replace('/trainee-home');
+      }
     }, 800);
   };
 
@@ -43,13 +51,19 @@ export default function LoginScreen() {
       Alert.alert('Forgot Password', 'Please enter your email to receive a reset link.');
       return;
     }
-    // Simulate sending reset link
     Alert.alert('Reset Link Sent', `A password reset link has been sent to ${email}.`);
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
+      <View style={styles.roleRow}>
+        {['admin', 'employee', 'trainee'].map(r => (
+          <Pressable key={r} onPress={() => setRole(r)} style={[styles.roleButton, role === r && styles.roleButtonActive]}>
+            <Text style={{ color: role === r ? '#004080' : '#888', fontWeight: 'bold' }}>{r.charAt(0).toUpperCase() + r.slice(1)}</Text>
+          </Pressable>
+        ))}
+      </View>
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -93,6 +107,22 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 24,
+  },
+  roleRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  roleButton: {
+    marginHorizontal: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: '#f0f4f8',
+  },
+  roleButtonActive: {
+    backgroundColor: '#e0eaff',
+    borderColor: '#004080',
+    borderWidth: 1,
   },
   input: {
     width: '100%',

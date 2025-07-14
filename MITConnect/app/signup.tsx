@@ -3,12 +3,13 @@ import { View, Text, TextInput, StyleSheet, Pressable, Alert } from 'react-nativ
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 export default function SignupScreen() {
-  const { role } = useLocalSearchParams();
+  const { role: initialRole } = useLocalSearchParams();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
+  const [role, setRole] = useState(initialRole || 'employee');
 
   const handleSignup = () => {
     setLoading(true);
@@ -23,13 +24,26 @@ export default function SignupScreen() {
         return;
       }
       Alert.alert('Success', `Account created for ${role}. Please log in.`);
-      router.push('/'); // Redirect to home page
+      if (role === 'admin') {
+        router.replace('/admin-home');
+      } else if (role === 'employee') {
+        router.replace('/employee-home');
+      } else {
+        router.replace('/trainee-home');
+      }
     }, 800);
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Sign Up as {role ? String(role).charAt(0).toUpperCase() + String(role).slice(1) : ''}</Text>
+      <View style={{ flexDirection: 'row', marginBottom: 16 }}>
+        {['admin', 'employee', 'trainee'].map(r => (
+          <Pressable key={r} onPress={() => setRole(r)} style={{ marginHorizontal: 8 }}>
+            <Text style={{ color: role === r ? '#004080' : '#888', fontWeight: 'bold' }}>{r.charAt(0).toUpperCase() + r.slice(1)}</Text>
+          </Pressable>
+        ))}
+      </View>
       <TextInput
         style={styles.input}
         placeholder="Email"

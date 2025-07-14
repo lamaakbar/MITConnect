@@ -1,24 +1,56 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
-export default function EmployeeHome() {
+export default function EmployeeTabs() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Employee Home</Text>
-      <Text>Welcome, Employee! (Main app coming soon)</Text>
-    </View>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#004080',
+      }}
+    >
+      <Tabs.Screen
+        name="home"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="events"
+        options={{
+          title: 'Events',
+          tabBarIcon: ({ color, size }) => <Ionicons name="calendar" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="bookclub"
+        options={{
+          title: 'Book Club',
+          tabBarIcon: ({ color, size }) => <Ionicons name="book" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="shopdrop"
+        options={{
+          title: 'ShopDrop',
+          tabBarIcon: ({ color, size }) => <Ionicons name="cart" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="gallery"
+        options={{
+          title: 'Gallery',
+          tabBarIcon: ({ color, size }) => <Ionicons name="images" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="inspirer-corner"
+        options={{
+          title: 'Inspirer',
+          tabBarIcon: ({ color, size }) => <Ionicons name="bulb" color={color} size={size} />,
+        }}
+      />
+    </Tabs>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-}); 
+} 
