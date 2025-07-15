@@ -1,2 +1,2 @@
-import Main from './MITConnect/app/index';
+import Main from './app/index';
 export default Main; 
