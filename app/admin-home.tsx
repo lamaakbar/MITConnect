@@ -17,7 +17,7 @@ export default function AdminHome() {
       subtitle: '8 Total Events\n87 registrations',
       icon: <MaterialIcons name="event" size={24} color="#7D3C98" />,
       color: '#F5EEF8',
-      onPress: () => router.push('/events-management'),
+      onPress: () => router.push('/admin-events'),
     },
     {
       title: 'Ideas Management',
@@ -91,7 +91,7 @@ export default function AdminHome() {
         <TouchableOpacity style={styles.footerTab} onPress={() => router.push('/admin-home')}>
           <Ionicons name="home" size={24} color="#004080" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.footerTab} onPress={() => router.push('/events-management')}>
+        <TouchableOpacity style={styles.footerTab} onPress={() => router.push('/admin-events')}>
           <MaterialIcons name="event" size={24} color="#7D3C98" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.footerTab} onPress={() => router.push('/ideas-management')}>
