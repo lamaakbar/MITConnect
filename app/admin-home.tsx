@@ -6,7 +6,7 @@ export default function AdminHome() {
   const router = useRouter();
   const cards = [
     {
-      title: 'Highlight Management',
+      title: 'Highlightttt Management',
       subtitle: 'The Winner of Table Tennis Competition',
       icon: <Feather name="map-pin" size={24} color="#3CB371" />,
       color: '#E8F8F5',
