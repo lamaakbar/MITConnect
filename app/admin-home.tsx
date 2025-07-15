@@ -1,110 +1,150 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Ionicons, MaterialIcons, FontAwesome5, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { Feather, MaterialIcons, MaterialCommunityIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 export default function AdminHome() {
   const router = useRouter();
-  const cards = [
-    {
-      title: 'Highlighttttggv Management',
-      subtitle: 'The Winner of Table Tennis Competition',
-      icon: <Feather name="map-pin" size={24} color="#3CB371" />,
-      color: '#E8F8F5',
-      onPress: () => router.push('/highlight-management'),
-    },
-    {
-      title: 'Events Management',
-      subtitle: '8 Total Events\n87 registrations',
-      icon: <MaterialIcons name="event" size={24} color="#7D3C98" />,
-      color: '#F5EEF8',
-      onPress: () => router.push('/admin-events'),
-    },
-    {
-      title: 'Ideas Management',
-      subtitle: '8 Total Ideas\n15% implemented',
-      icon: <Feather name="activity" size={24} color="#7D3C98" />,
-      color: '#F5EEF8',
-      onPress: () => router.push('/ideas-management'),
-    },
-    {
-      title: 'Shop Management',
-      subtitle: '9 Total Ads',
-      icon: <MaterialCommunityIcons name="sale" size={24} color="#F39C12" />,
-      color: '#FEF5E7',
-      onPress: () => router.push('/shop-management'),
-    },
-    {
-      title: 'Trainee Management',
-      subtitle: '30 Total Trainees',
-      icon: <FontAwesome5 name="user-friends" size={22} color="#F39C12" />,
-      color: '#FEF5E7',
-      onPress: () => router.push('/trainee-management'),
-      progress: 0.7,
-    },
-    {
-      title: 'Gallery Management',
-      subtitle: '156 Total Images',
-      icon: <Ionicons name="images-outline" size={24} color="#E67E22" />,
-      color: '#FEF5E7',
-      onPress: () => router.push('/gallery-management'),
-    },
-    {
-      title: 'Books Management',
-      subtitle: '19 Books Recommended',
-      icon: <MaterialIcons name="menu-book" size={24} color="#F4D03F" />,
-      color: '#FCF3CF',
-      onPress: () => router.push('/books-management'),
-      action: 'Add Book',
-    },
-  ];
-
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-        <View style={styles.headerRow}>
-          <Text style={styles.logo}>MITConnect</Text>
-          <Ionicons name="person-circle-outline" size={32} color="#004080" />
+    <View style={{ flex: 1, backgroundColor: '#F8F9F9' }}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <View style={styles.headerLeft}>
+          {/* Placeholder logo */}
+          <View style={styles.logoCircle}>
+            <Feather name="users" size={22} color="#004080" />
+          </View>
+          <Text style={styles.headerTitle}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
         </View>
+        <View style={styles.headerRight}>
+          <Feather name="globe" size={20} color="#222" style={styles.headerIcon} />
+          <Feather name="search" size={20} color="#222" style={styles.headerIcon} />
+          <Feather name="bell" size={20} color="#222" style={styles.headerIcon} />
+          <Feather name="menu" size={20} color="#222" style={styles.headerIcon} />
+        </View>
+      </View>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <Text style={styles.welcome}><Text style={{ color: '#3CB371', fontWeight: 'bold' }}>Welcome</Text> MITConnect Admin</Text>
         <Text style={styles.sectionTitle}>Portal Access</Text>
-        {cards.map((card, i) => (
-          <TouchableOpacity key={i} style={[styles.card, { backgroundColor: card.color }]} onPress={card.onPress}>
+        {/* Highlight Management Card */}
+        <TouchableOpacity onPress={() => router.push('/highlight-management')} activeOpacity={0.8}>
+          <View style={[styles.card, { borderColor: '#3CB371', borderWidth: 1 }]}> 
             <View style={styles.cardRow}>
-              <View style={styles.iconBox}>{card.icon}</View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>{card.title}</Text>
-                <Text style={styles.cardSubtitle}>{card.subtitle}</Text>
-                {card.progress !== undefined && (
-                  <View style={styles.progressBarBg}>
-                    <View style={[styles.progressBar, { width: `${card.progress * 100}%` }]} />
-                  </View>
-                )}
-                {card.action && (
-                  <Text style={styles.cardAction}>{card.action}</Text>
-                )}
+              <View style={[styles.iconBox, { backgroundColor: '#E8F8F5' }]}> 
+                <Feather name="map-pin" size={22} color="#3CB371" />
               </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>Highlight Management</Text>
+                <Text style={[styles.cardSubtitle, { color: '#3CB371', fontWeight: '500' }]}>The Winner of Table Tennis Competition</Text>
+              </View>
+              <Feather name="bookmark" size={22} color="#3CB371" />
             </View>
-          </TouchableOpacity>
-        ))}
+          </View>
+        </TouchableOpacity>
+        {/* Events Management Card */}
+        <TouchableOpacity onPress={() => router.push('/admin-events')} activeOpacity={0.8}>
+          <View style={styles.card}>
+            <View style={styles.cardRow}>
+              <View style={[styles.iconBox, { backgroundColor: '#F5EEF8' }]}> 
+                <MaterialCommunityIcons name="calendar-star" size={22} color="#7D3C98" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>Events Management</Text>
+                <Text style={styles.cardNumber}>8</Text>
+                <Text style={styles.cardLabel}>Total Events</Text>
+                <Text style={[styles.cardLink, { color: '#3CB371' }]}>87 registrations</Text>
+              </View>
+              <Feather name="calendar" size={22} color="#7D3C98" />
+            </View>
+          </View>
+        </TouchableOpacity>
+        {/* Ideas Management Card */}
+        <TouchableOpacity onPress={() => router.push('/ideas-management')} activeOpacity={0.8}>
+          <View style={styles.card}>
+            <View style={styles.cardRow}>
+              <View style={[styles.iconBox, { backgroundColor: '#F5EEF8' }]}> 
+                <Feather name="activity" size={22} color="#7D3C98" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>Ideas Management</Text>
+                <Text style={styles.cardNumber}>8</Text>
+                <Text style={styles.cardLabel}>Total Ideas</Text>
+                <Text style={[styles.cardLink, { color: '#7D3C98' }]}>15% implemented</Text>
+              </View>
+              <Feather name="zap" size={22} color="#7D3C98" />
+            </View>
+          </View>
+        </TouchableOpacity>
+        {/* Trainee Management Card */}
+        <TouchableOpacity onPress={() => router.push('/trainee-management')} activeOpacity={0.8}>
+          <View style={styles.card}>
+            <View style={styles.cardRow}>
+              <View style={[styles.iconBox, { backgroundColor: '#FEF5E7' }]}> 
+                <FontAwesome5 name="user-friends" size={20} color="#F39C12" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>Trainee Management</Text>
+                <Text style={styles.cardNumber}>30</Text>
+                <Text style={styles.cardLabel}>Total Trainees</Text>
+              </View>
+              <Feather name="user" size={22} color="#F39C12" />
+            </View>
+          </View>
+        </TouchableOpacity>
+        {/* Gallery Management Card */}
+        <TouchableOpacity onPress={() => router.push('/gallery-management')} activeOpacity={0.8}>
+          <View style={styles.card}>
+            <View style={styles.cardRow}>
+              <View style={[styles.iconBox, { backgroundColor: '#FEF5E7' }]}> 
+                <Feather name="image" size={22} color="#E67E22" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>Gallery Management</Text>
+                <Text style={styles.cardNumber}>156</Text>
+                <Text style={styles.cardLabel}>Total Images</Text>
+                <Feather name="upload" size={16} color="#222" style={{ marginTop: 2 }} />
+              </View>
+              <Feather name="image" size={22} color="#E67E22" />
+            </View>
+          </View>
+        </TouchableOpacity>
+        {/* Books Management Card */}
+        <TouchableOpacity onPress={() => router.push('/books-management')} activeOpacity={0.8}>
+          <View style={styles.card}>
+            <View style={styles.cardRow}>
+              <View style={[styles.iconBox, { backgroundColor: '#FCF3CF' }]}> 
+                <MaterialIcons name="menu-book" size={22} color="#F4D03F" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitle}>Books Management</Text>
+                <Text style={styles.cardNumber}>19</Text>
+                <Text style={styles.cardLabel}>Books Recommended</Text>
+                <Text style={[styles.cardLink, { color: '#004080' }]}>Add Book</Text>
+              </View>
+              <MaterialIcons name="menu-book" size={22} color="#F4D03F" />
+            </View>
+          </View>
+        </TouchableOpacity>
       </ScrollView>
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.footerTab} onPress={() => router.push('/admin-home')}>
-          <Ionicons name="home" size={24} color="#004080" />
+      {/* Bottom Tab Bar */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity style={styles.tabItem}>
+          <Feather name="home" size={22} color="#004080" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.footerTab} onPress={() => router.push('/admin-events')}>
-          <MaterialIcons name="event" size={24} color="#7D3C98" />
+        <TouchableOpacity style={styles.tabItem}>
+          <Feather name="calendar" size={22} color="#7D3C98" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.footerTab} onPress={() => router.push('/ideas-management')}>
-          <Feather name="activity" size={24} color="#7D3C98" />
+        <TouchableOpacity style={styles.tabItem}>
+          <Feather name="star" size={22} color="#004080" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.footerTab} onPress={() => router.push('/shop-management')}>
-          <MaterialCommunityIcons name="sale" size={24} color="#F39C12" />
+        <TouchableOpacity style={styles.tabItem}>
+          <Feather name="user" size={22} color="#F39C12" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.footerTab} onPress={() => router.push('/gallery-management')}>
-          <Ionicons name="images-outline" size={24} color="#E67E22" />
+        <TouchableOpacity style={styles.tabItem}>
+          <Feather name="image" size={22} color="#E67E22" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.footerTab} onPress={() => router.push('/books-management')}>
-          <MaterialIcons name="menu-book" size={24} color="#F4D03F" />
+        <TouchableOpacity style={styles.tabItem}>
+          <MaterialIcons name="menu-book" size={22} color="#F4D03F" />
         </TouchableOpacity>
       </View>
     </View>
@@ -112,43 +152,66 @@ export default function AdminHome() {
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 48,
+    paddingBottom: 10,
+    paddingHorizontal: 20,
     backgroundColor: '#F8F9F9',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E8F8F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#004080',
+    letterSpacing: 0.5,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIcon: {
+    marginLeft: 16,
   },
   container: {
     padding: 20,
     paddingBottom: 40,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  logo: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#004080',
-  },
   welcome: {
-    fontSize: 16,
-    marginBottom: 18,
+    fontSize: 15,
+    marginBottom: 8,
+    fontWeight: '500',
   },
   sectionTitle: {
     fontSize: 15,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 14,
     color: '#222',
   },
   card: {
+    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 18,
-    marginBottom: 16,
+    marginBottom: 18,
     shadowColor: '#000',
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 1,
+    borderWidth: 0,
   },
   cardRow: {
     flexDirection: 'row',
@@ -168,51 +231,50 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#222',
     marginBottom: 2,
   },
   cardSubtitle: {
     fontSize: 13,
+    color: '#3CB371',
+    marginBottom: 2,
+  },
+  cardNumber: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#222',
+    marginTop: 2,
+    marginBottom: 0,
+  },
+  cardLabel: {
+    fontSize: 13,
     color: '#888',
     marginBottom: 2,
   },
-  progressBarBg: {
-    height: 6,
-    backgroundColor: '#E5E7E9',
-    borderRadius: 3,
-    marginTop: 6,
-    marginBottom: 2,
-    width: '100%',
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: '#004080',
-    borderRadius: 3,
-  },
-  cardAction: {
-    color: '#004080',
-    fontWeight: 'bold',
-    marginTop: 6,
+  cardLink: {
     fontSize: 13,
+    fontWeight: '500',
+    marginTop: 2,
+    textDecorationLine: 'underline',
   },
-  footer: {
+  tabBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    height: 60,
     backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     elevation: 8,
+    paddingVertical: 10,
+    paddingBottom: 18,
   },
-  footerTab: {
+  tabItem: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
   },
 }); 
