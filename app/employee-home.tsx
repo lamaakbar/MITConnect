@@ -163,9 +163,17 @@ export default function EmployeeHome() {
           <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('bookclub'); router.push('/bookclub'); }}>
             <Ionicons name="book-outline" size={26} color={activeTab === 'bookclub' ? '#43C6AC' : '#bbb'} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('profile'); router.push('/profile'); }}>
+          {/*
+          <TouchableOpacity
+            style={styles.navBtn}
+            onPress={() => {
+              setActiveTab('profile');
+              router.push({ pathname: '/profile' });
+            }}
+          >
             <Ionicons name="person-circle-outline" size={26} color={activeTab === 'profile' ? '#43C6AC' : '#bbb'} />
           </TouchableOpacity>
+          */}
         </View>
       </RNScrollView>
     </SafeAreaView>
