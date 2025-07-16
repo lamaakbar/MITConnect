@@ -10,9 +10,18 @@ import {
   SafeAreaView,
   Platform,
   Alert,
+  Modal,
+  Animated,
+  Easing,
+  KeyboardAvoidingView,
+  Keyboard,
+  ToastAndroid,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 
 // Album and Photo Types
 interface Photo {
@@ -47,19 +56,38 @@ export default function GalleryManagement() {
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newPhotos, setNewPhotos] = useState<Photo[]>([]);
-  const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
+  // Replace selectedAlbum with selectedAlbumId
+  const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
+  // Add state for modal animation
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deleteAnimIdx, setDeleteAnimIdx] = useState<number | null>(null);
+  const deleteAnim = useState(new Animated.Value(1))[0];
+  // Add search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
 
-  // Pick images for new album
-  const pickImages = async () => {
+  // Refactored image picker for reuse
+  const pickImagesFromLibrary = async (): Promise<Photo[]> => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please grant photo library access to add images.');
+      return [];
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
       quality: 1,
       selectionLimit: 10,
     });
-    if (!result.canceled) {
-      setNewPhotos(result.assets.map((a) => ({ uri: a.uri })));
+    console.log('ImagePicker result:', result);
+    if (!result.canceled && result.assets) {
+      const uris = result.assets.map((a) => a.uri);
+      console.log('Selected image URIs:', uris);
+      return result.assets.map((a) => ({ uri: a.uri }));
     }
+    return [];
   };
 
   // Create a new album
@@ -92,59 +120,119 @@ export default function GalleryManagement() {
   const handleDeletePhoto = (album: Album, photoIdx: number) => {
     const updatedPhotos = album.photos.filter((_, idx) => idx !== photoIdx);
     setAlbums(albums.map((a) => (a.id === album.id ? { ...a, photos: updatedPhotos } : a)));
-    setSelectedAlbum({ ...album, photos: updatedPhotos });
+    setSelectedAlbumId(album.id);
   };
 
-  // Album List View
-  if (!showCreate && !selectedAlbum) {
+  // Filtered albums for search
+  const filteredAlbums = albums.filter(album => album.title.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  // Albums Grid View
+  if (!showCreate && !selectedAlbumId) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.headerBar}>
-          <Text style={styles.headerTitle}>Gallery</Text>
+        <View style={styles.sectionHeaderRow}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtnWidget} activeOpacity={0.7}>
+            <Ionicons name="chevron-back" size={28} color="#222" />
+          </TouchableOpacity>
+          <Text style={styles.sectionHeader}>Albums</Text>
           <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => setShowCreate(true)}
+            style={styles.addBtnWidget}
+            onPress={() => setShowCreateModal(true)}
             accessibilityLabel="Create new album"
+            activeOpacity={0.7}
           >
-            <Ionicons name="add-circle" size={30} color="#007AFF" />
+            <Ionicons name="add" size={28} color="#fff" />
           </TouchableOpacity>
         </View>
+        <View style={styles.searchBarContainer}>
+          <Ionicons name="search" size={20} color="#888" style={{ marginLeft: 10, marginRight: 4 }} />
+          <TextInput
+            style={styles.searchBar}
+            placeholder="Search Albums"
+            placeholderTextColor="#aaa"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            clearButtonMode="while-editing"
+          />
+        </View>
         <FlatList
-          data={albums}
+          data={filteredAlbums}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.albumList}
+          numColumns={1}
+          contentContainerStyle={styles.albumWidgetGrid}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.albumCard}
-              onPress={() => setSelectedAlbum(item)}
-              activeOpacity={0.8}
+              style={styles.albumWidgetCard}
+              onPress={() => setSelectedAlbumId(item.id)}
+              activeOpacity={0.85}
             >
-              <View style={styles.albumThumbRow}>
-                {item.photos.slice(0, 3).map((photo, idx) => (
-                  <Image
-                    key={idx}
-                    source={{ uri: photo.uri }}
-                    style={styles.albumThumb}
-                  />
-                ))}
-                {item.photos.length === 0 && (
-                  <View style={[styles.albumThumb, styles.albumThumbPlaceholder]} />
+              <View style={styles.albumWidgetCoverBox}>
+                {item.photos[0] ? (
+                  <Image source={{ uri: item.photos[0].uri }} style={styles.albumWidgetCoverImg} />
+                ) : (
+                  <View style={styles.albumWidgetCoverPlaceholder} />
                 )}
-              </View>
-              <View style={styles.albumInfoRow}>
-                <Text style={styles.albumTitle}>{item.title}</Text>
-                <TouchableOpacity
-                  onPress={() => handleDeleteAlbum(item.id)}
-                  style={styles.deleteBtn}
-                  accessibilityLabel="Delete album"
-                >
-                  <Ionicons name="trash" size={20} color="#FF3B30" />
-                </TouchableOpacity>
+                <View style={styles.albumWidgetOverlay}>
+                  <Text style={styles.albumWidgetTitle}>{item.title}</Text>
+                  <Text style={styles.albumWidgetCount}>{item.photos.length} {item.photos.length === 1 ? 'photo' : 'photos'}</Text>
+                </View>
               </View>
             </TouchableOpacity>
           )}
-          ListEmptyComponent={<Text style={styles.emptyText}>No albums yet.</Text>}
+          ListEmptyComponent={<Text style={styles.emptyTextWidget}>No albums yet.</Text>}
         />
+        <Modal
+          visible={showCreateModal}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setShowCreateModal(false)}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1 }}
+          >
+            <View style={styles.modalOverlayWidget}>
+              <View style={styles.modalSheetWidget}>
+                <View style={styles.modalHeaderWidget}>
+                  <Text style={styles.modalTitleWidget}>New Album</Text>
+                  <TouchableOpacity onPress={() => setShowCreateModal(false)} style={styles.modalCloseBtnWidget}>
+                    <Ionicons name="close" size={28} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.formContainerWidget}>
+                  <TextInput
+                    style={styles.inputWidget}
+                    placeholder="Album Title"
+                    value={newTitle}
+                    onChangeText={setNewTitle}
+                    placeholderTextColor="#aaa"
+                    autoFocus
+                  />
+                  <TouchableOpacity style={styles.uploadBoxWidget} onPress={async () => setNewPhotos(await pickImagesFromLibrary())} activeOpacity={0.8}>
+                    <Ionicons name="images" size={32} color="#fff" />
+                    <Text style={styles.uploadTextWidget}>Select Photos</Text>
+                  </TouchableOpacity>
+                  <View style={styles.previewRowWidget}>
+                    {newPhotos.map((img, idx) => (
+                      <Image key={idx} source={{ uri: img.uri }} style={styles.previewImgWidget} />
+                    ))}
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.createBtnWidget, { backgroundColor: '#222' }]}
+                    onPress={() => {
+                      handleCreateAlbum();
+                      setShowCreateModal(false);
+                    }}
+                    activeOpacity={0.85}
+                    disabled={!(newTitle && newPhotos.length > 0)}
+                  >
+                    <Text style={[styles.createBtnTextWidget, { color: '#fff' }]}>Create</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
       </SafeAreaView>
     );
   }
@@ -153,233 +241,541 @@ export default function GalleryManagement() {
   if (showCreate) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.headerBar}>
-          <TouchableOpacity onPress={() => setShowCreate(false)}>
+        {/* Header */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 16,
+            paddingTop: 12,
+            paddingBottom: 8,
+            backgroundColor: '#fff',
+            borderBottomWidth: 1,
+            borderBottomColor: '#F2F2F7',
+          }}
+        >
+          <TouchableOpacity onPress={() => setShowCreate(false)} style={{ padding: 4 }}>
             <Ionicons name="chevron-back" size={28} color="#007AFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>New Album</Text>
-          <View style={{ width: 30 }} />
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: '600',
+              color: '#111',
+              flex: 1,
+              textAlign: 'center',
+              marginLeft: -28, // visually center title between back and right
+            }}
+            numberOfLines={1}
+          >
+            New Album
+          </Text>
+          <View style={{ width: 28 }} />
         </View>
-        <View style={styles.formContainer}>
+        {/* Form */}
+        <View style={styles.formContainerWidget}>
           <TextInput
-            style={styles.input}
+            style={styles.inputWidget}
             placeholder="Album Title"
             value={newTitle}
             onChangeText={setNewTitle}
             placeholderTextColor="#aaa"
             autoFocus
           />
-          <TouchableOpacity style={styles.uploadBox} onPress={pickImages} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.uploadBoxWidget}
+            onPress={async () => setNewPhotos(await pickImagesFromLibrary())}
+            activeOpacity={0.8}
+          >
             <Ionicons name="images" size={32} color="#007AFF" />
-            <Text style={styles.uploadText}>Select Photos</Text>
+            <Text style={styles.uploadTextWidget}>Select Photos</Text>
           </TouchableOpacity>
-          <View style={styles.previewRow}>
+          <View style={styles.previewRowWidget}>
             {newPhotos.map((img, idx) => (
-              <Image key={idx} source={{ uri: img.uri }} style={styles.previewImg} />
+              <Image key={idx} source={{ uri: img.uri }} style={styles.previewImgWidget} />
             ))}
           </View>
           <TouchableOpacity
-            style={[styles.createBtn, { backgroundColor: newTitle && newPhotos.length > 0 ? '#007AFF' : '#E5E5EA' }]}
+            style={[
+              styles.createBtnWidget,
+              { backgroundColor: newTitle && newPhotos.length > 0 ? '#007AFF' : '#E5E5EA' }
+            ]}
             onPress={handleCreateAlbum}
             activeOpacity={0.85}
             disabled={!(newTitle && newPhotos.length > 0)}
           >
-            <Text style={[styles.createBtnText, { color: newTitle && newPhotos.length > 0 ? '#fff' : '#007AFF' }]}>Create Album</Text>
+            <Text style={[
+              styles.createBtnTextWidget,
+              { color: newTitle && newPhotos.length > 0 ? '#fff' : '#007AFF' }
+            ]}>
+              Create Album
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  // Album Detail View
-  if (selectedAlbum) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.headerBar}>
-          <TouchableOpacity onPress={() => setSelectedAlbum(null)}>
-            <Ionicons name="chevron-back" size={28} color="#007AFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{selectedAlbum.title}</Text>
-          <View style={{ width: 30 }} />
-        </View>
-        <FlatList
-          data={selectedAlbum.photos}
-          keyExtractor={(_, idx) => idx.toString()}
-          numColumns={3}
-          contentContainerStyle={styles.photoGrid}
-          renderItem={({ item, index }) => (
-            <View style={styles.photoCell}>
-              <Image source={{ uri: item.uri }} style={styles.photoImg} />
+  // Album Detail View: Widget style
+  if (selectedAlbumId) {
+    const handleAddPhotosToAlbum = async () => {
+      const newImgs = await pickImagesFromLibrary();
+      console.log('Picked images:', newImgs);
+      if (newImgs.length > 0) {
+        const current = albums.find(a => a.id === selectedAlbumId);
+        const updatedAlbum = {
+          ...current,
+          photos: [...(current?.photos || []), ...newImgs] as Photo[],
+        } as Album;
+        setAlbums(albums.map((a) => (a.id === selectedAlbumId ? updatedAlbum : a)));
+        setSelectedAlbumId(selectedAlbumId);
+        console.log('Updated album photos:', updatedAlbum.photos);
+        ToastAndroid.show('Photos added!', ToastAndroid.SHORT);
+      }
+    };
+    const handleAnimatedDeletePhoto = (album: Album, photoIdx: number) => {
+      setDeleteAnimIdx(photoIdx);
+      Animated.timing(deleteAnim, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start(() => {
+        handleDeletePhoto(album, photoIdx);
+        setDeleteAnimIdx(null);
+        deleteAnim.setValue(1);
+      });
+    };
+    const openEditModal = () => {
+      setEditTitle(albums.find(a => a.id === selectedAlbumId)?.title || '');
+      setShowEditModal(true);
+    };
+    const handleSaveEdit = () => {
+      if (!editTitle.trim()) return;
+      const current = albums.find(a => a.id === selectedAlbumId);
+      if (!current) return;
+      const updatedAlbum: Album = { ...current, title: editTitle.trim() };
+      setAlbums(albums.map((a) => (a.id === selectedAlbumId ? updatedAlbum : a)));
+      setSelectedAlbumId(selectedAlbumId);
+      setShowEditModal(false);
+      Keyboard.dismiss();
+      ToastAndroid.show('Album updated!', ToastAndroid.SHORT);
+    };
+    const currentAlbum = albums.find(a => a.id === selectedAlbumId);
+    if (selectedAlbumId && currentAlbum) {
+      return (
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.sectionHeaderRow}>
+            <TouchableOpacity onPress={() => setSelectedAlbumId(null)} style={styles.backBtnWidget} activeOpacity={0.7}>
+              <Ionicons name="chevron-back" size={28} color="#222" />
+            </TouchableOpacity>
+            <Text style={styles.sectionHeader}>{currentAlbum.title}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TouchableOpacity
-                style={styles.photoDeleteBtn}
-                onPress={() => handleDeletePhoto(selectedAlbum, index)}
-                accessibilityLabel="Delete photo"
+                style={[styles.addBtnWidget, { marginRight: 8 }]}
+                onPress={handleAddPhotosToAlbum}
+                accessibilityLabel="Add photos to album"
+                activeOpacity={0.7}
               >
-                <Ionicons name="close-circle" size={22} color="#FF3B30" />
+                <Ionicons name="add" size={28} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.addBtnWidget}
+                onPress={openEditModal}
+                accessibilityLabel="Edit album"
+                activeOpacity={0.7}
+              >
+                <Ionicons name="create-outline" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
-          )}
-          ListEmptyComponent={<Text style={styles.emptyText}>No photos in this album.</Text>}
-        />
-      </SafeAreaView>
-    );
+          </View>
+          <FlatList
+            key={`album-detail-${selectedAlbumId}`}
+            data={currentAlbum.photos}
+            keyExtractor={(_, idx) => idx.toString()}
+            numColumns={1}
+            contentContainerStyle={styles.photoWidgetList}
+            renderItem={({ item, index }) => {
+              let loadError = false;
+              return (
+                <Animated.View style={[styles.photoWidgetListItem, deleteAnimIdx === index && { opacity: deleteAnim, transform: [{ scale: deleteAnim }] }]}>
+                  {!loadError ? (
+                    <Image
+                      source={{ uri: item.uri }}
+                      style={styles.photoWidgetListImg}
+                      onError={() => { loadError = true; }}
+                    />
+                  ) : (
+                    <View style={[styles.photoWidgetListImg, { alignItems: 'center', justifyContent: 'center' }]}>
+                      <Ionicons name="alert-circle-outline" size={40} color="#f00" />
+                      <Text style={{ color: '#f00', fontSize: 12, textAlign: 'center' }}>Failed to load</Text>
+                    </View>
+                  )}
+                  <View style={styles.photoWidgetOverlay} />
+                  <Text style={{ color: '#888', fontSize: 10, margin: 2, textAlign: 'center' }}>{item.uri}</Text>
+                  <TouchableOpacity
+                    style={styles.photoDeleteBtnWidget}
+                    onPress={() => handleAnimatedDeletePhoto(currentAlbum, index)}
+                    accessibilityLabel="Delete photo"
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="close" size={18} color="#fff" />
+                  </TouchableOpacity>
+                </Animated.View>
+              );
+            }}
+            ListEmptyComponent={
+              <View style={{ alignItems: 'center', marginTop: 60 }}>
+                <Ionicons name="image-outline" size={64} color="#bbb" />
+                <Text style={{ color: '#bbb', fontSize: 18, marginTop: 12 }}>No photos in this album.</Text>
+              </View>
+            }
+          />
+          {/* Edit Album Modal */}
+          <Modal
+            visible={showEditModal}
+            animationType="slide"
+            transparent
+            onRequestClose={() => setShowEditModal(false)}
+          >
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={{ flex: 1 }}
+            >
+              <View style={styles.modalOverlayWidget}>
+                <View style={styles.modalSheetWidget}>
+                  <View style={styles.modalHeaderWidget}>
+                    <Text style={styles.modalTitleWidget}>Edit Album</Text>
+                    <TouchableOpacity onPress={() => setShowEditModal(false)} style={styles.modalCloseBtnWidget}>
+                      <Ionicons name="close" size={28} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.formContainerWidget}>
+                    <TextInput
+                      style={styles.inputWidget}
+                      placeholder="Album Title"
+                      value={editTitle}
+                      onChangeText={setEditTitle}
+                      placeholderTextColor="#aaa"
+                      autoFocus
+                    />
+                    <TouchableOpacity
+                      style={[styles.createBtnWidget, { backgroundColor: '#222' }]}
+                      onPress={handleSaveEdit}
+                      activeOpacity={0.85}
+                      disabled={!editTitle.trim()}
+                    >
+                      <Text style={[styles.createBtnTextWidget, { color: '#fff' }]}>Save</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
+          </Modal>
+        </SafeAreaView>
+      );
+    }
   }
 
   return null;
 }
 
+const albumColors = [
+  '#43c6ac', '#f8ffae', '#ff6e7f', '#bfe9ff', '#f9d423', '#fc6076', '#92fe9d', '#f7971e', '#c471f5', '#fa709a', '#30cfd0', '#330867',
+];
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Platform.OS === 'ios' ? '#F9F9F9' : '#F6F8FB',
+    backgroundColor: '#f6f7f9',
   },
-  headerBar: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 18,
-    paddingTop: Platform.OS === 'ios' ? 8 : 18,
-    paddingBottom: 10,
-    backgroundColor: '#fff',
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#E5E5EA',
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: { width: 0, height: 2 },
-    zIndex: 10,
+    paddingTop: Platform.OS === 'ios' ? 18 : 24,
+    paddingBottom: 8,
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '600',
+  sectionHeader: {
+    fontSize: 26,
+    fontWeight: '800',
     color: '#222',
-    textAlign: 'center',
     flex: 1,
+    textAlign: 'left',
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
   },
-  addBtn: {
+  addBtnWidget: {
     marginLeft: 8,
+    borderRadius: 16,
+    backgroundColor: '#222',
+    padding: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
-  albumList: {
+  backBtnWidget: {
+    borderRadius: 16,
+    backgroundColor: '#f2f2f7',
+    padding: 2,
+    marginRight: 8,
+  },
+  albumWidgetGrid: {
     padding: 18,
     paddingTop: 0,
   },
-  albumCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 18,
+  albumWidgetCard: {
+    backgroundColor: '#222',
+    borderRadius: 18,
+    marginBottom: 24,
     shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowOpacity: 0.13,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+    overflow: 'hidden',
   },
-  albumThumbRow: {
-    flexDirection: 'row',
-    marginBottom: 10,
+  albumWidgetCoverBox: {
+    width: '100%',
+    aspectRatio: 2.8,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#333',
+    justifyContent: 'flex-end',
   },
-  albumThumb: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    marginRight: 8,
-    backgroundColor: '#E5E5EA',
+  albumWidgetCoverImg: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
-  albumThumbPlaceholder: {
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
+  albumWidgetCoverPlaceholder: {
+    flex: 1,
+    backgroundColor: '#444',
   },
-  albumInfoRow: {
+  albumWidgetOverlay: {
+    width: '100%',
+    padding: 16,
+    backgroundColor: 'rgba(34,34,34,0.82)',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+  },
+  albumWidgetTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 2,
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+  },
+  albumWidgetCount: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '400',
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+  },
+  emptyTextWidget: {
+    textAlign: 'center',
+    color: '#B0B0B0',
+    marginTop: 40,
+    fontSize: 16,
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+  },
+  // Modal
+  modalOverlayWidget: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    justifyContent: 'flex-end',
+  },
+  modalSheetWidget: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.10,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 8,
+  },
+  modalHeaderWidget: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 18,
+    paddingBottom: 8,
   },
-  albumTitle: {
-    fontSize: 17,
-    fontWeight: '500',
+  modalTitleWidget: {
+    fontSize: 20,
+    fontWeight: '700',
     color: '#222',
+    flex: 1,
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
   },
-  deleteBtn: {
-    marginLeft: 10,
+  modalCloseBtnWidget: {
+    marginLeft: 12,
+    borderRadius: 20,
+    backgroundColor: '#222',
     padding: 4,
   },
-  emptyText: {
-    textAlign: 'center',
-    color: '#aaa',
-    marginTop: 40,
-    fontSize: 16,
-  },
-  formContainer: {
+  formContainerWidget: {
     padding: 24,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    margin: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
-  input: {
+  inputWidget: {
     backgroundColor: '#F2F2F7',
-    borderRadius: 10,
-    padding: 14,
+    borderRadius: 14,
+    padding: 18,
     fontSize: 16,
     marginBottom: 18,
     color: '#222',
+    borderWidth: 0.5,
+    borderColor: '#E5E5EA',
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
   },
-  uploadBox: {
+  uploadBoxWidget: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F2F2F7',
-    borderRadius: 10,
-    padding: 14,
+    backgroundColor: '#222',
+    borderRadius: 14,
+    padding: 18,
     marginBottom: 14,
+    borderWidth: 0.5,
+    borderColor: '#222',
   },
-  uploadText: {
+  uploadTextWidget: {
     marginLeft: 10,
-    color: '#007AFF',
-    fontWeight: '500',
+    color: '#fff',
+    fontWeight: '600',
     fontSize: 16,
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
   },
-  previewRow: {
+  previewRowWidget: {
     flexDirection: 'row',
     marginBottom: 18,
     flexWrap: 'wrap',
   },
-  previewImg: {
-    width: 54,
-    height: 54,
-    borderRadius: 10,
+  previewImgWidget: {
+    width: 64,
+    height: 64,
+    borderRadius: 14,
     marginRight: 8,
     marginBottom: 8,
     backgroundColor: '#E5E5EA',
+    borderWidth: 0.5,
+    borderColor: '#E5E5EA',
   },
-  createBtn: {
-    borderRadius: 10,
-    paddingVertical: 14,
+  createBtnWidget: {
+    borderRadius: 22,
+    paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
+    backgroundColor: '#222',
+    shadowColor: '#000',
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
-  createBtnText: {
-    fontWeight: '600',
-    fontSize: 17,
+  createBtnTextWidget: {
+    fontWeight: '700',
+    fontSize: 18,
+    color: '#fff',
+    letterSpacing: 0.2,
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
   },
-  photoGrid: {
+  // Album detail grid
+  photoWidgetGrid: {
     padding: 18,
     paddingTop: 0,
   },
-  photoCell: {
-    width: '32%',
-    aspectRatio: 1,
-    margin: '1%',
-    borderRadius: 12,
+  photoWidgetCard: {
+    backgroundColor: '#222',
+    borderRadius: 18,
+    margin: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.13,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
     overflow: 'hidden',
-    backgroundColor: '#F2F2F7',
     position: 'relative',
   },
-  photoImg: {
+  photoWidgetImg: {
     width: '100%',
-    height: '100%',
-    borderRadius: 12,
+    height: 180,
+    resizeMode: 'cover',
   },
-  photoDeleteBtn: {
+  photoWidgetOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(34,34,34,0.18)',
+  },
+  photoDeleteBtnWidget: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: 11,
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(34,34,34,0.82)',
+    borderRadius: 16,
+    padding: 4,
+  },
+  // Add search bar and keyboard avoiding styles
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginHorizontal: 18,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  searchBar: {
+    flex: 1,
+    fontSize: 16,
+    color: '#222',
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+  },
+  // Add styles for vertical list
+  photoWidgetList: {
+    padding: 18,
+    paddingTop: 0,
+  },
+  photoWidgetListItem: {
+    backgroundColor: '#222',
+    borderRadius: 18,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.13,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  photoWidgetListImg: {
+    width: '100%',
+    height: 220,
+    resizeMode: 'cover',
   },
 }); 
