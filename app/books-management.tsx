@@ -1,64 +1,57 @@
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-
-type Book = {
-  id: string;
-  title: string;
-  author: string;
-  genre: string;
-  genreColor: string;
-  cover: string;
-};
-
-const BOOKS: Book[] = [
-  {
-    id: '1',
-    title: 'White Nights',
-    author: 'Fyodor Dostoevsky',
-    genre: 'Philosophical Fiction',
-    genreColor: '#A3C9A8',
-    cover: 'https://covers.openlibrary.org/b/id/11153223-L.jpg',
-  },
-  {
-    id: '2',
-    title: 'The Richest Man in Babylon',
-    author: 'George S. Clason',
-    genre: 'Finance',
-    genreColor: '#B5D6F6',
-    cover: 'https://covers.openlibrary.org/b/id/11153224-L.jpg',
-  },
-  {
-    id: '3',
-    title: 'Atomic Habits',
-    author: 'James Clear',
-    genre: 'Personal Development',
-    genreColor: '#F6E7B5',
-    cover: 'https://covers.openlibrary.org/b/id/11153225-L.jpg',
-  },
-];
+import { useBooks } from '../components/BookContext';
+import Toast from 'react-native-root-toast';
 
 export default function AdminBooksScreen() {
   const router = useRouter();
+  const { books, removeBook } = useBooks();
+
+  const handleRemove = (id: string, title: string) => {
+    Alert.alert(
+      'Remove Book',
+      `Are you sure you want to remove this book?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            removeBook(id);
+            Toast.show('Book removed successfully', {
+              duration: Toast.durations.SHORT,
+              position: Toast.positions.BOTTOM,
+            });
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
+        <TouchableOpacity onPress={() => router.push('/admin-home')} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color="#222" />
+        </TouchableOpacity>
         <Text style={styles.header}>MITConnect Library</Text>
         <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/add-book')}>
           <Ionicons name="add" size={20} color="#fff" />
           <Text style={styles.addBtnText}>Add</Text>
         </TouchableOpacity>
       </View>
-      <FlatList<Book>
-        data={BOOKS}
+      <FlatList
+        data={books}
         keyExtractor={item => item.id}
         contentContainerStyle={{ paddingBottom: 24 }}
-        renderItem={(props: { item: Book }) => {
-          const item = props.item;
-          return (
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            onPress={() => router.push(`/books-management/${item.id}/details`)}
+            activeOpacity={0.8}
+          >
             <View style={styles.card}>
               <Image source={{ uri: item.cover }} style={styles.cover} />
               <View style={styles.info}>
@@ -68,12 +61,12 @@ export default function AdminBooksScreen() {
                   <Text style={styles.genreText}>{item.genre}</Text>
                 </View>
               </View>
-              <TouchableOpacity style={styles.removeBtn}>
+              <TouchableOpacity style={styles.removeBtn} onPress={() => handleRemove(item.id, item.title)}>
                 <Text style={styles.removeBtnText}>Remove</Text>
               </TouchableOpacity>
             </View>
-          );
-        }}
+          </TouchableOpacity>
+        )}
       />
     </View>
   );
@@ -92,10 +85,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 24,
   },
+  backBtn: {
+    marginRight: 8,
+    padding: 4,
+  },
   header: {
     fontSize: 22,
     fontWeight: 'bold',
     color: '#222',
+    flex: 1,
+    textAlign: 'center',
   },
   addBtn: {
     flexDirection: 'row',

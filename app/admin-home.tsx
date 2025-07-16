@@ -119,7 +119,9 @@ export default function AdminHome() {
                 <Text style={styles.cardTitle}>Books Management</Text>
                 <Text style={styles.cardNumber}>19</Text>
                 <Text style={styles.cardLabel}>Books Recommended</Text>
-                <Text style={[styles.cardLink, { color: '#004080' }]}>Add Book</Text>
+                <TouchableOpacity onPress={() => router.push('/add-book')} activeOpacity={0.7}>
+                  <Text style={[styles.cardLink, { color: '#004080' }]}>Add Book</Text>
+                </TouchableOpacity>
               </View>
               <MaterialIcons name="menu-book" size={22} color="#F4D03F" />
             </View>
