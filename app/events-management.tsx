@@ -1,5 +1,41 @@
 import React from "react";
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, FlatList } from 'react-native';
+
+const mockEvents = [
+  {
+    id: '1',
+    title: 'Technology Table Tennis',
+    attendees: [
+      'Hassan Ahmed',
+      'Mona Khateeb',
+      'Lama Akbar',
+      'Youseef Naytah',
+      'Khalid Alkhaibari',
+    ],
+  },
+  {
+    id: '2',
+    title: 'AI in Business Conference',
+    attendees: [
+      'Bayan Alsahafi',
+      'Hadeel Kufiah',
+      'Hassan Ahmed',
+      'Mona Khateeb',
+      'Lama Akbar',
+    ],
+  },
+  {
+    id: '3',
+    title: 'Design Thinking Workshop',
+    attendees: [
+      'Youseef Naytah',
+      'Khalid Alkhaibari',
+      'Bayan Alsahafi',
+      'Hadeel Kufiah',
+      'Hassan Ahmed',
+    ],
+  },
+];
 
 export default function EventsManagement() {
   return (
