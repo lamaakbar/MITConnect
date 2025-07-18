@@ -1,21 +1,15 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  Image,
-  Alert,
-  ScrollView,
-  ActivityIndicator,
-  Platform,
-} from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { useBooks } from '../components/BookContext';
 
-const GENRES = ['Fiction', 'Business', 'Tech'];
+const GENRES = [
+  { name: 'Philosophical Fiction', color: '#A3C9A8' },
+  { name: 'Finance', color: '#B5D6F6' },
+  { name: 'Personal Development', color: '#F6E7B5' },
+];
 
 const CARD_SHADOW = Platform.OS === 'ios'
   ? {
@@ -29,30 +23,34 @@ const CARD_SHADOW = Platform.OS === 'ios'
     };
 
 export default function AddBookScreen() {
-  const navigation = useNavigation();
+  const router = useRouter();
+  const { addBook } = useBooks();
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [genre, setGenre] = useState('');
+  const [genreColor, setGenreColor] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState<string | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [showGenreList, setShowGenreList] = useState(false);
+  const [error, setError] = useState('');
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      quality: 1,
+      quality: 0.8,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const asset = result.assets[0];
-      if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
-        setError('Image must be less than 10MB');
+      if (!asset.uri) return;
+      // Validate file type
+      if (!asset.uri.match(/\.(jpg|jpeg|png)$/i)) {
+        setError('Only PNG or JPG images are allowed.');
         return;
       }
-      if (asset.uri && !asset.uri.match(/\.(jpg|jpeg|png)$/i)) {
-        setError('Only PNG or JPG images are allowed');
+      // Validate file size (max 10MB)
+      if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
+        setError('Image size must be less than 10MB.');
         return;
       }
       setImage(asset.uri);
@@ -60,63 +58,46 @@ export default function AddBookScreen() {
     }
   };
 
-  const validate = () => {
-    if (!title.trim() || !author.trim() || !genre.trim()) {
-      setError('Please fill all required fields.');
-      return false;
+  const handleAddBook = () => {
+    if (!title.trim() || !author.trim() || !genre.trim() || !image) {
+      setError('Please fill in all required fields.');
+      return;
     }
+    const newBook = {
+      id: Date.now().toString(),
+      title,
+      author,
+      genre,
+      genreColor: genreColor || '#eee',
+      cover: image,
+      description,
+    };
+    addBook(newBook);
+    setTitle('');
+    setAuthor('');
+    setGenre('');
+    setGenreColor('');
+    setDescription('');
+    setImage(null);
     setError('');
-    return true;
-  };
-
-  const handleAdd = async () => {
-    if (!validate()) return;
-    setLoading(true);
-    try {
-      // Prepare form data
-      const formData = new FormData();
-      formData.append('title', title);
-      formData.append('author', author);
-      formData.append('genre', genre);
-      formData.append('description', description);
-      if (image) {
-        const filename = image.split('/').pop() || 'cover.jpg';
-        const match = /\.([a-zA-Z0-9]+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : `image`;
-        formData.append('cover', {
-          uri: image,
-          name: filename,
-          type,
-        } as any);
-      }
-      // TODO: Replace with your backend endpoint
-      const response = await fetch('https://your-backend-url.com/api/books', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        body: formData,
-      });
-      if (!response.ok) throw new Error('Failed to add book');
-      Alert.alert('Book added successfully');
-      navigation.goBack();
-    } catch (e: any) {
-      setError(e.message || 'Failed to add book');
-    } finally {
-      setLoading(false);
-    }
+    router.push('/book-added');
   };
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-      <Text style={styles.header}>Add New Book</Text>
+      <View style={styles.headerRow}>
+        <TouchableOpacity onPress={() => router.push('/books-management')} style={styles.backBtn} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={24} color="#222" />
+        </TouchableOpacity>
+        <Text style={styles.header}>Add New Book</Text>
+      </View>
       <Text style={styles.subHeader}>Add a new book to the MITConnect Library</Text>
-
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
       {/* Book Information Card */}
       <View style={[styles.card, CARD_SHADOW]}>  
         <Text style={styles.sectionTitle}>Book Information</Text>
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Book Title</Text>
+          <Text style={styles.label}>Book Title <Text style={{ color: 'red' }}>*</Text></Text>
           <TextInput
             style={styles.input}
             placeholder="Enter book title"
@@ -126,7 +107,7 @@ export default function AddBookScreen() {
           />
         </View>
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Author</Text>
+          <Text style={styles.label}>Author <Text style={{ color: 'red' }}>*</Text></Text>
           <TextInput
             style={styles.input}
             placeholder="Enter author name"
@@ -136,7 +117,7 @@ export default function AddBookScreen() {
           />
         </View>
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Genre</Text>
+          <Text style={styles.label}>Genre <Text style={{ color: 'red' }}>*</Text></Text>
           <TouchableOpacity
             style={[styles.input, styles.dropdown]}
             onPress={() => setShowGenreList(!showGenreList)}
@@ -149,14 +130,15 @@ export default function AddBookScreen() {
             <View style={styles.genreList}>
               {GENRES.map((g) => (
                 <TouchableOpacity
-                  key={g}
+                  key={g.name}
                   style={styles.genreItem}
                   onPress={() => {
-                    setGenre(g);
+                    setGenre(g.name);
+                    setGenreColor(g.color);
                     setShowGenreList(false);
                   }}
                 >
-                  <Text style={{ color: '#222' }}>{g}</Text>
+                  <Text style={{ color: '#222' }}>{g.name}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -175,10 +157,9 @@ export default function AddBookScreen() {
           />
         </View>
       </View>
-
       {/* Book Cover Card */}
       <View style={[styles.card, CARD_SHADOW, { marginTop: 24 }]}>  
-        <Text style={styles.sectionTitle}>Book Cover</Text>
+        <Text style={styles.sectionTitle}>Book Cover <Text style={{ color: 'red' }}>*</Text></Text>
         <TouchableOpacity style={styles.uploadArea} onPress={pickImage} activeOpacity={0.8}>
           {image ? (
             <Image source={{ uri: image }} style={styles.coverPreview} />
@@ -194,195 +175,175 @@ export default function AddBookScreen() {
           )}
         </TouchableOpacity>
       </View>
-
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-
       {/* Action Buttons */}
       <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.addButton]}
-          onPress={handleAdd}
-          disabled={loading}
-        >
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.addBtnText}>+ Add</Text>}
+        <TouchableOpacity style={styles.addBtn} onPress={handleAddBook}>
+          <Text style={styles.addBtnText}>Add</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.cancelButton]}
-          onPress={() => navigation.goBack()}
-          disabled={loading}
-        >
+        <TouchableOpacity style={styles.cancelBtn} onPress={() => router.push('/books-management')}>
           <Text style={styles.cancelBtnText}>Cancel</Text>
         </TouchableOpacity>
       </View>
-      <View style={{ height: 32 }} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   scrollContainer: {
+    padding: 20,
+    backgroundColor: '#F8FAF9',
     flexGrow: 1,
-    backgroundColor: '#fff',
-    padding: 0,
-    alignItems: 'stretch',
-    justifyContent: 'flex-start',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  backBtn: {
+    marginRight: 8,
+    padding: 4,
   },
   header: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginTop: 32,
-    marginBottom: 4,
-    marginLeft: 24,
-    color: '#111',
+    color: '#222',
+    flex: 1,
+    textAlign: 'center',
   },
   subHeader: {
     fontSize: 15,
-    color: '#444',
-    marginBottom: 24,
-    marginLeft: 24,
+    color: '#888',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: 'red',
+    marginBottom: 10,
+    textAlign: 'center',
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 18,
-    marginHorizontal: 16,
+    borderRadius: 16,
     padding: 20,
-    marginBottom: 0,
+    marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 17,
     fontWeight: 'bold',
-    marginBottom: 18,
-    color: '#111',
+    fontSize: 16,
+    marginBottom: 12,
+    color: '#222',
   },
   fieldGroup: {
     marginBottom: 16,
   },
   label: {
     fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 6,
     color: '#222',
+    marginBottom: 6,
   },
   input: {
-    backgroundColor: '#f7f7f7',
+    backgroundColor: '#F5F5F5',
     borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     fontSize: 15,
     color: '#222',
-    borderWidth: 0,
   },
   dropdown: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     position: 'relative',
-    paddingRight: 32,
   },
   genreList: {
     backgroundColor: '#fff',
     borderRadius: 10,
+    marginTop: 2,
     borderWidth: 1,
     borderColor: '#eee',
-    marginTop: 2,
-    marginBottom: 8,
-    elevation: 2,
-    zIndex: 10,
+    overflow: 'hidden',
   },
   genreItem: {
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    padding: 12,
   },
   textArea: {
-    minHeight: 90,
+    minHeight: 80,
     textAlignVertical: 'top',
   },
   uploadArea: {
-    minHeight: 170,
-    backgroundColor: '#fafafa',
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#e0e0e0',
+    marginTop: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 10,
-    marginBottom: 4,
-    overflow: 'hidden',
+    minHeight: 120,
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+    padding: 16,
   },
   uploadPlaceholder: {
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    height: 170,
-  },
-  uploadText: {
-    color: '#888',
-    fontSize: 15,
-    marginTop: 10,
-    marginBottom: 2,
-  },
-  uploadSubText: {
-    color: '#bbb',
-    fontSize: 13,
-    marginBottom: 10,
-  },
-  chooseFileBtn: {
-    backgroundColor: '#fff',
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#d1d1d1',
-    paddingHorizontal: 18,
-    paddingVertical: 7,
-    marginTop: 4,
-  },
-  chooseFileText: {
-    color: '#222',
-    fontWeight: 'bold',
-    fontSize: 14,
   },
   coverPreview: {
     width: 120,
     height: 160,
-    borderRadius: 8,
+    borderRadius: 10,
     resizeMode: 'cover',
-    alignSelf: 'center',
   },
-  error: {
-    color: '#d32f2f',
-    marginTop: 18,
-    marginBottom: 0,
-    textAlign: 'center',
+  uploadText: {
+    color: '#888',
     fontSize: 15,
+    marginTop: 8,
+  },
+  uploadSubText: {
+    color: '#bdbdbd',
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  chooseFileBtn: {
+    backgroundColor: '#F2F2F2',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginTop: 8,
+  },
+  chooseFileText: {
+    color: '#444',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 36,
-    marginHorizontal: 16,
+    marginTop: 32,
+    marginBottom: 24,
   },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 30,
+  addBtn: {
+    backgroundColor: '#3AC569',
+    borderRadius: 24,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
     alignItems: 'center',
-    marginHorizontal: 6,
-  },
-  addButton: {
-    backgroundColor: '#2ecc40',
-  },
-  cancelButton: {
-    backgroundColor: '#f2f2f2',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    flex: 1,
+    marginRight: 8,
   },
   addBtnText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 17,
+    fontSize: 16,
+  },
+  cancelBtn: {
+    backgroundColor: '#F2F2F2',
+    borderRadius: 24,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    alignItems: 'center',
+    flex: 1,
+    marginLeft: 8,
   },
   cancelBtnText: {
-    color: '#222',
+    color: '#444',
     fontWeight: 'bold',
-    fontSize: 17,
+    fontSize: 16,
   },
 }); 
