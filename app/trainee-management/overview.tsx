@@ -144,4 +144,32 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
+  statsRowIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    marginBottom: 2,
+  },
+  statIconBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statText: {
+    fontSize: 13,
+    color: '#222',
+    marginLeft: 4,
+  },
+  expandedSection: {
+    backgroundColor: '#F8FFFA',
+    borderRadius: 8,
+    marginTop: 8,
+    padding: 8,
+  },
+  detailText: {
+    fontSize: 12,
+    color: '#222',
+    marginBottom: 2,
+  },
 }); 

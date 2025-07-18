@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, Pressable } from 'react-native';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 
-const TABS = ['Dashboard', 'Registrations', 'Progress', 'Overview'];
+const TABS = ['Dashboard', 'Registrations', 'Progress'];
 
 const DEPARTMENTS = [
   { name: 'IT Governance and Architecture', value: 30 },
@@ -11,6 +11,13 @@ const DEPARTMENTS = [
   { name: 'Production', value: 70 },
   { name: 'Enterprise Project Delivery', value: 50 },
   { name: 'Development', value: 80 },
+];
+
+const PROGRAMS = [
+  'All Programs',
+  'CO-OP',
+  'Rowad',
+  'Technology',
 ];
 
 const TRAINEE_PROGRESS = [
@@ -109,6 +116,7 @@ export default function TraineeDashboard() {
   const [program, setProgram] = useState('All Programs');
   const [showDeptDropdown, setShowDeptDropdown] = useState(false);
   const [showProgDropdown, setShowProgDropdown] = useState(false);
+  const [showTraineeModal, setShowTraineeModal] = useState(false);
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: '#fff' }} contentContainerStyle={{ paddingBottom: 32 }}>
@@ -119,22 +127,36 @@ export default function TraineeDashboard() {
       </View>
       <Text style={styles.headerSubtitle}>Check your Trainees!</Text>
       {/* Tabs */}
-      <View style={styles.tabsRow}>
-        {TABS.map(tab => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tab, selectedTab === tab && styles.tabActive]}
-            onPress={() => setSelectedTab(tab)}
-          >
-            <Text style={[styles.tabText, selectedTab === tab && styles.tabTextActive]}>{tab}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {TABS.length > 3 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsRow}>
+          {TABS.map(tab => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tab, selectedTab === tab && styles.tabActive]}
+              onPress={() => setSelectedTab(tab)}
+            >
+              <Text style={[styles.tabText, selectedTab === tab && styles.tabTextActive]}>{tab}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      ) : (
+        <View style={styles.tabsRow}>
+          {TABS.map(tab => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tab, selectedTab === tab && styles.tabActive]}
+              onPress={() => setSelectedTab(tab)}
+            >
+              <Text style={[styles.tabText, selectedTab === tab && styles.tabTextActive]}>{tab}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
       {/* Tab Content */}
       {selectedTab === 'Dashboard' && (
         <>
           {/* Summary Cards */}
-          <View style={styles.card}>
+          <TouchableOpacity style={styles.card} onPress={() => setShowTraineeModal(true)}>
             <View style={styles.cardRow}>
               <View>
                 <Text style={styles.cardTitle}>Total Trainees</Text>
@@ -143,10 +165,31 @@ export default function TraineeDashboard() {
               <Ionicons name="people-outline" size={28} color="#3CB371" />
             </View>
             <Text style={styles.cardValue}>30</Text>
-          </View>
+          </TouchableOpacity>
+          {/* Modal for trainee names */}
+          <Modal
+            visible={showTraineeModal}
+            animationType="slide"
+            transparent
+            onRequestClose={() => setShowTraineeModal(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={{ fontWeight: 'bold', fontSize: 18, marginBottom: 12 }}>All Trainees</Text>
+                <ScrollView style={{ maxHeight: 300 }}>
+                  {REGISTRATIONS.map((reg, idx) => (
+                    <Text key={idx} style={{ fontSize: 16, marginBottom: 6 }}>{reg.name}</Text>
+                  ))}
+                </ScrollView>
+                <Pressable style={styles.closeBtn} onPress={() => setShowTraineeModal(false)}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Close</Text>
+                </Pressable>
+              </View>
+            </View>
+          </Modal>
           <View style={styles.card}>
             <View style={styles.cardRow}>
-              <Text style={styles.cardTitle}>Avg Progress</Text>
+              <Text style={styles.cardTitle}>Average Progress</Text>
               <MaterialIcons name="timelapse" size={28} color="#F4B400" />
             </View>
             <View style={styles.progressBarBg}>
@@ -156,11 +199,11 @@ export default function TraineeDashboard() {
           </View>
           <View style={styles.card}>
             <View style={styles.cardRow}>
-              <Text style={styles.cardTitle}>House Logged</Text>
+              <Text style={styles.cardTitle}>Hours Logged</Text>
               <Ionicons name="time-outline" size={28} color="#00B8D9" />
             </View>
             <Text style={styles.cardValue}>378</Text>
-            <Text style={styles.cardSubtitle}>Total Training House</Text>
+            <Text style={styles.cardSubtitle}>Total Training Hours</Text>
           </View>
           <View style={styles.card}>
             <View style={styles.cardRow}>
@@ -168,7 +211,7 @@ export default function TraineeDashboard() {
               <MaterialIcons name="star-rate" size={28} color="#F4B400" />
             </View>
             <Text style={styles.cardValue}>3.7</Text>
-            <Text style={styles.cardSubtitle}>T Avg Rating</Text>
+            <Text style={styles.cardSubtitle}>Average Rating</Text>
           </View>
           {/* Department Distribution */}
           <Text style={styles.sectionTitle}><MaterialIcons name="apartment" size={20} color="#222" />  Department Distribution</Text>
@@ -201,14 +244,39 @@ export default function TraineeDashboard() {
           </View>
           {/* Filters */}
           <View style={styles.filterRow}>
-            <TouchableOpacity style={styles.filterBtn} onPress={() => setShowDeptDropdown(!showDeptDropdown)}>
-              <Text style={styles.filterBtnText}>{department}</Text>
-              <Ionicons name="chevron-down" size={16} color="#3CB371" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.filterBtn} onPress={() => setShowProgDropdown(!showProgDropdown)}>
-              <Text style={styles.filterBtnText}>{program}</Text>
-              <Ionicons name="chevron-down" size={16} color="#3CB371" />
-            </TouchableOpacity>
+            <View style={{ position: 'relative' }}>
+              <TouchableOpacity style={styles.filterBtn} onPress={() => setShowDeptDropdown(!showDeptDropdown)}>
+                <Text style={styles.filterBtnText}>{department}</Text>
+                <Ionicons name="chevron-down" size={16} color="#3CB371" />
+              </TouchableOpacity>
+              {showDeptDropdown && (
+                <View style={{ position: 'absolute', top: 40, left: 0, right: 0, backgroundColor: '#fff', borderRadius: 8, elevation: 4, zIndex: 100, paddingVertical: 4 }}>
+                  <TouchableOpacity key="All Departments" style={{ padding: 10 }} onPress={() => { setDepartment('All Departments'); setShowDeptDropdown(false); }}>
+                    <Text style={{ fontSize: 14, color: '#222' }}>All Departments</Text>
+                  </TouchableOpacity>
+                  {DEPARTMENTS.map(dep => (
+                    <TouchableOpacity key={dep.name} style={{ padding: 10 }} onPress={() => { setDepartment(dep.name); setShowDeptDropdown(false); }}>
+                      <Text style={{ fontSize: 14, color: '#222' }}>{dep.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+            <View style={{ position: 'relative' }}>
+              <TouchableOpacity style={styles.filterBtn} onPress={() => setShowProgDropdown(!showProgDropdown)}>
+                <Text style={styles.filterBtnText}>{program}</Text>
+                <Ionicons name="chevron-down" size={16} color="#3CB371" />
+              </TouchableOpacity>
+              {showProgDropdown && (
+                <View style={{ position: 'absolute', top: 40, left: 0, right: 0, backgroundColor: '#fff', borderRadius: 8, elevation: 4, zIndex: 100, paddingVertical: 4 }}>
+                  {PROGRAMS.map(opt => (
+                    <TouchableOpacity key={opt} style={{ padding: 10 }} onPress={() => { setProgram(opt); setShowProgDropdown(false); }}>
+                      <Text style={{ fontSize: 14, color: '#222' }}>{opt}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
           </View>
           {/* Registration List */}
           <View style={styles.tableHeader}>
@@ -216,16 +284,35 @@ export default function TraineeDashboard() {
             <Text style={[styles.tableHeaderText, { flex: 1 }]}>Duration</Text>
             <Text style={[styles.tableHeaderText, { flex: 1 }]}>Program Type</Text>
           </View>
-          {REGISTRATIONS.map((reg, idx) => (
-            <View key={idx} style={styles.tableRow}>
-              <View style={{ flex: 2 }}>
-                <Text style={styles.nameText}>{reg.name}</Text>
-                <Text style={styles.emailText}>{reg.email}</Text>
+          {(() => {
+            const searchLower = search.toLowerCase();
+            const filtered = REGISTRATIONS.filter(reg => {
+              const matchesDept = department === 'All Departments' || reg.department === department;
+              const matchesProg = program === 'All Programs' || reg.type === program;
+              const matchesSearch =
+                reg.name.toLowerCase().includes(searchLower) ||
+                (reg.department && reg.department.toLowerCase().includes(searchLower)) ||
+                (reg.type && reg.type.toLowerCase().includes(searchLower));
+              return matchesDept && matchesProg && matchesSearch;
+            });
+            if (filtered.length === 0) {
+              return (
+                <View style={{ alignItems: 'center', marginTop: 32 }}>
+                  <Text style={{ color: '#888', fontSize: 16 }}>No results found</Text>
+                </View>
+              );
+            }
+            return filtered.map((reg, idx) => (
+              <View key={idx} style={styles.tableRow}>
+                <View style={{ flex: 2 }}>
+                  <Text style={styles.nameText}>{reg.name}</Text>
+                  <Text style={styles.emailText}>{reg.email}</Text>
+                </View>
+                <Text style={[styles.tableCell, { flex: 1 }]}>{reg.duration}</Text>
+                <Text style={[styles.tableCell, { flex: 1, fontWeight: 'bold', letterSpacing: 1 }]}>{reg.type}</Text>
               </View>
-              <Text style={[styles.tableCell, { flex: 1 }]}>{reg.duration}</Text>
-              <Text style={[styles.tableCell, { flex: 1, fontWeight: 'bold', letterSpacing: 1 }]}>{reg.type}</Text>
-            </View>
-          ))}
+            ));
+          })()}
         </View>
       )}
       {selectedTab === 'Progress' && (
@@ -260,38 +347,6 @@ export default function TraineeDashboard() {
                     <Text style={styles.progressWeekInfo}>{week.hours}h logged{week.tasks > 0 ? `\n${week.tasks} tasks` : ''}</Text>
                   </View>
                 ))}
-              </View>
-            </View>
-          ))}
-        </>
-      )}
-      {selectedTab === 'Overview' && (
-        <>
-          {OVERVIEW_TRAINEES.map((trainee, idx) => (
-            <View key={trainee.name} style={styles.overviewCard}>
-              <View style={styles.overviewHeader}>
-                <View>
-                  <Text style={styles.overviewName}>{trainee.name}</Text>
-                  <Text style={styles.overviewDept}>{trainee.department}</Text>
-                </View>
-                <Text style={styles.overviewPercent}>{trainee.progress}%</Text>
-              </View>
-              <View style={styles.overviewStatsRow}>
-                <View style={styles.overviewStatBox}>
-                  <Text style={styles.overviewStatValue}>{trainee.weeksDone}</Text>
-                  <Text style={styles.overviewStatLabel}>Week done of {trainee.totalWeeks}</Text>
-                </View>
-                <View style={styles.overviewStatBox}>
-                  <Text style={styles.overviewStatValue}>{trainee.hoursLogged}</Text>
-                  <Text style={styles.overviewStatLabel}>Hours logged of {trainee.totalHours}</Text>
-                </View>
-                <View style={styles.overviewStatBox}>
-                  <Text style={styles.overviewStatValue}>{trainee.progress}%</Text>
-                  <Text style={styles.overviewStatLabel}>Progress overall</Text>
-                </View>
-              </View>
-              <View style={styles.overviewBarBg}>
-                <View style={[styles.overviewBar, { width: `${trainee.progress}%`, backgroundColor: trainee.color }]} />
               </View>
             </View>
           ))}
@@ -631,4 +686,7 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     marginBottom: 8,
   },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { backgroundColor: '#fff', borderRadius: 16, padding: 24, width: 300, alignItems: 'center' },
+  closeBtn: { backgroundColor: '#3CB371', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 24, marginTop: 16 },
 }); 

@@ -142,25 +142,31 @@ const styles = StyleSheet.create({
   },
   progressWeeksRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     marginTop: 8,
   },
   progressWeekBox: {
     alignItems: 'center',
-    flex: 1,
+    width: '25%', // Adjust as needed for 5 weeks
   },
   progressWeekIconBox: {
-    marginBottom: 2,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F0F0F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   progressWeekLabel: {
     fontSize: 12,
     color: '#222',
-    marginBottom: 2,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   progressWeekInfo: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#888',
     textAlign: 'center',
-    lineHeight: 14,
   },
 }); 
