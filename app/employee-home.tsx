@@ -3,27 +3,8 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, 
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useEventContext } from '../components/EventContext';
-
-const events = [
-  {
-    id: '1',
-    title: 'Brainstorming',
-    desc: 'Brainstorming with team on storily app',
-    date: 'Today',
-    time: '12:45 pm',
-    daysLeft: 10,
-  },
-  {
-    id: '2',
-    title: 'DataCenter',
-    desc: 'Together to Explore The Data',
-    date: '18 July',
-    time: '',
-    daysLeft: 5,
-  },
-];
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
@@ -52,7 +33,32 @@ const featuredNews = [
 export default function EmployeeHome() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('home');
-  const { registered } = useEventContext();
+  const { events, registered } = useEventContext();
+
+  // Get upcoming events (events with future dates)
+  const upcomingEvents = useMemo(() => {
+    const today = new Date();
+    return events
+      .filter(event => {
+        const eventDate = new Date(event.date);
+        return eventDate > today;
+      })
+      .slice(0, 5) // Show max 5 upcoming events
+      .map(event => {
+        const eventDate = new Date(event.date);
+        const daysLeft = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        return {
+          id: event.id,
+          title: event.title,
+          desc: event.desc,
+          date: event.date,
+          time: event.time,
+          daysLeft: daysLeft,
+          image: event.image,
+        };
+      });
+  }, [events]);
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -93,41 +99,47 @@ export default function EmployeeHome() {
           )}
         />
         <Text style={styles.sectionTitle}>Upcoming Events</Text>
-        <FlatList
-          data={events}
-          keyExtractor={item => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
-              <View style={styles.eventCard}>
-                <View style={styles.eventCardHeader}>
-                  <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
-                  <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
-                </View>
-                <Text style={styles.eventTitle}>{item.title}</Text>
-                <Text style={styles.eventDesc}>{item.desc}</Text>
-                {registered.includes(item.id) && (
-                  <View style={styles.registeredBadge}><Text style={styles.registeredBadgeText}>Registered</Text></View>
-                )}
-                <TouchableOpacity style={styles.eventBtn}><Text style={styles.eventBtnText}>Register Now!</Text></TouchableOpacity>
-                <View style={styles.eventCardFooter}>
-                  <View style={styles.eventFooterItem}>
-                    <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
-                    <Text style={styles.eventFooterText}>{item.date}</Text>
+        {upcomingEvents.length > 0 ? (
+          <FlatList
+            data={upcomingEvents}
+            keyExtractor={item => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
+            renderItem={({ item }) => (
+              <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
+                <View style={styles.eventCard}>
+                  <View style={styles.eventCardHeader}>
+                    <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
+                    <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
                   </View>
-                  {item.time ? (
+                  <Text style={styles.eventTitle}>{item.title}</Text>
+                  <Text style={styles.eventDesc}>{item.desc}</Text>
+                  {registered.includes(item.id) && (
+                    <View style={styles.registeredBadge}><Text style={styles.registeredBadgeText}>Registered</Text></View>
+                  )}
+                  <TouchableOpacity style={styles.eventBtn}><Text style={styles.eventBtnText}>Register Now!</Text></TouchableOpacity>
+                  <View style={styles.eventCardFooter}>
                     <View style={styles.eventFooterItem}>
-                      <Ionicons name="time-outline" size={16} color="#7B61FF" />
-                      <Text style={styles.eventFooterText}>{item.time}</Text>
+                      <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
+                      <Text style={styles.eventFooterText}>{item.date}</Text>
                     </View>
-                  ) : null}
+                    {item.time ? (
+                      <View style={styles.eventFooterItem}>
+                        <Ionicons name="time-outline" size={16} color="#7B61FF" />
+                        <Text style={styles.eventFooterText}>{item.time}</Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          )}
-        />
+              </TouchableOpacity>
+            )}
+          />
+        ) : (
+          <View style={styles.noEventsContainer}>
+            <Text style={styles.noEventsText}>No upcoming events at the moment</Text>
+          </View>
+        )}
         <Text style={styles.sectionTitle}>Portal Access</Text>
         <View style={styles.portalRow}>
           {portalLinks.map(link => (
@@ -439,5 +451,24 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '700',
+  },
+  noEventsContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    marginHorizontal: 18,
+    marginBottom: 18,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  noEventsText: {
+    color: '#888',
+    fontSize: 16,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 }); 
