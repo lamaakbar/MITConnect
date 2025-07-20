@@ -4,6 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useBooks } from '../components/BookContext';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import StandardHeader from '../components/StandardHeader';
 
 const GENRES = [
   { name: 'Philosophical Fiction', color: '#A3C9A8' },
@@ -25,6 +28,16 @@ const CARD_SHADOW = Platform.OS === 'ios'
 export default function AddBookScreen() {
   const router = useRouter();
   const { addBook } = useBooks();
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+  
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#E0E0E0';
+  const searchBackground = isDarkMode ? '#2A2A2A' : '#F2F4F7';
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [genre, setGenre] = useState('');
@@ -84,92 +97,87 @@ export default function AddBookScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => router.push('/books-management')} style={styles.backBtn} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={24} color="#222" />
-        </TouchableOpacity>
-        <Text style={styles.header}>Add New Book</Text>
-      </View>
-      <Text style={styles.subHeader}>Add a new book to the MITConnect Library</Text>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    <ScrollView contentContainerStyle={[styles.scrollContainer, { backgroundColor }]} keyboardShouldPersistTaps="handled">
+      <StandardHeader title="Add New Book" />
+      <Text style={[styles.subHeader, { color: secondaryTextColor }]}>Add a new book to the MITConnect Library</Text>
+      {error ? <Text style={[styles.errorText, { color: '#E74C3C' }]}>{error}</Text> : null}
       {/* Book Information Card */}
-      <View style={[styles.card, CARD_SHADOW]}>  
-        <Text style={styles.sectionTitle}>Book Information</Text>
+      <View style={[styles.card, CARD_SHADOW, { backgroundColor: cardBackground, borderColor }]}>  
+        <Text style={[styles.sectionTitle, { color: textColor }]}>Book Information</Text>
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Book Title <Text style={{ color: 'red' }}>*</Text></Text>
+          <Text style={[styles.label, { color: textColor }]}>Book Title <Text style={{ color: 'red' }}>*</Text></Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: textColor, backgroundColor: searchBackground, borderColor }]}
             placeholder="Enter book title"
+            placeholderTextColor={secondaryTextColor}
             value={title}
             onChangeText={setTitle}
-            placeholderTextColor="#bdbdbd"
           />
         </View>
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Author <Text style={{ color: 'red' }}>*</Text></Text>
+          <Text style={[styles.label, { color: textColor }]}>Author <Text style={{ color: 'red' }}>*</Text></Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: textColor, backgroundColor: searchBackground, borderColor }]}
             placeholder="Enter author name"
+            placeholderTextColor={secondaryTextColor}
             value={author}
             onChangeText={setAuthor}
-            placeholderTextColor="#bdbdbd"
           />
         </View>
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Genre <Text style={{ color: 'red' }}>*</Text></Text>
+          <Text style={[styles.label, { color: textColor }]}>Genre <Text style={{ color: 'red' }}>*</Text></Text>
           <TouchableOpacity
-            style={[styles.input, styles.dropdown]}
+            style={[styles.input, styles.dropdown, { backgroundColor: searchBackground, borderColor }]}
             onPress={() => setShowGenreList(!showGenreList)}
             activeOpacity={0.7}
           >
-            <Text style={{ color: genre ? '#222' : '#bdbdbd' }}>{genre || 'Select Genre'}</Text>
-            <Ionicons name={showGenreList ? 'chevron-up' : 'chevron-down'} size={18} color="#bdbdbd" style={{ position: 'absolute', right: 16, top: 16 }} />
+            <Text style={{ color: genre ? textColor : secondaryTextColor }}>{genre || 'Select Genre'}</Text>
+            <Ionicons name={showGenreList ? 'chevron-up' : 'chevron-down'} size={18} color={secondaryTextColor} style={{ position: 'absolute', right: 16, top: 16 }} />
           </TouchableOpacity>
-          {showGenreList && (
-            <View style={styles.genreList}>
-              {GENRES.map((g) => (
-                <TouchableOpacity
-                  key={g.name}
-                  style={styles.genreItem}
-                  onPress={() => {
-                    setGenre(g.name);
-                    setGenreColor(g.color);
-                    setShowGenreList(false);
-                  }}
-                >
-                  <Text style={{ color: '#222' }}>{g.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+                      {showGenreList && (
+              <View style={[styles.genreList, { backgroundColor: cardBackground, borderColor }]}>
+                {GENRES.map((g) => (
+                  <TouchableOpacity
+                    key={g.name}
+                    style={[styles.genreItem, { borderBottomColor: borderColor }]}
+                    onPress={() => {
+                      setGenre(g.name);
+                      setGenreColor(g.color);
+                      setShowGenreList(false);
+                    }}
+                  >
+                    <Text style={{ color: textColor }}>{g.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
         </View>
         <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Book Description</Text>
+          <Text style={[styles.label, { color: textColor }]}>Book Description</Text>
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[styles.input, styles.textArea, { color: textColor, backgroundColor: searchBackground, borderColor }]}
             placeholder="Enter a detailed description about the book..."
+            placeholderTextColor={secondaryTextColor}
             value={description}
             onChangeText={setDescription}
             multiline
             numberOfLines={4}
-            placeholderTextColor="#bdbdbd"
           />
         </View>
       </View>
       {/* Book Cover Card */}
-      <View style={[styles.card, CARD_SHADOW, { marginTop: 24 }]}>  
-        <Text style={styles.sectionTitle}>Book Cover <Text style={{ color: 'red' }}>*</Text></Text>
-        <TouchableOpacity style={styles.uploadArea} onPress={pickImage} activeOpacity={0.8}>
+      <View style={[styles.card, CARD_SHADOW, { marginTop: 24, backgroundColor: cardBackground, borderColor }]}>  
+        <Text style={[styles.sectionTitle, { color: textColor }]}>Book Cover <Text style={{ color: 'red' }}>*</Text></Text>
+        <TouchableOpacity style={[styles.uploadArea, { borderColor }]} onPress={pickImage} activeOpacity={0.8}>
           {image ? (
             <Image source={{ uri: image }} style={styles.coverPreview} />
           ) : (
             <View style={styles.uploadPlaceholder}>
-              <Ionicons name="cloud-upload-outline" size={40} color="#bdbdbd" />
-              <Text style={styles.uploadText}>Upload book cover</Text>
-              <Text style={styles.uploadSubText}>PNG, JPG up to 10MB</Text>
-              <TouchableOpacity style={styles.chooseFileBtn} onPress={pickImage}>
-                <Text style={styles.chooseFileText}>Choose File</Text>
+              <Ionicons name="cloud-upload-outline" size={40} color={secondaryTextColor} />
+              <Text style={[styles.uploadText, { color: textColor }]}>Upload book cover</Text>
+              <Text style={[styles.uploadSubText, { color: secondaryTextColor }]}>PNG, JPG up to 10MB</Text>
+              <TouchableOpacity style={[styles.chooseFileBtn, { backgroundColor: searchBackground }]} onPress={pickImage}>
+                <Text style={[styles.chooseFileText, { color: textColor }]}>Choose File</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -177,11 +185,11 @@ export default function AddBookScreen() {
       </View>
       {/* Action Buttons */}
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.addBtn} onPress={handleAddBook}>
-          <Text style={styles.addBtnText}>Add</Text>
+        <TouchableOpacity style={[styles.addBtn, { backgroundColor: '#3CB371' }]} onPress={handleAddBook}>
+          <Text style={[styles.addBtnText, { color: '#fff' }]}>Add</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.cancelBtn} onPress={() => router.push('/books-management')}>
-          <Text style={styles.cancelBtnText}>Cancel</Text>
+        <TouchableOpacity style={[styles.cancelBtn, { backgroundColor: searchBackground }]} onPress={() => router.push('/books-management')}>
+          <Text style={[styles.cancelBtnText, { color: textColor }]}>Cancel</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -191,63 +199,43 @@ export default function AddBookScreen() {
 const styles = StyleSheet.create({
   scrollContainer: {
     padding: 20,
-    backgroundColor: '#F8FAF9',
     flexGrow: 1,
+    paddingBottom: 40,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  backBtn: {
-    marginRight: 8,
-    padding: 4,
-  },
-  header: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#222',
-    flex: 1,
-    textAlign: 'center',
-  },
+
   subHeader: {
     fontSize: 15,
-    color: '#888',
     marginBottom: 20,
     textAlign: 'center',
   },
   errorText: {
-    color: 'red',
     marginBottom: 10,
     textAlign: 'center',
   },
   card: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
     marginBottom: 8,
+    borderWidth: 1,
   },
   sectionTitle: {
     fontWeight: 'bold',
     fontSize: 16,
     marginBottom: 12,
-    color: '#222',
   },
   fieldGroup: {
     marginBottom: 16,
   },
   label: {
     fontSize: 14,
-    color: '#222',
     marginBottom: 6,
   },
   input: {
-    backgroundColor: '#F5F5F5',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 15,
-    color: '#222',
+    borderWidth: 1,
   },
   dropdown: {
     flexDirection: 'row',
@@ -256,15 +244,14 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   genreList: {
-    backgroundColor: '#fff',
     borderRadius: 10,
     marginTop: 2,
     borderWidth: 1,
-    borderColor: '#eee',
     overflow: 'hidden',
   },
   genreItem: {
     padding: 12,
+    borderBottomWidth: 1,
   },
   textArea: {
     minHeight: 80,
@@ -276,9 +263,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 120,
     borderWidth: 1,
-    borderColor: '#eee',
     borderRadius: 12,
-    backgroundColor: '#F5F5F5',
     padding: 16,
   },
   uploadPlaceholder: {
@@ -291,24 +276,20 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   uploadText: {
-    color: '#888',
     fontSize: 15,
     marginTop: 8,
   },
   uploadSubText: {
-    color: '#bdbdbd',
     fontSize: 13,
     marginBottom: 8,
   },
   chooseFileBtn: {
-    backgroundColor: '#F2F2F2',
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginTop: 8,
   },
   chooseFileText: {
-    color: '#444',
     fontWeight: 'bold',
     fontSize: 14,
   },
@@ -317,32 +298,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 32,
     marginBottom: 24,
+    gap: 12,
   },
   addBtn: {
-    backgroundColor: '#3AC569',
     borderRadius: 24,
     paddingHorizontal: 32,
     paddingVertical: 12,
     alignItems: 'center',
     flex: 1,
-    marginRight: 8,
   },
   addBtnText: {
-    color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
   },
   cancelBtn: {
-    backgroundColor: '#F2F2F2',
     borderRadius: 24,
     paddingHorizontal: 32,
     paddingVertical: 12,
     alignItems: 'center',
     flex: 1,
-    marginLeft: 8,
   },
   cancelBtnText: {
-    color: '#444',
     fontWeight: 'bold',
     fontSize: 16,
   },

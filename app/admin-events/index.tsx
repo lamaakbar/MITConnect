@@ -2,20 +2,26 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  FlatList,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
   View,
-  Modal,
+  Text,
+  StyleSheet,
   TouchableOpacity,
-  KeyboardAvoidingView,
+  Image,
+  TextInput,
+  Modal,
+  Pressable,
+  ActivityIndicator,
   Platform,
-  ScrollView
+  Alert,
+  KeyboardAvoidingView,
+  Keyboard,
+  ToastAndroid,
+  ScrollView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import AdminTabBar from '../../components/AdminTabBar';
 
 // Mock data for events
 const mockEvents = [
@@ -79,6 +85,19 @@ const FILTERS = ['All', 'Upcoming', 'Past'];
 
 const AdminEventListScreen: React.FC = () => {
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+  
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#E0E0E0';
+  const searchBackground = isDarkMode ? '#2A2A2A' : '#F2F4F7';
+  const modalBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const overlayBackground = isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.3)';
+  
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [events, setEvents] = useState(mockEvents);
@@ -107,36 +126,12 @@ const AdminEventListScreen: React.FC = () => {
   const [editLoading, setEditLoading] = useState(false);
   const [showEditTypeDropdown, setShowEditTypeDropdown] = useState(false);
 
-  // Replace mockAttendees with only the five specified names/emails
-  // const mockAttendees = [
-  //   { name: "Ahmed Ali", email: "ahmed.ali@email.com", status: "Confirmed" },
-  //   { name: "Sara Khaled", email: "sara.khaled@email.com", status: "Confirmed" },
-  //   { name: "Faisal Alsaif", email: "faisal.alsaif@email.com", status: "Canceled" },
-  //   { name: "Layan Omar", email: "layan.omar@email.com", status: "Canceled" },
-  //   { name: "Yara Alharthi", email: "yara.alharthi@email.com", status: "Confirmed" },
-  // ];
-  // Add unique mock attendees for 'AI in Business Conference'
-  // const aiConferenceAttendees = [
-  //   { name: "Mona Alzahrani", email: "mona.alzahrani@email.com", status: "Confirmed" },
-  //   { name: "Omar Alotaibi", email: "omar.alotaibi@email.com", status: "Confirmed" },
-  //   { name: "Huda Alharbi", email: "huda.alharbi@email.com", status: "Canceled" },
-  //   { name: "Salem Alshammari", email: "salem.alshammari@email.com", status: "Canceled" },
-  //   { name: "Rania Alghamdi", email: "rania.alghamdi@email.com", status: "Confirmed" },
-  // ];
   const [showAttendeesModal, setShowAttendeesModal] = useState(false);
   const [attendeesSearch, setAttendeesSearch] = useState('');
   // Add state for attendeeStatus
   const [attendeeStatus, setAttendeeStatus] = useState<'Confirmed' | 'Canceled'>('Confirmed');
   // Add state to track which event's attendees are being shown
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
-  // Filter attendees by status
-  // In the Attendees modal, add two iOS-like buttons for 'Confirmed' and 'Canceled', and show filteredAttendees
-  // Example:
-  // <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16 }}>
-  //   <TouchableOpacity ...>Confirmed</TouchableOpacity>
-  //   <TouchableOpacity ...>Canceled</TouchableOpacity>
-  // </View>
-  // In the Attendees modal, only map over mockAttendees and show name/email, no status, no filter tabs
 
   // Filter events based on filter selection (mock logic)
   const featuredEvent = events.find((e) => e.featured);
@@ -202,7 +197,7 @@ const AdminEventListScreen: React.FC = () => {
     setShowEditModal(true);
   };
 
-  // Save edits
+  // Handle Edit Save
   const handleEditSave = () => {
     setEditLoading(true);
     setTimeout(() => {
@@ -211,920 +206,814 @@ const AdminEventListScreen: React.FC = () => {
         alert('Please fill in all fields.');
         return;
       }
-      setEvents(prev => prev.map((ev, i) => {
-        // Find the correct event by id
-        if (ev.id === filteredEvents[editIndex!].id) {
-          return {
-            ...ev,
-            title: editTitle,
-            type: editType,
-            date: editDate,
-            time: editTime,
-            location: editLocation,
-            description: editDescription,
-            coverImage: editImage ? { uri: editImage } : require('../../assets/images/splash-icon.png'),
-            attendees: ev.attendees, // Keep existing attendees
-          };
+      if (editIndex !== null) {
+        const updatedEvents = [...events];
+        const eventToUpdate = updatedEvents.find(e => e.id === filteredEvents[editIndex].id);
+        if (eventToUpdate) {
+          eventToUpdate.title = editTitle;
+          eventToUpdate.type = editType;
+          eventToUpdate.date = editDate;
+          eventToUpdate.time = editTime;
+          eventToUpdate.location = editLocation;
+          eventToUpdate.description = editDescription;
+          if (editImage) {
+            eventToUpdate.coverImage = { uri: editImage };
+          }
         }
-        return ev;
-      }));
+        setEvents(updatedEvents);
+      }
       setShowEditModal(false);
       setEditIndex(null);
+      setEditImage(null);
+      setEditTitle('');
+      setEditType('');
+      setEditDate('');
+      setEditTime('');
+      setEditLocation('');
+      setEditDescription('');
     }, 800);
   };
 
-  // Delete event
+  // Handle Edit Delete
   const handleEditDelete = () => {
-    setEvents(prev => prev.filter(ev => ev.id !== filteredEvents[editIndex!].id));
+    if (editIndex !== null) {
+      const eventToDelete = filteredEvents[editIndex];
+      setEvents(prev => prev.filter(e => e.id !== eventToDelete.id));
+    }
     setShowEditModal(false);
     setEditIndex(null);
   };
 
-  // Open Attendees modal for an event (mock: always show mockAttendees)
+  // Open Attendees Modal
   const openAttendeesModal = (eventId: string) => {
-    const event = events.find(e => e.id === eventId);
     setCurrentEventId(eventId);
-    setShowAttendeesModal(true);
     setAttendeesSearch('');
-    setAttendeeStatus('Confirmed');
+    setShowAttendeesModal(true);
   };
 
-  // Only one filteredAttendees declaration:
-  // const filteredAttendees = (currentEvent?.attendees || []).filter(
-  //   a => a.status === attendeeStatus &&
-  //     (a.name.toLowerCase().includes(attendeesSearch.toLowerCase()) ||
-  //      a.email.toLowerCase().includes(attendeesSearch.toLowerCase()))
-  // );
+  // Get current event's attendees
+  const currentEvent = events.find(e => e.id === currentEventId);
+  const filteredAttendees = currentEvent?.attendees.filter(a => 
+    (a.name.toLowerCase().includes(attendeesSearch.toLowerCase()) ||
+     a.email.toLowerCase().includes(attendeesSearch.toLowerCase()))
+  ) || [];
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#F8FFFA' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <FlatList
-        data={filteredEvents}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={
-          <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.headerRow}>
-              <Text style={styles.logoText}>MIT<Text style={{ color: '#4ECB71' }}>Connect</Text></Text>
-              {/* Remove menu/sandwich icon */}
-            </View>
-            {/* Search Bar */}
-            <View style={styles.searchBar}>
-              <Ionicons name="search" size={20} color="#B0B0B0" style={{ marginRight: 8 }} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search events"
-                value={search}
-                onChangeText={setSearch}
-                placeholderTextColor="#B0B0B0"
-              />
-            </View>
-            {/* Filters */}
-            <View style={styles.filterRow}>
-              {FILTERS.map((filter) => (
-                <Pressable
-                  key={filter}
-                  style={[styles.filterButton, selectedFilter === filter && styles.filterButtonActive]}
-                  onPress={() => setSelectedFilter(filter)}
-                >
-                  <Text style={[styles.filterText, selectedFilter === filter && styles.filterTextActive]}>{filter}</Text>
-                </Pressable>
-              ))}
-              <View style={{ flex: 1 }} />
-              <Pressable style={styles.addButton} onPress={() => setShowAddModal(true)}>
-                <Text style={styles.addButtonText}>+ Add</Text>
-              </Pressable>
-            </View>
-            {/* Featured Event */}
-            {featuredEvent && (
-              <View style={styles.featuredCard}>
-                <Image source={featuredEvent.coverImage} style={styles.featuredImage} />
-                <Text style={styles.featuredTitle}>{featuredEvent.title}</Text>
-                <View style={styles.featuredInfoRow}>
-                  <MaterialIcons name="location-on" size={18} color="#4ECB71" style={{ marginRight: 4 }} />
-                  <Text style={styles.featuredInfoText}>{featuredEvent.location}</Text>
-                </View>
-                <View style={styles.featuredInfoRow}>
-                  <Ionicons name="time-outline" size={18} color="#4ECB71" style={{ marginRight: 4 }} />
-                  <Text style={styles.featuredInfoText}>{featuredEvent.time}, {formatDate(featuredEvent.date)}</Text>
-                </View>
+    <View style={[styles.mainContainer, { backgroundColor }]}>
+      {/* Header */}
+      <View style={[styles.headerRow, { backgroundColor, borderBottomColor: borderColor }]}>
+        <TouchableOpacity onPress={() => router.push('/admin-home')} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color={textColor} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: textColor }]}>Events Management</Text>
+        <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)}>
+          <Ionicons name="add" size={20} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Search Bar */}
+      <View style={[styles.searchBar, { backgroundColor: searchBackground }]}>
+        <Ionicons name="search" size={20} color={secondaryTextColor} style={{ marginRight: 8 }} />
+        <TextInput
+          style={[styles.searchInput, { color: textColor }]}
+          placeholder="Search events"
+          placeholderTextColor={secondaryTextColor}
+          value={search}
+          onChangeText={setSearch}
+        />
+      </View>
+
+      {/* Filter Tabs */}
+      <View style={[styles.filterContainer, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
+        {FILTERS.map((filter) => (
+          <TouchableOpacity
+            key={filter}
+            style={[
+              styles.filterTab,
+              { backgroundColor: searchBackground },
+              selectedFilter === filter && styles.activeFilterTab
+            ]}
+            onPress={() => setSelectedFilter(filter)}
+          >
+            <Text style={[
+              styles.filterText,
+              { color: textColor },
+              selectedFilter === filter && styles.activeFilterText
+            ]}>
+              {filter}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Scrollable Content */}
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
+        {/* Featured Event */}
+        {featuredEvent && (
+          <TouchableOpacity 
+            style={styles.featuredCard}
+            onPress={() => router.push(`/admin-events/${featuredEvent.id}/details`)}
+            activeOpacity={0.8}
+          >
+            <Image source={featuredEvent.coverImage} style={styles.featuredImage} />
+            <View style={styles.featuredOverlay}>
+              <View style={styles.featuredBadge}>
+                <Text style={styles.featuredText}>Featured</Text>
               </View>
-            )}
-            {/* All Events */}
-            <Text style={styles.allEventsTitle}>All Events</Text>
-            {filteredEvents.length === 0 && (
-              <Text style={{ color: '#888', textAlign: 'center', marginTop: 12 }}>No events found.</Text>
-            )}
-          </View>
-        }
-        renderItem={({ item, index }) => (
-          <View style={styles.eventRow}>
-            <Image source={item.coverImage} style={styles.eventImage} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.eventTitle}>{item.title}</Text>
-              <Text style={styles.eventLocation}>{item.location} · {formatDate(item.date)}, {item.time}</Text>
+              <Text style={styles.featuredTitle}>{featuredEvent.title}</Text>
+              <Text style={styles.featuredSubtitle}>{featuredEvent.type} • {formatDate(featuredEvent.date)}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Regular Events */}
+        {filteredEvents.map((event, index) => (
+          <TouchableOpacity 
+            key={event.id}
+            style={[styles.eventCard, { backgroundColor: cardBackground, borderColor }]}
+            onPress={() => router.push(`/admin-events/${event.id}/details`)}
+            activeOpacity={0.8}
+          >
+            <Image source={event.coverImage} style={styles.eventImage} />
+            <View style={styles.eventInfo}>
+              <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
+              <Text style={[styles.eventType, { color: '#3CB371' }]}>{event.type}</Text>
+              <Text style={[styles.eventDate, { color: secondaryTextColor }]}>{formatDate(event.date)} • {event.time}</Text>
+              <Text style={[styles.eventLocation, { color: secondaryTextColor }]}>{event.location}</Text>
             </View>
             <View style={styles.eventActions}>
-              <Pressable
+              <TouchableOpacity 
+                style={styles.actionBtn}
+                onPress={() => openAttendeesModal(event.id)}
+              >
+                <Ionicons name="people" size={20} color="#3CB371" />
+              </TouchableOpacity>
+              <TouchableOpacity 
                 style={styles.actionBtn}
                 onPress={() => openEditModal(index)}
               >
-                <Text style={styles.actionBtnText}>Edit</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.actionBtn, { backgroundColor: '#E8F8F5', marginLeft: 6 }]}
-                onPress={() => openAttendeesModal(item.id)}
-              >
-                <Text style={[styles.actionBtnText, { color: '#004080' }]}>Attendees</Text>
-              </Pressable>
+                <Ionicons name="create" size={20} color="#4A90E2" />
+              </TouchableOpacity>
             </View>
-          </View>
-        )}
-        style={{ paddingBottom: 32 }}
-        showsVerticalScrollIndicator={false}
-      />
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* Bottom Tab Bar */}
+      <AdminTabBar activeTab="events" isDarkMode={isDarkMode} />
+
       {/* Add Event Modal */}
-      <Modal visible={showAddModal} animationType="slide" transparent>
-          <View style={modalStyles.overlay}>
-            <KeyboardAvoidingView style={modalStyles.keyboardView} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-              <ScrollView contentContainerStyle={modalStyles.scrollContent} keyboardShouldPersistTaps="handled">
-                <View style={modalStyles.modalBox}>
-                  <Text style={modalStyles.modalTitle}>Add New Event</Text>
-                  {/* Image Upload */}
-                  <Text style={modalStyles.label}>Event Cover Image</Text>
-                  <TouchableOpacity style={modalStyles.imageUploadBox} onPress={pickImage} activeOpacity={0.8}>
-                    {addImage ? (
-                      <Image source={{ uri: addImage }} style={modalStyles.uploadedImage} />
-                    ) : (
-                      <View style={{ alignItems: 'center' }}>
-                        <Text style={modalStyles.uploadText}>Tap to upload an event image</Text>
-                        <Text style={modalStyles.uploadSubText}>Supported formats: .jpg, .png</Text>
-                        <View style={modalStyles.uploadBtn}><Text style={modalStyles.uploadBtnText}>Upload</Text></View>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                  {/* Event Title */}
-                  <Text style={modalStyles.label}>Event Title</Text>
-                  <TextInput
-                    style={modalStyles.input}
-                    placeholder="e.g.,  Data Science Bootcamp"
-                    placeholderTextColor="#8BA18C"
-                    value={addTitle}
-                    onChangeText={setAddTitle}
-                  />
-                  {/* Event Type Dropdown */}
-                  <Text style={modalStyles.label}>Event Type</Text>
-                  <TouchableOpacity
-                    style={modalStyles.input}
-                    onPress={() => setShowTypeDropdown((v) => !v)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[modalStyles.dropdownText, !addType && { color: '#8BA18C' }]}> {addType || 'Select  Event  Type'} </Text>
-                  </TouchableOpacity>
-                  {showTypeDropdown && (
-                    <View style={modalStyles.dropdownMenu}>
-                      {['Seminar', 'Workshop', 'Conference', 'Meetup'].map((t) => (
-                        <TouchableOpacity
-                          key={t}
-                          style={modalStyles.dropdownItem}
-                          onPress={() => {
-                            setAddType(t);
-                            setShowTypeDropdown(false);
-                          }}
-                        >
-                          <Text style={modalStyles.dropdownText}>{t}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                  {/* Event Date */}
-                  <Text style={modalStyles.label}>Event Date</Text>
-                  <TextInput
-                    style={modalStyles.input}
-                    placeholder="Select  date"
-                    placeholderTextColor="#8BA18C"
-                    value={addDate}
-                    onChangeText={setAddDate}
-                  />
-                  {/* Event Time */}
-                  <Text style={modalStyles.label}>Event Time</Text>
-                  <TextInput
-                    style={modalStyles.input}
-                    placeholder="e.g.,  09:00 AM – 11:00 AM"
-                    placeholderTextColor="#8BA18C"
-                    value={addTime}
-                    onChangeText={setAddTime}
-                  />
-                  {/* Location */}
-                  <Text style={modalStyles.label}>Location</Text>
-                  <TextInput
-                    style={modalStyles.input}
-                    placeholder="e.g.,  SNB HQ Auditorium"
-                    placeholderTextColor="#8BA18C"
-                    value={addLocation}
-                    onChangeText={setAddLocation}
-                  />
-                  {/* Description */}
-                  <Text style={modalStyles.label}>Description</Text>
-                  <TextInput
-                    style={[modalStyles.input, { height: 70, textAlignVertical: 'top' }]}
-                    placeholder="Brief description of the event"
-                    placeholderTextColor="#8BA18C"
-                    value={addDescription}
-                    onChangeText={setAddDescription}
-                    multiline
-                  />
-                  {/* Create Event Button */}
-                  <Pressable style={modalStyles.createBtn} onPress={handleAddEvent} disabled={addLoading}>
-                    <Text style={modalStyles.createBtnText}>{addLoading ? 'Submitting...' : 'Create Event'}</Text>
-                  </Pressable>
-                  <TouchableOpacity style={modalStyles.cancelBtn} onPress={() => setShowAddModal(false)}>
-                    <Text style={modalStyles.cancelBtnText}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </KeyboardAvoidingView>
-          </View>
-        </Modal>
-        {/* Edit Event Modal */}
-        <Modal visible={showEditModal} animationType="slide" transparent>
-          <View style={modalStyles.overlay}>
-            <KeyboardAvoidingView style={modalStyles.keyboardView} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-              <ScrollView contentContainerStyle={modalStyles.scrollContent} keyboardShouldPersistTaps="handled">
-                <View style={modalStyles.modalBox}>
-                  <Text style={modalStyles.modalTitle}>Edit Event</Text>
-                  {/* Image Upload */}
-                  <Text style={modalStyles.label}>Event Cover Image</Text>
-                  <TouchableOpacity style={modalStyles.imageUploadBox} onPress={pickImage} activeOpacity={0.8}>
-                    {editImage ? (
-                      <Image source={{ uri: editImage }} style={modalStyles.uploadedImage} />
-                    ) : (
-                      <View style={{ alignItems: 'center' }}>
-                        <Text style={modalStyles.uploadText}>Tap to upload an event image</Text>
-                        <Text style={modalStyles.uploadSubText}>Supported formats: .jpg, .png</Text>
-                        <View style={modalStyles.uploadBtn}><Text style={modalStyles.uploadBtnText}>Upload</Text></View>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                  {/* Event Title */}
-                  <Text style={modalStyles.label}>Event Title</Text>
-                  <TextInput
-                    style={modalStyles.input}
-                    placeholder="e.g.,  Data Science Bootcamp"
-                    placeholderTextColor="#8BA18C"
-                    value={editTitle}
-                    onChangeText={setEditTitle}
-                  />
-                  {/* Event Type Dropdown */}
-                  <Text style={modalStyles.label}>Event Type</Text>
-                  <TouchableOpacity
-                    style={modalStyles.input}
-                    onPress={() => setShowEditTypeDropdown((v) => !v)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[modalStyles.dropdownText, !editType && { color: '#8BA18C' }]}> {editType || 'Select  Event  Type'} </Text>
-                  </TouchableOpacity>
-                  {showEditTypeDropdown && (
-                    <View style={modalStyles.dropdownMenu}>
-                      {['Seminar', 'Workshop', 'Conference', 'Meetup'].map((t) => (
-                        <TouchableOpacity
-                          key={t}
-                          style={modalStyles.dropdownItem}
-                          onPress={() => {
-                            setEditType(t);
-                            setShowEditTypeDropdown(false);
-                          }}
-                        >
-                          <Text style={modalStyles.dropdownText}>{t}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                  {/* Event Date */}
-                  <Text style={modalStyles.label}>Event Date</Text>
-                  <TextInput
-                    style={modalStyles.input}
-                    placeholder="Select  date"
-                    placeholderTextColor="#8BA18C"
-                    value={editDate}
-                    onChangeText={setEditDate}
-                  />
-                  {/* Event Time */}
-                  <Text style={modalStyles.label}>Event Time</Text>
-                  <TextInput
-                    style={modalStyles.input}
-                    placeholder="e.g.,  09:00 AM – 11:00 AM"
-                    placeholderTextColor="#8BA18C"
-                    value={editTime}
-                    onChangeText={setEditTime}
-                  />
-                  {/* Location */}
-                  <Text style={modalStyles.label}>Location</Text>
-                  <TextInput
-                    style={modalStyles.input}
-                    placeholder="e.g.,  SNB HQ Auditorium"
-                    placeholderTextColor="#8BA18C"
-                    value={editLocation}
-                    onChangeText={setEditLocation}
-                  />
-                  {/* Description */}
-                  <Text style={modalStyles.label}>Description</Text>
-                  <TextInput
-                    style={[modalStyles.input, { height: 70, textAlignVertical: 'top' }]}
-                    placeholder="Brief description of the event"
-                    placeholderTextColor="#8BA18C"
-                    value={editDescription}
-                    onChangeText={setEditDescription}
-                    multiline
-                  />
-                  {/* Save Button */}
-                  <Pressable style={modalStyles.createBtn} onPress={handleEditSave} disabled={editLoading}>
-                    <Text style={modalStyles.createBtnText}>{editLoading ? 'Saving...' : 'Save'}</Text>
-                  </Pressable>
-                  {/* Delete Button */}
-                  <TouchableOpacity style={modalStyles.cancelBtn} onPress={handleEditDelete}>
-                    <Text style={[modalStyles.cancelBtnText, { color: '#E74C3C' }]}>Delete</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={modalStyles.cancelBtn} onPress={() => { setShowEditModal(false); setEditIndex(null); }}>
-                    <Text style={modalStyles.cancelBtnText}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </KeyboardAvoidingView>
-          </View>
-        </Modal>
-        {/* Attendees Modal */}
-        <Modal visible={showAttendeesModal} animationType="slide" transparent>
-          <View style={attendeesModalStyles.overlay}>
-            <KeyboardAvoidingView style={attendeesModalStyles.keyboardView} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-              <View style={attendeesModalStyles.modalBox}>
-                <Text style={attendeesModalStyles.modalTitle}>Attendees</Text>
-                {/* Search and Status Filter */}
-                <View style={attendeesModalStyles.searchRow}>
-                  <Ionicons name="search" size={18} color="#B0B0B0" style={{ marginRight: 6 }} />
-                  <TextInput
-                    style={attendeesModalStyles.searchInput}
-                    placeholder="Search attendees"
-                    value={attendeesSearch}
-                    onChangeText={setAttendeesSearch}
-                    placeholderTextColor="#B0B0B0"
-                  />
-                </View>
-                {/* Remove attendeesStatus, statusOptions, and all status filter logic */}
-                {/* In the Attendees modal, only map over mockAttendees and show name/email, no status, no filter tabs */}
-                <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16 }}>
-                  <TouchableOpacity
-                    style={[
-                      attendeesModalStyles.filterBtn,
-                      attendeeStatus === 'Confirmed' && attendeesModalStyles.filterBtnActive,
-                      { flex: 1, marginRight: 8 }
-                    ]}
-                    onPress={() => setAttendeeStatus('Confirmed')}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={attendeeStatus === 'Confirmed' ? attendeesModalStyles.filterBtnTextActive : attendeesModalStyles.filterBtnText}>
-                      Confirmed
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      attendeesModalStyles.filterBtn,
-                      attendeeStatus === 'Canceled' && attendeesModalStyles.filterBtnActive,
-                      { flex: 1, marginLeft: 8 }
-                    ]}
-                    onPress={() => setAttendeeStatus('Canceled')}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={attendeeStatus === 'Canceled' ? attendeesModalStyles.filterBtnTextActive : attendeesModalStyles.filterBtnText}>
-                      Canceled
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                {currentEventId && (() => {
-                  const currentEvent = events.find(e => e.id === currentEventId);
-                  const filteredAttendees = (currentEvent?.attendees || []).filter(
-                    a => a.status === attendeeStatus &&
-                      (a.name.toLowerCase().includes(attendeesSearch.toLowerCase()) ||
-                       a.email.toLowerCase().includes(attendeesSearch.toLowerCase()))
-                  );
-                  return (
-                    <>
-                      <Text style={attendeesModalStyles.modalTitle}>Attendees</Text>
-                      <View style={{ width: '100%', maxHeight: 260, overflow: 'hidden', alignSelf: 'center' }}>
-                        <ScrollView
-                          style={{ width: '100%' }}
-                          contentContainerStyle={{ paddingBottom: 16, flexGrow: 1 }}
-                          showsVerticalScrollIndicator={true}
-                          horizontal={false}
-                        >
-                          {filteredAttendees.length === 0 ? (
-                            <Text style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>No attendees found.</Text>
-                          ) : (
-                            filteredAttendees.map((a, idx) => (
-                              <View key={a.email + idx} style={attendeesModalStyles.attendeeCard}>
-                                <Text style={attendeesModalStyles.attendeeName}>{a.name}</Text>
-                                <Text style={attendeesModalStyles.attendeeEmail}>{a.email}</Text>
-                              </View>
-                            ))
-                          )}
-                        </ScrollView>
-                      </View>
-                    </>
-                  );
-                })()}
-                <TouchableOpacity style={attendeesModalStyles.closeBtn} onPress={() => setShowAttendeesModal(false)}>
-                  <Text style={attendeesModalStyles.closeBtnText}>Close</Text>
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <View style={[styles.modalOverlay, { backgroundColor: overlayBackground }]}>
+            <View style={[styles.modalContent, { backgroundColor: modalBackground }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: textColor }]}>Add New Event</Text>
+                <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                  <Ionicons name="close" size={24} color={secondaryTextColor} />
                 </TouchableOpacity>
               </View>
-            </KeyboardAvoidingView>
+              <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
+                <Text style={[styles.modalLabel, { color: textColor }]}>Event Title</Text>
+                <TextInput
+                  style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground }]}
+                  value={addTitle}
+                  onChangeText={setAddTitle}
+                  placeholder="Enter event title..."
+                  placeholderTextColor={secondaryTextColor}
+                />
+                <Text style={[styles.modalLabel, { color: textColor }]}>Event Type</Text>
+                <TextInput
+                  style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground }]}
+                  value={addType}
+                  onChangeText={setAddType}
+                  placeholder="Workshop, Seminar, etc."
+                  placeholderTextColor={secondaryTextColor}
+                />
+                <Text style={[styles.modalLabel, { color: textColor }]}>Date</Text>
+                <TextInput
+                  style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground }]}
+                  value={addDate}
+                  onChangeText={setAddDate}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={secondaryTextColor}
+                />
+                <Text style={[styles.modalLabel, { color: textColor }]}>Time</Text>
+                <TextInput
+                  style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground }]}
+                  value={addTime}
+                  onChangeText={setAddTime}
+                  placeholder="HH:MM AM/PM"
+                  placeholderTextColor={secondaryTextColor}
+                />
+                <Text style={[styles.modalLabel, { color: textColor }]}>Location</Text>
+                <TextInput
+                  style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground }]}
+                  value={addLocation}
+                  onChangeText={setAddLocation}
+                  placeholder="Enter location..."
+                  placeholderTextColor={secondaryTextColor}
+                />
+                <Text style={[styles.modalLabel, { color: textColor }]}>Description</Text>
+                <TextInput
+                  style={[styles.modalInput, styles.textArea, { color: textColor, backgroundColor: searchBackground }]}
+                  value={addDescription}
+                  onChangeText={setAddDescription}
+                  placeholder="Enter event description..."
+                  placeholderTextColor={secondaryTextColor}
+                  multiline
+                  numberOfLines={4}
+                />
+                <TouchableOpacity
+                  style={[styles.addImageBtn, { backgroundColor: searchBackground, borderColor }]}
+                  onPress={pickImage}
+                >
+                  <Ionicons name="image" size={20} color="#3CB371" />
+                  <Text style={[styles.addImageText, { color: '#3CB371' }]}>Add Cover Image</Text>
+                </TouchableOpacity>
+                {addImage && (
+                  <Image source={{ uri: addImage }} style={styles.previewImage} />
+                )}
+                <TouchableOpacity
+                  style={[styles.saveBtn, addLoading && styles.saveBtnDisabled]}
+                  onPress={handleAddEvent}
+                  disabled={addLoading}
+                >
+                  {addLoading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.saveBtnText}>Add Event</Text>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
           </View>
-        </Modal>
-    </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Edit Event Modal */}
+      <Modal
+        visible={showEditModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <View style={[styles.modalOverlay, { backgroundColor: overlayBackground }]}>
+            <View style={[styles.modalContent, { backgroundColor: modalBackground }]}>
+              <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
+                <Text style={[styles.modalTitle, { color: textColor }]}>Edit Event</Text>
+                <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                  <Ionicons name="close" size={24} color={secondaryTextColor} />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
+                <Text style={[styles.modalLabel, { color: textColor }]}>Event Title</Text>
+                <TextInput
+                  style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground, borderColor }]}
+                  value={editTitle}
+                  onChangeText={setEditTitle}
+                  placeholder="Enter event title..."
+                  placeholderTextColor={secondaryTextColor}
+                />
+                <Text style={[styles.modalLabel, { color: textColor }]}>Event Type</Text>
+                <TextInput
+                  style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground, borderColor }]}
+                  value={editType}
+                  onChangeText={setEditType}
+                  placeholder="Workshop, Seminar, etc."
+                  placeholderTextColor={secondaryTextColor}
+                />
+                <Text style={[styles.modalLabel, { color: textColor }]}>Date</Text>
+                <TextInput
+                  style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground, borderColor }]}
+                  value={editDate}
+                  onChangeText={setEditDate}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={secondaryTextColor}
+                />
+                <Text style={[styles.modalLabel, { color: textColor }]}>Time</Text>
+                <TextInput
+                  style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground, borderColor }]}
+                  value={editTime}
+                  onChangeText={setEditTime}
+                  placeholder="HH:MM AM/PM"
+                  placeholderTextColor={secondaryTextColor}
+                />
+                <Text style={[styles.modalLabel, { color: textColor }]}>Location</Text>
+                <TextInput
+                  style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground, borderColor }]}
+                  value={editLocation}
+                  onChangeText={setEditLocation}
+                  placeholder="Enter location..."
+                  placeholderTextColor={secondaryTextColor}
+                />
+                <Text style={[styles.modalLabel, { color: textColor }]}>Description</Text>
+                <TextInput
+                  style={[styles.modalInput, styles.textArea, { color: textColor, backgroundColor: searchBackground, borderColor }]}
+                  value={editDescription}
+                  onChangeText={setEditDescription}
+                  placeholder="Enter event description..."
+                  placeholderTextColor={secondaryTextColor}
+                  multiline
+                  numberOfLines={4}
+                />
+                <View style={styles.editActions}>
+                  <TouchableOpacity
+                    style={[styles.deleteBtn, { backgroundColor: '#E74C3C' }]}
+                    onPress={handleEditDelete}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
+                    <Text style={[styles.deleteBtnText, { color: '#fff', fontWeight: '600' }]}>Delete Event</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.saveBtn, { backgroundColor: '#3CB371' }, editLoading && styles.saveBtnDisabled]}
+                    onPress={handleEditSave}
+                    disabled={editLoading}
+                    activeOpacity={0.8}
+                  >
+                    {editLoading ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-outline" size={18} color="#fff" style={{ marginRight: 8 }} />
+                        <Text style={[styles.saveBtnText, { color: '#fff', fontWeight: '600' }]}>Save Changes</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Attendees Modal */}
+      <Modal
+        visible={showAttendeesModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowAttendeesModal(false)}
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: overlayBackground }]}>
+          <View style={[styles.modalContent, { backgroundColor: modalBackground }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
+              <Text style={[styles.modalTitle, { color: textColor }]}>Event Attendees</Text>
+              <TouchableOpacity onPress={() => setShowAttendeesModal(false)}>
+                <Ionicons name="close" size={24} color={secondaryTextColor} />
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.attendeesHeader, { borderBottomColor: borderColor }]}>
+              <View style={[styles.searchRow, { backgroundColor: searchBackground }]}>
+                <Ionicons name="search" size={18} color={secondaryTextColor} style={{ marginRight: 6 }} />
+                <TextInput
+                  style={[styles.attendeesSearchInput, { color: textColor }]}
+                  placeholder="Search attendees"
+                  placeholderTextColor={secondaryTextColor}
+                  value={attendeesSearch}
+                  onChangeText={setAttendeesSearch}
+                />
+              </View>
+              <View style={styles.statusFilter}>
+                <TouchableOpacity
+                  style={[
+                    styles.statusBtn,
+                    { backgroundColor: searchBackground },
+                    attendeeStatus === 'Confirmed' && styles.activeStatusBtn
+                  ]}
+                  onPress={() => setAttendeeStatus('Confirmed')}
+                >
+                  <Text style={[
+                    styles.statusBtnText,
+                    { color: textColor },
+                    attendeeStatus === 'Confirmed' && styles.activeStatusBtnText
+                  ]}>
+                    Confirmed
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.statusBtn,
+                    { backgroundColor: searchBackground },
+                    attendeeStatus === 'Canceled' && styles.activeStatusBtn
+                  ]}
+                  onPress={() => setAttendeeStatus('Canceled')}
+                >
+                  <Text style={[
+                    styles.statusBtnText,
+                    { color: textColor },
+                    attendeeStatus === 'Canceled' && styles.activeStatusBtnText
+                  ]}>
+                    Canceled
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <ScrollView style={styles.attendeesList}>
+              {filteredAttendees
+                .filter(a => a.status === attendeeStatus)
+                .map((attendee, index) => (
+                  <View key={index} style={[styles.attendeeItem, { borderBottomColor: borderColor }]}>
+                    <View style={styles.attendeeInfo}>
+                      <Text style={[styles.attendeeName, { color: textColor }]}>{attendee.name}</Text>
+                      <Text style={[styles.attendeeEmail, { color: secondaryTextColor }]}>{attendee.email}</Text>
+                    </View>
+                    <View style={[
+                      styles.statusBadge,
+                      { backgroundColor: attendee.status === 'Confirmed' ? '#3CB371' : '#E74C3C' }
+                    ]}>
+                      <Text style={styles.statusBadgeText}>{attendee.status}</Text>
+                    </View>
+                  </View>
+                ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 };
 
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-    backgroundColor: '#F8FFFA',
-    paddingBottom: 24,
-  },
-  container: {
+  mainContainer: {
     flex: 1,
-    backgroundColor: '#F8FFFA',
-    paddingHorizontal: 16,
-    paddingTop: 48,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 32,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
   },
-  logoText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    color: '#222',
-    flex: 1,
-  },
-  menuButton: {
+  backBtn: {
     padding: 4,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+  },
+  addBtn: {
+    backgroundColor: '#3CB371',
+    borderRadius: 20,
+    padding: 8,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F2F4F7',
     borderRadius: 12,
+    marginHorizontal: 16,
+    marginVertical: 12,
     paddingHorizontal: 12,
-    height: 44,
-    marginBottom: 12,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#222',
   },
-  filterRow: {
+  filterContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  filterButton: {
-    backgroundColor: '#F2F4F7',
-    borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 6,
-    marginRight: 8,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
   },
-  filterButtonActive: {
-    backgroundColor: '#4ECB71',
+  filterTab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  activeFilterTab: {
+    backgroundColor: '#3CB371',
   },
   filterText: {
-    color: '#222',
+    fontSize: 14,
     fontWeight: '500',
   },
-  filterTextActive: {
+  activeFilterText: {
     color: '#fff',
   },
-  addButton: {
-    backgroundColor: '#4ECB71',
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    marginLeft: 8,
+  scrollContainer: {
+    flex: 1,
   },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 100, // Extra padding for tab bar
   },
   featuredCard: {
-    backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
+    marginBottom: 16,
+    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-    alignItems: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   featuredImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 12,
-    marginBottom: 8,
-    resizeMode: 'contain',
-  },
-  featuredTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  featuredInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  featuredInfoText: {
-    fontSize: 14,
-    color: '#222',
-  },
-  editButton: {
-    marginTop: 12,
-    backgroundColor: '#4ECB71',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-  },
-  editButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  allEventsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#222',
-  },
-  eventListContainer: {
-    flexGrow: 0,
-    maxHeight: 340,
-    marginBottom: 16,
-  },
-  eventRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  eventImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 8,
-    marginRight: 12,
+    width: '100%',
+    height: 200,
     resizeMode: 'cover',
   },
-  eventTitle: {
-    fontSize: 15,
+  featuredOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+  },
+  featuredBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#3CB371',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  featuredText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  featuredTitle: {
+    color: '#fff',
+    fontSize: 18,
     fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  featuredSubtitle: {
+    color: '#fff',
+    fontSize: 14,
+    opacity: 0.8,
+  },
+  eventCard: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    borderWidth: 1,
+  },
+  eventImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  eventInfo: {
+    flex: 1,
+  },
+  eventTitle: {
+    fontSize: 16,
+    fontWeight: '600',
     color: '#222',
+    marginBottom: 4,
+  },
+  eventType: {
+    fontSize: 12,
+    color: '#3CB371',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  eventDate: {
+    fontSize: 12,
     marginBottom: 2,
   },
   eventLocation: {
-    fontSize: 13,
-    color: '#888',
+    fontSize: 12,
   },
   eventActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 8,
+    justifyContent: 'space-between',
   },
   actionBtn: {
-    backgroundColor: '#4ECB71',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    alignItems: 'center',
-  },
-  actionBtnText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  attendeesContainer: {
-    width: '100%',
-    backgroundColor: '#F7F8FA',
-    borderRadius: 12,
-    marginTop: 10,
     padding: 8,
-    maxHeight: 140,
-    overflow: 'hidden',
+    marginBottom: 4,
   },
-  attendeeRow: {
-    width: '100%',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: '#fff',
-    marginBottom: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-    alignItems: 'flex-start',
-  },
-});
-
-const modalStyles = StyleSheet.create({
-  overlay: {
+  modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  keyboardView: {
-    flex: 1,
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: '100%',
-    paddingBottom: 24,
-  },
-  modalBox: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 24,
-    width: '92%',
-    maxWidth: 420,
-    alignItems: 'stretch',
+  modalContent: {
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '80%',
     shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#222',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: 15,
-    marginTop: 16,
-    marginBottom: 6,
-    color: '#222',
-  },
-  imageUploadBox: {
-    borderWidth: 1,
-    borderColor: '#D6E3D7',
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    height: 150,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-    backgroundColor: '#FAFCFA',
-  },
-  uploadedImage: {
-    width: '100%',
-    height: 140,
-    borderRadius: 10,
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  uploadText: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: '#222',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  uploadSubText: {
-    fontSize: 13,
-    color: '#888',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  uploadBtn: {
-    backgroundColor: '#E5E7E9',
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  uploadBtnText: {
-    color: '#3CB371',
-    fontWeight: 'bold',
-    fontSize: 15,
-  },
-  input: {
-    backgroundColor: '#F4F6F7',
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 15,
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: '#E5E7E9',
-  },
-  dropdownText: {
-    fontSize: 15,
-    color: '#222',
-  },
-  dropdownMenu: {
-    position: 'absolute',
-    top: 40,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    elevation: 4,
-    zIndex: 100,
-    paddingVertical: 4,
-  },
-  dropdownItem: {
-    padding: 10,
-  },
-  createBtn: {
-    backgroundColor: '#4ECB71',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 18,
-    shadowColor: '#4ECB71',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  createBtnText: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
-  cancelBtn: {
-    marginTop: 12,
+  modalScroll: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  modalLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  modalInput: {
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  addImageBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    backgroundColor: '#F8F9F9',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
-  cancelBtnText: {
-    color: '#E74C3C',
-    fontWeight: 'bold',
-    fontSize: 15,
+  addImageText: {
+    marginLeft: 8,
+    color: '#3CB371',
+    fontWeight: '500',
   },
-});
-
-const attendeesModalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.18)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  keyboardView: {
-    flex: 1,
+  previewImage: {
     width: '100%',
-    justifyContent: 'center',
+    height: 120,
+    borderRadius: 8,
+    marginBottom: 16,
+    resizeMode: 'cover',
+  },
+  saveBtn: {
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
     alignItems: 'center',
-  },
-  modalBox: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 24,
-    width: '92%',
-    maxWidth: 420,
-    alignItems: 'stretch',
+    justifyContent: 'center',
+    flexDirection: 'row',
     shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 6,
-    maxHeight: '90%',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+    minHeight: 56,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#222',
-    textAlign: 'center',
-    marginBottom: 12,
+  saveBtnDisabled: {
+    opacity: 0.6,
+  },
+  saveBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  editActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    marginBottom: 16,
+    gap: 12,
+  },
+  deleteBtn: {
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+    minHeight: 56,
+  },
+  deleteBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  attendeesHeader: {
+    padding: 20,
+    borderBottomWidth: 1,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F2F4F7',
-    borderRadius: 12,
+    borderRadius: 8,
     paddingHorizontal: 12,
-    height: 40,
-    marginBottom: 10,
+    paddingVertical: 8,
+    marginBottom: 12,
   },
-  searchInput: {
+  attendeesSearchInput: {
     flex: 1,
-    fontSize: 15,
-    color: '#222',
+    fontSize: 14,
   },
-  filterRow: {
+  statusFilter: {
     flexDirection: 'row',
-    marginBottom: 12,
-    gap: 8,
+    justifyContent: 'space-around',
   },
-  filterBtn: {
-    backgroundColor: '#F7F8FA',
-    borderRadius: 16,
-    paddingVertical: 10,
+  statusBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    marginHorizontal: 4,
   },
-  filterBtnActive: {
-    backgroundColor: '#fff',
-    borderColor: '#007AFF',
-    shadowOpacity: 0.12,
-    elevation: 2,
+  activeStatusBtn: {
+    backgroundColor: '#3CB371',
   },
-  filterBtnText: {
-    color: '#888',
-    fontWeight: '600',
-    fontSize: 16,
+  statusBtnText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
-  filterBtnTextActive: {
-    color: '#007AFF',
-    fontWeight: '700',
-    fontSize: 16,
+  activeStatusBtnText: {
+    color: '#fff',
   },
-  attendeeCard: {
-    width: '100%',
-    minWidth: 0,
-    boxSizing: 'border-box',
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    overflow: 'hidden',
+  attendeesList: {
+    padding: 20,
+  },
+  attendeeItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  attendeeInfo: {
+    flex: 1,
   },
   attendeeName: {
-    fontWeight: 'bold',
-    fontSize: 15,
-    color: '#222',
+    fontSize: 16,
+    fontWeight: '500',
     marginBottom: 2,
   },
   attendeeEmail: {
-    fontSize: 13,
-    color: '#888',
-  },
-  statusBox: {
-    minWidth: 80,
-    alignItems: 'flex-end',
-  },
-  statusText: {
-    fontWeight: 'bold',
     fontSize: 14,
   },
-  closeBtn: {
-    backgroundColor: '#4ECB71',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 8,
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  closeBtnText: {
+  statusBadgeText: {
+    fontSize: 12,
     color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    fontWeight: '600',
   },
-});
-
-export default AdminEventListScreen; 
+  });
+  
+  export default AdminEventListScreen; 
