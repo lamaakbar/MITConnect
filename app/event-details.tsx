@@ -8,13 +8,28 @@ import EventsTabBar from '../components/EventsTabBar';
 export default function EventDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const { events, registerEvent, registered, bookmarks, bookmarkEvent, unbookmarkEvent } = useEventContext();
+  const { events, registerEvent, registered, bookmarks, bookmarkEvent, unbookmarkEvent, getUserEventStatus } = useEventContext();
   const event = events.find(e => e.id === id);
 
   if (!event) return <View style={styles.center}><Text>Event not found</Text></View>;
 
   const isBookmarked = bookmarks.includes(event.id);
   const isRegistered = registered.includes(event.id);
+
+  // Check if event is in the past
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const eventDate = new Date(event.date);
+  const isEventInPast = eventDate < today;
+
+  // Get button state
+  const getButtonState = () => {
+    if (isRegistered) return { text: 'Registered', disabled: true };
+    if (isEventInPast) return { text: 'Event Passed', disabled: true };
+    return { text: 'Register', disabled: false };
+  };
+
+  const buttonState = getButtonState();
 
   const handleShare = async () => {
     try {
@@ -27,11 +42,19 @@ export default function EventDetailsScreen() {
   const handleRegister = () => {
     console.log('Event Details: Register button pressed for event:', event.id);
     console.log('Current registered events:', registered);
+    
+    if (isEventInPast) {
+      console.log('Event has passed, showing alert');
+      Alert.alert('Event Passed', 'You cannot register for events that have already passed.');
+      return;
+    }
+    
     if (isRegistered) {
       console.log('Already registered, showing alert');
       Alert.alert('You\'re already registered');
       return;
     }
+    
     console.log('Registering event...');
     registerEvent(event.id);
     console.log('After registration, navigating to success screen');
@@ -82,13 +105,13 @@ export default function EventDetailsScreen() {
           <Text style={styles.infoText}>{event.location}</Text>
         </View>
         <TouchableOpacity
-          style={[styles.registerBtn, isRegistered && styles.registerBtnDisabled]}
+          style={[styles.registerBtn, buttonState.disabled && styles.registerBtnDisabled]}
           onPress={handleRegister}
-          disabled={isRegistered}
+          disabled={buttonState.disabled}
           activeOpacity={0.7}
         >
-          <Text style={[styles.registerBtnText, isRegistered && styles.registerBtnTextDisabled]}>
-            {isRegistered ? 'Registered' : 'Register'}
+          <Text style={[styles.registerBtnText, buttonState.disabled && styles.registerBtnTextDisabled]}>
+            {buttonState.text}
           </Text>
         </TouchableOpacity>
       </View>
