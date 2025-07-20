@@ -123,12 +123,6 @@ export default function FeaturedBookDetailsScreen() {
         {/* Recent Selections */}
         <View style={styles.recentHeaderRow}>
           <Text style={styles.sectionTitle}><Feather name="clock" size={16} color="#3AC569" /> Recent Selections</Text>
-<<<<<<< HEAD
-          <TouchableOpacity style={styles.goLibraryBtnSmall} onPress={() => router.push('/books-management')}>
-            <Text style={styles.goLibraryBtnTextSmall}>Go to MITC Library</Text>
-          </TouchableOpacity>
-=======
->>>>>>> 1501abd6930cdacb6fb1c93a306a3156e48b916e
         </View>
         <FlatList
           data={recentBooks}
@@ -144,11 +138,7 @@ export default function FeaturedBookDetailsScreen() {
                   <Text style={styles.genreText}>{item.genre}</Text>
                 </View>
               </View>
-<<<<<<< HEAD
               <TouchableOpacity style={{ alignSelf: 'center' }} onPress={() => router.push('/book-details')}>
-=======
-              <TouchableOpacity style={{ alignSelf: 'center' }} onPress={() => router.push({ pathname: '/library/[id]/details', params: { id: item.id } })}>
->>>>>>> 1501abd6930cdacb6fb1c93a306a3156e48b916e
                 <Text style={styles.moreDetails}>More Details</Text>
               </TouchableOpacity>
             </View>

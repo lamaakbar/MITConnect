@@ -509,8 +509,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
-<<<<<<< HEAD
-=======
   emptyState: {
     flex: 1,
     alignItems: 'center',
@@ -533,7 +531,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
->>>>>>> 1501abd6930cdacb6fb1c93a306a3156e48b916e
   featuredBookCard: {
     flexDirection: 'row',
     backgroundColor: '#fff',
@@ -587,30 +584,5 @@ const styles = StyleSheet.create({
   recommender: {
     fontSize: 13,
     color: '#888',
-<<<<<<< HEAD
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 60,
-    marginBottom: 20,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 24,
-=======
->>>>>>> 1501abd6930cdacb6fb1c93a306a3156e48b916e
   },
 }); 
