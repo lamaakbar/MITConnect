@@ -38,23 +38,8 @@ interface Album {
   photos: Photo[];
 }
 
-const initialAlbums: Album[] = [
-  {
-    id: '1',
-    title: 'MIT Events',
-    photos: [
-      { uri: 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80' },
-      { uri: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80' },
-    ],
-  },
-  {
-    id: '2',
-    title: 'Book Club',
-    photos: [
-      { uri: 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80' },
-    ],
-  },
-];
+// Empty albums array - no mock data
+const initialAlbums: Album[] = [];
 
 export default function GalleryManagement() {
   const router = useRouter();
@@ -183,35 +168,58 @@ export default function GalleryManagement() {
           showsVerticalScrollIndicator={false}
           bounces={true}
         >
-          <View style={styles.albumGrid}>
-            {filteredAlbums.map((item) => (
-                          <TouchableOpacity
-              key={item.id}
-              style={[styles.albumCard, { backgroundColor: cardBackground, borderColor }]}
-              onPress={() => setSelectedAlbumId(item.id)}
-              activeOpacity={0.7}
-            >
-                <View style={styles.albumCoverBox}>
-                  {item.photos[0] ? (
-                    <Image source={{ uri: item.photos[0].uri }} style={styles.albumCoverImg} />
-                  ) : (
-                    <View style={[styles.albumCoverPlaceholder, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]} />
-                  )}
-                  <View style={[styles.albumOverlay, { 
-                    backgroundColor: isDarkMode ? 'rgba(0,0,0,0.8)' : 'rgba(34,34,34,0.9)',
-                    borderBottomLeftRadius: 24,
-                    borderBottomRightRadius: 24,
-                  }]}>
-                    <Text style={[styles.albumTitle, { color: '#fff' }]}>{item.title}</Text>
-                    <Text style={[styles.albumCount, { color: '#fff' }]}>{item.photos.length} {item.photos.length === 1 ? 'photo' : 'photos'}</Text>
-                  </View>
-                </View>
+          {albums.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="images-outline" size={64} color="#ccc" />
+              <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Albums Created</Text>
+              <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+                Start by creating your first album to organize and share photos with your team.
+              </Text>
+              <TouchableOpacity 
+                style={styles.emptyStateButton}
+                onPress={() => setShowCreateModal(true)}
+              >
+                <Ionicons name="add" size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.emptyStateButtonText}>Create First Album</Text>
               </TouchableOpacity>
-            ))}
-            {filteredAlbums.length === 0 && (
-              <Text style={[styles.emptyText, { color: secondaryTextColor }]}>No albums yet.</Text>
-            )}
-          </View>
+            </View>
+          ) : (
+            <View style={styles.albumGrid}>
+              {filteredAlbums.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.albumCard, { backgroundColor: cardBackground, borderColor }]}
+                  onPress={() => setSelectedAlbumId(item.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.albumCoverBox}>
+                    {item.photos[0] ? (
+                      <Image source={{ uri: item.photos[0].uri }} style={styles.albumCoverImg} />
+                    ) : (
+                      <View style={[styles.albumCoverPlaceholder, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]} />
+                    )}
+                    <View style={[styles.albumOverlay, { 
+                      backgroundColor: isDarkMode ? 'rgba(0,0,0,0.8)' : 'rgba(34,34,34,0.9)',
+                      borderBottomLeftRadius: 24,
+                      borderBottomRightRadius: 24,
+                    }]}>
+                      <Text style={[styles.albumTitle, { color: '#fff' }]}>{item.title}</Text>
+                      <Text style={[styles.albumCount, { color: '#fff' }]}>{item.photos.length} {item.photos.length === 1 ? 'photo' : 'photos'}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+              {filteredAlbums.length === 0 && searchQuery.length > 0 && (
+                <View style={styles.emptySearchState}>
+                  <Ionicons name="search-outline" size={48} color="#ccc" />
+                  <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Albums Found</Text>
+                  <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+                    No albums match your search "{searchQuery}". Try different keywords.
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </ScrollView>
 
         {/* Bottom Tab Bar */}
@@ -937,5 +945,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 16,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 60,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  emptyStateButton: {
+    backgroundColor: '#3CB371',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  emptyStateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptySearchState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 40,
   },
 }); 

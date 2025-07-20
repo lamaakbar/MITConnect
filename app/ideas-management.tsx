@@ -30,59 +30,8 @@ type Idea = {
   poll?: Poll;
 };
 
-// Mock ideas data
-const mockIdeas: Idea[] = [
-  {
-    id: '1',
-    title: 'Monthly Recognition Wall',
-    category: 'Culture & Morale',
-    description:
-      'Start a monthly tradition of spotlighting employees who went above and beyond, with a small write-up and a photo on a shared digital board or office wall. This promotes a positive work culture and boosts morale across teams.',
-    status: IDEA_STATUS.PENDING,
-    votes: 34,
-    hasPoll: false,
-  },
-  {
-    id: '2',
-    title: 'After–Hours Game Night',
-    category: 'Culture & Fun',
-    description:
-      'Suggest a monthly game night – online or in-person – featuring video games, board games, or trivia to relax and strengthen team spirit.',
-    status: IDEA_STATUS.PENDING,
-    votes: 21,
-    hasPoll: false,
-  },
-  {
-    id: '3',
-    title: 'Mental Health Recharge Hour',
-    category: 'Employee Wellness',
-    description:
-      'Introduce a monthly hour where teams pause work to focus on mental health – guided meditation, nature walks, no-meeting time, or stress-relief activities.',
-    status: IDEA_STATUS.PENDING,
-    votes: 56,
-    hasPoll: false,
-  },
-  {
-    id: '4',
-    title: 'Flexible Fridays',
-    category: 'Work-Life Balance',
-    description:
-      'Allow employees to choose their work location or hours on Fridays to promote flexibility and work-life balance.',
-    status: IDEA_STATUS.IN_PROGRESS,
-    votes: 44,
-    hasPoll: true,
-  },
-  {
-    id: '5',
-    title: 'Book Exchange Program',
-    category: 'Learning & Growth',
-    description:
-      'Set up a book exchange shelf in the office for employees to share and borrow books, encouraging continuous learning.',
-    status: IDEA_STATUS.APPROVED,
-    votes: 111,
-    hasPoll: true,
-  },
-];
+// Empty ideas array - no mock data
+const mockIdeas: Idea[] = [];
 
 export default function IdeasManagement() {
   const router = useRouter();
@@ -247,18 +196,33 @@ export default function IdeasManagement() {
 
         {/* Ideas List */}
         <View style={styles.ideasContainer}>
-          {(tab === 'pending' ? pendingIdeas : submittedIdeas).map((idea) => (
-            <IdeaCard
-              key={idea.id}
-              idea={idea}
-              onApprove={tab === 'pending' ? handleApprove : undefined}
-              onReject={tab === 'pending' ? handleReject : undefined}
-              onCreatePoll={tab === 'pending' ? handleCreatePoll : undefined}
-              onManage={() => setManageIdea(idea)}
-              isPending={tab === 'pending'}
-              actionLoading={actionLoading}
-            />
-          ))}
+          {(tab === 'pending' ? pendingIdeas : submittedIdeas).length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="bulb-outline" size={64} color="#ccc" />
+              <Text style={[styles.emptyStateTitle, { color: textColor }]}>
+                {tab === 'pending' ? 'No Pending Ideas' : 'No Submitted Ideas'}
+              </Text>
+              <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+                {tab === 'pending' 
+                  ? "There are no pending ideas waiting for review."
+                  : "There are no approved or in-progress ideas yet."
+                }
+              </Text>
+            </View>
+          ) : (
+            (tab === 'pending' ? pendingIdeas : submittedIdeas).map((idea) => (
+              <IdeaCard
+                key={idea.id}
+                idea={idea}
+                onApprove={tab === 'pending' ? handleApprove : undefined}
+                onReject={tab === 'pending' ? handleReject : undefined}
+                onCreatePoll={tab === 'pending' ? handleCreatePoll : undefined}
+                onManage={() => setManageIdea(idea)}
+                isPending={tab === 'pending'}
+                actionLoading={actionLoading}
+              />
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -938,5 +902,24 @@ const styles = StyleSheet.create({
   statusBtnText: {
     fontWeight: 'bold',
     fontSize: 13,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 60,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
   },
 }); 

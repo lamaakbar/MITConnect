@@ -36,7 +36,15 @@ export default function BookmarksScreen() {
             </View>
           </View>
         )}
-        ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 40, color: '#888' }}>No bookmarks yet.</Text>}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="bookmark-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyStateTitle}>No Bookmarks Yet</Text>
+            <Text style={styles.emptyStateText}>
+              You haven't bookmarked any events yet. Start exploring events and save the ones you're interested in!
+            </Text>
+          </View>
+        }
       />
       <EventsTabBar />
     </View>
@@ -102,5 +110,26 @@ const styles = StyleSheet.create({
     color: '#43C6AC',
     fontWeight: 'bold',
     fontSize: 15,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 60,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
   },
 }); 

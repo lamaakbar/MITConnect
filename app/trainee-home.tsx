@@ -5,24 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 
-const events = [
-  {
-    id: '1',
-    title: 'Orientation',
-    desc: 'Welcome session for new trainees',
-    date: 'Today',
-    time: '10:00 am',
-    daysLeft: 2,
-  },
-  {
-    id: '2',
-    title: 'Weekly Check-in',
-    desc: 'Progress review and Q&A',
-    date: '20 July',
-    time: '2:00 pm',
-    daysLeft: 7,
-  },
-];
+// Empty data arrays - no mock data
+const events: any[] = [];
 
 const portalLinks = [
   { key: 'hub', label: 'Trainee Hub', icon: <MaterialIcons name="dashboard" size={28} color="#43C6AC" /> },
@@ -31,20 +15,7 @@ const portalLinks = [
   { key: 'bookclub', label: 'Book Club', icon: <Ionicons name="book-outline" size={28} color="#FF8C42" /> },
 ];
 
-const featuredNews = [
-  {
-    id: '1',
-    image: require('../assets/images/react-logo.png'),
-    text: 'Trainee of the Week',
-    progress: 0.7,
-  },
-  {
-    id: '2',
-    image: require('../assets/images/partial-react-logo.png'),
-    text: 'Best Project',
-    progress: 0.8,
-  },
-];
+const featuredNews: any[] = [];
 
 export default function TraineeHome() {
   const router = useRouter();
@@ -62,77 +33,102 @@ export default function TraineeHome() {
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionTitle}>Featured This Week</Text>
-        <FlatList
-          data={featuredNews}
-          keyExtractor={item => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft: 18, paddingBottom: 8 }}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => router.push({ pathname: '/feature-details' })}
-            >
-              <LinearGradient
-                colors={['#A259FF', '#3BB2B8']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.featuredGradientCard}
-              >
-                <Image source={item.image} style={styles.featuredImage} />
-                <Text style={styles.featuredMonoText}>{item.text}</Text>
-                <View style={styles.featuredProgressBarBg}>
-                  <View style={[styles.featuredProgressBar, { width: `${item.progress * 100}%` }]} />
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
-        />
-        <Text style={styles.sectionTitle}>Upcoming Events</Text>
-        <FlatList
-          data={events}
-          keyExtractor={item => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
-          renderItem={({ item }) => (
-            <View style={styles.eventCard}>
-              <View style={styles.eventCardHeader}>
-                <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
-                <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
-              </View>
-              <Text style={styles.eventTitle}>{item.title}</Text>
-              <Text style={styles.eventDesc}>{item.desc}</Text>
-              <TouchableOpacity
-                style={[styles.eventBtn, registered.includes(item.id) && { backgroundColor: '#aaa' }]}
-                onPress={() => {
-                  setRegistered(prev => [...prev, item.id]);
-                  Alert.alert('Registered', 'You have successfully registered for this event!');
-                }}
-                disabled={registered.includes(item.id)}
-                accessibilityLabel={`Register for ${item.title}`}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={styles.eventBtnText}>
-                  {registered.includes(item.id) ? 'Registered' : 'Register Now!'}
-                </Text>
-              </TouchableOpacity>
-              <View style={styles.eventCardFooter}>
-                <View style={styles.eventFooterItem}>
-                  <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
-                  <Text style={styles.eventFooterText}>{item.date}</Text>
-                </View>
-                {item.time ? (
-                  <View style={styles.eventFooterItem}>
-                    <Ionicons name="time-outline" size={16} color="#7B61FF" />
-                    <Text style={styles.eventFooterText}>{item.time}</Text>
+        {featuredNews.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="star-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyStateTitle}>No Featured Content</Text>
+            <Text style={styles.emptyStateText}>
+              There are no featured highlights this week. Check back later for exciting updates!
+            </Text>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>Featured This Week</Text>
+            <FlatList
+              data={featuredNews}
+              keyExtractor={item => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingLeft: 18, paddingBottom: 8 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => router.push({ pathname: '/feature-details' })}
+                >
+                  <LinearGradient
+                    colors={['#A259FF', '#3BB2B8']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.featuredGradientCard}
+                  >
+                    <Image source={item.image} style={styles.featuredImage} />
+                    <Text style={styles.featuredMonoText}>{item.text}</Text>
+                    <View style={styles.featuredProgressBarBg}>
+                      <View style={[styles.featuredProgressBar, { width: `${item.progress * 100}%` }]} />
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+            />
+          </>
+        )}
+        
+        {events.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyStateTitle}>No Upcoming Events</Text>
+            <Text style={styles.emptyStateText}>
+              There are no upcoming events scheduled. Check back later for exciting activities!
+            </Text>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>Upcoming Events</Text>
+            <FlatList
+              data={events}
+              keyExtractor={item => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
+              renderItem={({ item }) => (
+                <View style={styles.eventCard}>
+                  <View style={styles.eventCardHeader}>
+                    <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
+                    <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
                   </View>
-                ) : null}
-              </View>
-            </View>
-          )}
-        />
+                  <Text style={styles.eventTitle}>{item.title}</Text>
+                  <Text style={styles.eventDesc}>{item.desc}</Text>
+                  <TouchableOpacity
+                    style={[styles.eventBtn, registered.includes(item.id) && { backgroundColor: '#aaa' }]}
+                    onPress={() => {
+                      setRegistered(prev => [...prev, item.id]);
+                      Alert.alert('Registered', 'You have successfully registered for this event!');
+                    }}
+                    disabled={registered.includes(item.id)}
+                    accessibilityLabel={`Register for ${item.title}`}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.eventBtnText}>
+                      {registered.includes(item.id) ? 'Registered' : 'Register Now!'}
+                    </Text>
+                  </TouchableOpacity>
+                  <View style={styles.eventCardFooter}>
+                    <View style={styles.eventFooterItem}>
+                      <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
+                      <Text style={styles.eventFooterText}>{item.date}</Text>
+                    </View>
+                    {item.time ? (
+                      <View style={styles.eventFooterItem}>
+                        <Ionicons name="time-outline" size={16} color="#7B61FF" />
+                        <Text style={styles.eventFooterText}>{item.time}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              )}
+            />
+          </>
+        )}
         <Text style={styles.sectionTitle}>Portal Access</Text>
         <View style={styles.portalRow}>
           {portalLinks.map(link => (
@@ -427,5 +423,27 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 8,
     marginLeft: 12,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 60,
+    marginBottom: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
   },
 }); 

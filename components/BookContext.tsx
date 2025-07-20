@@ -18,32 +18,8 @@ interface BookContextType {
 
 const BookContext = createContext<BookContextType | undefined>(undefined);
 
-const DEFAULT_BOOKS: Book[] = [
-  {
-    id: '1',
-    title: 'White Nights',
-    author: 'Fyodor Dostoevsky',
-    genre: 'Philosophical Fiction',
-    genreColor: '#A3C9A8',
-    cover: 'https://covers.openlibrary.org/b/id/11153223-L.jpg',
-  },
-  {
-    id: '2',
-    title: 'The Richest Man in Babylon',
-    author: 'George S. Clason',
-    genre: 'Finance',
-    genreColor: '#B5D6F6',
-    cover: 'https://covers.openlibrary.org/b/id/11153224-L.jpg',
-  },
-  {
-    id: '3',
-    title: 'Atomic Habits',
-    author: 'James Clear',
-    genre: 'Personal Development',
-    genreColor: '#F6E7B5',
-    cover: 'https://covers.openlibrary.org/b/id/11153225-L.jpg',
-  },
-];
+// Empty books array - no mock data
+const DEFAULT_BOOKS: Book[] = [];
 
 export function BookProvider({ children }: { children: ReactNode }) {
   const [books, setBooks] = useState<Book[]>(DEFAULT_BOOKS);

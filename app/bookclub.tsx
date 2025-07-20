@@ -32,7 +32,7 @@ export default function BookClubScreen() {
   const [mainCommentInput, setMainCommentInput] = useState('');
 
   // Exclude featured book from recent selections
-  const recentBooks = books.filter(b => b.title !== FEATURED_BOOK.title);
+  const recentBooks = books.filter(b => FEATURED_BOOK && b.title !== FEATURED_BOOK.title);
 
   const openBookModal = (book: Book) => {
     setSelectedBook(book);
@@ -57,21 +57,38 @@ export default function BookClubScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Featured Book Section */}
-        {/* Header row with button */}
-        <View style={styles.featuredHeaderRow}>
-          <Text style={styles.sectionTitle}>
-            <Ionicons name="star" size={20} color="#1abc9c" /> Featured Book This Week
-          </Text>
-          <TouchableOpacity
-            style={[styles.goLibraryBtn, books.length === 0 && styles.goLibraryBtnDisabled]}
-            onPress={() => router.push('/books-management')}
-            disabled={books.length === 0}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.goLibraryBtnText}>Go to Library</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.featuredCard}>
+        {!FEATURED_BOOK ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="book-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyStateTitle}>No Featured Book</Text>
+            <Text style={styles.emptyStateText}>
+              There's no featured book this week. Check the library for great reads!
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyStateButton}
+              onPress={() => router.push('/books-management')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.emptyStateButtonText}>Browse Library</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            {/* Header row with button */}
+            <View style={styles.featuredHeaderRow}>
+              <Text style={styles.sectionTitle}>
+                <Ionicons name="star" size={20} color="#1abc9c" /> Featured Book This Week
+              </Text>
+              <TouchableOpacity
+                style={[styles.goLibraryBtn, books.length === 0 && styles.goLibraryBtnDisabled]}
+                onPress={() => router.push('/books-management')}
+                disabled={books.length === 0}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.goLibraryBtnText}>Go to Library</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.featuredCard}>
           <View style={{ flexDirection: 'row' }}>
             <Image source={{ uri: FEATURED_BOOK.cover }} style={styles.featuredCover} />
             <View style={{ flex: 1, marginLeft: 16 }}>
@@ -200,6 +217,8 @@ export default function BookClubScreen() {
           )}
           ListEmptyComponent={<Text style={{ color: '#888', textAlign: 'center', marginTop: 16 }}>No recent selections.</Text>}
         />
+          </>
+        )}
       </ScrollView>
       {/* Bottom Navigation Bar */}
       <View style={styles.bottomNav}>
@@ -648,5 +667,44 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 60,
+    marginBottom: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  emptyStateButton: {
+    backgroundColor: '#1abc9c',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  emptyStateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 
