@@ -65,134 +65,139 @@ export default function EmployeeHome() {
         };
       });
   }, [events]);
+
   return (
     <RoleGuard allowedRoles={['employee']}>
       <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Image source={require('../assets/images/icon.png')} style={styles.logo} />
-        <Text style={styles.appName}><Text style={{ color: '#222' }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
-        <View style={styles.headerIcons}>
-          <Ionicons name="globe-outline" size={22} color="#222" style={styles.headerIcon} />
-          <Ionicons name="notifications-outline" size={22} color="#222" style={styles.headerIcon} />
-          <Ionicons name="person-circle-outline" size={26} color="#222" />
+        <View style={styles.header}>
+          <Image source={require('../assets/images/icon.png')} style={styles.logo} />
+          <Text style={styles.appName}><Text style={{ color: '#222' }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
+          <View style={styles.headerIcons}>
+            <Ionicons name="globe-outline" size={22} color="#222" style={styles.headerIcon} />
+            <Ionicons name="notifications-outline" size={22} color="#222" style={styles.headerIcon} />
+            <Ionicons name="person-circle-outline" size={26} color="#222" />
+          </View>
         </View>
-      </View>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionTitle}>Featured This Week</Text>
-        <FlatList
-          data={featuredNews}
-          keyExtractor={item => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft: 18, paddingBottom: 8 }}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => router.push({ pathname: '/event-details', params: { id: item.eventId } })}
-            >
-              <LinearGradient
-                colors={['#A259FF', '#3BB2B8']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.featuredGradientCard}
-              >
-                <Image source={item.image} style={styles.featuredImage} />
-                <Text style={styles.featuredMonoText}>{item.text}</Text>
-                <View style={styles.featuredProgressBarBg}>
-                  <View style={[styles.featuredProgressBar, { width: `${item.progress * 100}%` }]} />
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
-        />
-        <Text style={styles.sectionTitle}>Upcoming Events</Text>
-        {upcomingEvents.length > 0 ? (
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <Text style={styles.sectionTitle}>Featured This Week</Text>
           <FlatList
-            data={upcomingEvents}
+            data={featuredNews}
             keyExtractor={item => item.id}
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
+            contentContainerStyle={{ paddingLeft: 18, paddingBottom: 8 }}
             renderItem={({ item }) => (
-              <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
-                <View style={styles.eventCard}>
-                  <View style={styles.eventCardHeader}>
-                    <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
-                    <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => router.push({ pathname: '/event-details', params: { id: item.eventId } })}
+              >
+                <LinearGradient
+                  colors={['#A259FF', '#3BB2B8']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.featuredGradientCard}
+                >
+                  <Image source={item.image} style={styles.featuredImage} />
+                  <Text style={styles.featuredMonoText}>{item.text}</Text>
+                  <View style={styles.featuredProgressBarBg}>
+                    <View style={[styles.featuredProgressBar, { width: `${item.progress * 100}%` }]} />
                   </View>
-                  <Text style={styles.eventTitle}>{item.title}</Text>
-                  <Text style={styles.eventDesc}>{item.desc}</Text>
-                  {registered.includes(item.id) && (
-                    <View style={styles.registeredBadge}><Text style={styles.registeredBadgeText}>Registered</Text></View>
-                  )}
-                  <TouchableOpacity style={styles.eventBtn}><Text style={styles.eventBtnText}>Register Now!</Text></TouchableOpacity>
-                  <View style={styles.eventCardFooter}>
-                    <View style={styles.eventFooterItem}>
-                      <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
-                      <Text style={styles.eventFooterText}>{item.date}</Text>
-                    </View>
-                    {item.time ? (
-                      <View style={styles.eventFooterItem}>
-                        <Ionicons name="time-outline" size={16} color="#7B61FF" />
-                        <Text style={styles.eventFooterText}>{item.time}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
+                </LinearGradient>
               </TouchableOpacity>
             )}
           />
-        ) : (
-          <View style={styles.noEventsContainer}>
-            <Text style={styles.noEventsText}>No upcoming events at the moment</Text>
-          </View>
-        )}
-        <Text style={styles.sectionTitle}>Portal Access</Text>
-        <View style={styles.portalRow}>
-          {portalLinks.map(link => (
-            <TouchableOpacity
-              key={link.key}
-              style={styles.portalIconBox}
-              activeOpacity={0.8}
-              onPress={() => {
-                if (link.key === 'events') router.push('/events');
-                else if (link.key === 'gallery') router.push('/gallery');
-                else if (link.key === 'inspire') router.push('/inspirer-corner');
-                else if (link.key === 'bookclub') router.push('/bookclub');
-              }}
-            >
-              {link.icon}
-              <Text style={styles.portalLabel}>{link.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <Text style={styles.sectionTitle}>Book of the Month</Text>
-        <TouchableOpacity style={styles.featuredBookCard} onPress={() => router.push('/library/featured/details')}>
-          <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
-          <View style={{ flex: 1, marginLeft: 16 }}>
-            <View style={styles.genreChip}><Text style={styles.genreText}>Philosophical Fiction</Text></View>
-            <Text style={styles.featuredBookTitle}>The Alchemist</Text>
-            <Text style={styles.featuredBookAuthor}>By Paulo Coelho</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              {[1,2,3,4,5].map(i => (
-                <MaterialIcons
-                  key={i}
-                  name={i <= 5 ? 'star' : 'star-border'}
-                  size={20}
-                  color="#F4B400"
-                  style={{ marginRight: 2 }}
-                />
-              ))}
-              <Text style={styles.ratingText}>4.9</Text>
+          <Text style={styles.sectionTitle}>Upcoming Events</Text>
+          {upcomingEvents.length > 0 ? (
+            <FlatList
+              data={upcomingEvents}
+              keyExtractor={item => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
+                  <View style={styles.eventCard}>
+                    <View style={styles.eventCardHeader}>
+                      <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
+                      <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
+                    </View>
+                    <Text style={styles.eventTitle}>{item.title}</Text>
+                    <Text style={styles.eventDesc}>{item.desc}</Text>
+                    {registered.includes(item.id) && (
+                      <View style={styles.registeredBadge}>
+                        <Text style={styles.registeredBadgeText}>Registered</Text>
+                      </View>
+                    )}
+                    <TouchableOpacity style={styles.eventBtn}>
+                      <Text style={styles.eventBtnText}>Register Now!</Text>
+                    </TouchableOpacity>
+                    <View style={styles.eventCardFooter}>
+                      <View style={styles.eventFooterItem}>
+                        <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
+                        <Text style={styles.eventFooterText}>{item.date}</Text>
+                      </View>
+                      {item.time ? (
+                        <View style={styles.eventFooterItem}>
+                          <Ionicons name="time-outline" size={16} color="#7B61FF" />
+                          <Text style={styles.eventFooterText}>{item.time}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+          ) : (
+            <View style={styles.noEventsContainer}>
+              <Text style={styles.noEventsText}>No upcoming events at the moment</Text>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-              <Ionicons name="person" size={16} color="#888" style={{ marginRight: 4 }} />
-              <Text style={styles.recommender}>Nizar Naghi</Text>
-            </View>
+          )}
+          <Text style={styles.sectionTitle}>Portal Access</Text>
+          <View style={styles.portalRow}>
+            {portalLinks.map(link => (
+              <TouchableOpacity
+                key={link.key}
+                style={styles.portalIconBox}
+                activeOpacity={0.8}
+                onPress={() => {
+                  if (link.key === 'events') router.push('/events');
+                  else if (link.key === 'gallery') router.push('/gallery');
+                  else if (link.key === 'inspire') router.push('/inspirer-corner');
+                  else if (link.key === 'bookclub') router.push('/bookclub');
+                }}
+              >
+                {link.icon}
+                <Text style={styles.portalLabel}>{link.label}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+          <Text style={styles.sectionTitle}>Book of the Month</Text>
+          <TouchableOpacity style={styles.featuredBookCard} onPress={() => router.push('/library/featured/details')}>
+            <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
+            <View style={{ flex: 1, marginLeft: 16 }}>
+              <View style={styles.genreChip}><Text style={styles.genreText}>Philosophical Fiction</Text></View>
+              <Text style={styles.featuredBookTitle}>The Alchemist</Text>
+              <Text style={styles.featuredBookAuthor}>By Paulo Coelho</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                {[1,2,3,4,5].map(i => (
+                  <MaterialIcons
+                    key={i}
+                    name={i <= 5 ? 'star' : 'star-border'}
+                    size={20}
+                    color="#F4B400"
+                    style={{ marginRight: 2 }}
+                  />
+                ))}
+                <Text style={styles.ratingText}>4.9</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                <Ionicons name="person" size={16} color="#888" style={{ marginRight: 4 }} />
+                <Text style={styles.recommender}>Nizar Naghi</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
     </RoleGuard>
   );
 }
@@ -243,25 +248,6 @@ const styles = StyleSheet.create({
     marginLeft: 18,
     marginTop: 18,
     marginBottom: 8,
-  },
-  featuredBanner: {
-    backgroundColor: 'linear-gradient(90deg, #43C6AC 0%, #191654 100%)',
-    borderRadius: 18,
-    marginHorizontal: 18,
-    marginBottom: 18,
-    height: 90,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#43C6AC',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  featuredText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: 1,
   },
   eventCard: {
     backgroundColor: '#fff',
@@ -360,68 +346,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
     textAlign: 'center',
   },
-  bookCard: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    marginHorizontal: 18,
-    marginBottom: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  bookTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#222',
-    marginBottom: 2,
-  },
-  bookAuthor: {
-    fontSize: 13,
-    color: '#888',
-    marginBottom: 6,
-  },
-  bookMore: {
-    color: '#2196F3',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  bookImg: {
-    width: 54,
-    height: 74,
-    borderRadius: 8,
-    marginLeft: 12,
-    backgroundColor: '#eee',
-  },
-  featuredCard: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    marginHorizontal: 18,
-    marginBottom: 18,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#43C6AC',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  highlightFrame: {
-    backgroundColor: '#F8F9F9',
-    borderRadius: 16,
-    marginHorizontal: 18,
-    marginBottom: 18,
-    padding: 0,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 1,
-  },
   featuredGradientCard: {
     borderRadius: 24,
     marginHorizontal: 18,
@@ -458,12 +382,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   featuredProgressBar: {
-    width: '60%', // Example progress
+    width: '60%',
     height: 8,
     backgroundColor: '#fff',
     borderRadius: 4,
   },
-<<<<<<< HEAD
   registeredBadge: {
     backgroundColor: '#43C6AC',
     borderRadius: 8,
@@ -485,7 +408,17 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
-=======
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  noEventsText: {
+    color: '#888',
+    fontSize: 16,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
   featuredBookCard: {
     flexDirection: 'row',
     backgroundColor: '#fff',
@@ -493,19 +426,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginHorizontal: 18,
     marginBottom: 18,
->>>>>>> ad557c2 (Uptade the bookClub)
     shadowColor: '#000',
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 1,
-<<<<<<< HEAD
-  },
-  noEventsText: {
-    color: '#888',
-    fontSize: 16,
-    textAlign: 'center',
-    fontStyle: 'italic',
-=======
     alignItems: 'center',
   },
   featuredBookCover: {
@@ -548,6 +472,5 @@ const styles = StyleSheet.create({
   recommender: {
     fontSize: 13,
     color: '#888',
->>>>>>> ad557c2 (Uptade the bookClub)
   },
-}); 
+});

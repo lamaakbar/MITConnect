@@ -57,7 +57,6 @@ export default function BookClubScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Featured Book Section */}
-<<<<<<< HEAD
         {!FEATURED_BOOK ? (
           <View style={styles.emptyState}>
             <Ionicons name="book-outline" size={64} color="#ccc" />
@@ -90,12 +89,6 @@ export default function BookClubScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.featuredCard}>
-=======
-        <Text style={styles.sectionTitle}>
-          <Ionicons name="star" size={20} color="#1abc9c" /> Featured Book This Week
-        </Text>
-        <View style={styles.featuredCard}>
->>>>>>> ad557c2 (Uptade the bookClub)
           <View style={{ flexDirection: 'row' }}>
             <Image source={{ uri: FEATURED_BOOK.cover }} style={styles.featuredCover} />
             <View style={{ flex: 1, marginLeft: 16 }}>

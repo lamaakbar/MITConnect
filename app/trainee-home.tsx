@@ -3,17 +3,10 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, 
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-<<<<<<< HEAD
 import { useState, useMemo } from 'react';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
 import RoleGuard from '../components/RoleGuard';
-=======
-import { useState } from 'react';
-
-// Empty data arrays - no mock data
-const events: any[] = [];
->>>>>>> f24d1a708ce9253a6bec757fb8a2b86ed35b4151
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
@@ -71,45 +64,6 @@ export default function TraineeHome() {
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-<<<<<<< HEAD
-        <Text style={styles.sectionTitle}>Featured This Week</Text>
-        <FlatList
-          data={featuredNews}
-          keyExtractor={item => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft: 18, paddingBottom: 8 }}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => router.push({ pathname: '/feature-details' })}
-            >
-              <LinearGradient
-                colors={['#A259FF', '#3BB2B8']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.featuredGradientCard}
-              >
-                <Image source={item.image} style={styles.featuredImage} />
-                <Text style={styles.featuredMonoText}>{item.text}</Text>
-                <View style={styles.featuredProgressBarBg}>
-                  <View style={[styles.featuredProgressBar, { width: `${item.progress * 100}%` }]} />
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
-        />
-        <Text style={styles.sectionTitle}>Upcoming Events</Text>
-        {upcomingEvents.length > 0 ? (
-          <FlatList
-            data={upcomingEvents}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
-            renderItem={({ item }) => (
-              <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
-=======
         {featuredNews.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="star-outline" size={64} color="#ccc" />
@@ -150,7 +104,7 @@ export default function TraineeHome() {
           </>
         )}
         
-        {events.length === 0 ? (
+        {upcomingEvents.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="calendar-outline" size={64} color="#ccc" />
             <Text style={styles.emptyStateTitle}>No Upcoming Events</Text>
@@ -162,13 +116,13 @@ export default function TraineeHome() {
           <>
             <Text style={styles.sectionTitle}>Upcoming Events</Text>
             <FlatList
-              data={events}
+              data={upcomingEvents}
               keyExtractor={item => item.id}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
               renderItem={({ item }) => (
->>>>>>> f24d1a708ce9253a6bec757fb8a2b86ed35b4151
+                <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
                 <View style={styles.eventCard}>
                   <View style={styles.eventCardHeader}>
                     <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
@@ -176,27 +130,10 @@ export default function TraineeHome() {
                   </View>
                   <Text style={styles.eventTitle}>{item.title}</Text>
                   <Text style={styles.eventDesc}>{item.desc}</Text>
-<<<<<<< HEAD
                   {registered.includes(item.id) && (
                     <View style={styles.registeredBadge}><Text style={styles.registeredBadgeText}>Registered</Text></View>
                   )}
                   <TouchableOpacity style={styles.eventBtn}><Text style={styles.eventBtnText}>Register Now!</Text></TouchableOpacity>
-=======
-                  <TouchableOpacity
-                    style={[styles.eventBtn, registered.includes(item.id) && { backgroundColor: '#aaa' }]}
-                    onPress={() => {
-                      setRegistered(prev => [...prev, item.id]);
-                      Alert.alert('Registered', 'You have successfully registered for this event!');
-                    }}
-                    disabled={registered.includes(item.id)}
-                    accessibilityLabel={`Register for ${item.title}`}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Text style={styles.eventBtnText}>
-                      {registered.includes(item.id) ? 'Registered' : 'Register Now!'}
-                    </Text>
-                  </TouchableOpacity>
->>>>>>> f24d1a708ce9253a6bec757fb8a2b86ed35b4151
                   <View style={styles.eventCardFooter}>
                     <View style={styles.eventFooterItem}>
                       <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
@@ -210,19 +147,10 @@ export default function TraineeHome() {
                     ) : null}
                   </View>
                 </View>
-<<<<<<< HEAD
               </TouchableOpacity>
             )}
           />
-        ) : (
-          <View style={styles.noEventsContainer}>
-            <Text style={styles.noEventsText}>No upcoming events at the moment</Text>
-          </View>
-=======
-              )}
-            />
           </>
->>>>>>> f24d1a708ce9253a6bec757fb8a2b86ed35b4151
         )}
         <Text style={styles.sectionTitle}>Portal Access</Text>
         <View style={styles.portalRow}>
@@ -581,7 +509,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
-<<<<<<< HEAD
   emptyState: {
     flex: 1,
     alignItems: 'center',
@@ -603,7 +530,7 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 24,
-=======
+  },
   featuredBookCard: {
     flexDirection: 'row',
     backgroundColor: '#fff',
@@ -657,6 +584,5 @@ const styles = StyleSheet.create({
   recommender: {
     fontSize: 13,
     color: '#888',
->>>>>>> ad557c2 (Uptade the bookClub)
   },
 }); 
