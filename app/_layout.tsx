@@ -56,6 +56,8 @@ export default function RootLayout() {
             <Stack.Screen name="highlight-management" options={{ headerShown: false }} />
             <Stack.Screen name="ideas-management" options={{ headerShown: false }} />
             <Stack.Screen name="home" options={{ headerShown: false }} />
+            <Stack.Screen name="my-events" options={{ headerShown: false }} />
+            <Stack.Screen name="event-feedback" options={{ headerShown: false }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

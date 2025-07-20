@@ -1,17 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
-import { Ionicons, Feather } from '@expo/vector-icons';
+import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import EventsTabBar from '../components/EventsTabBar';
 
 const TABS = ['All', 'Upcoming', 'Past'];
 
 export default function EventsScreen() {
   const router = useRouter();
-  const { events, bookmarks, bookmarkEvent, unbookmarkEvent, registered, registerEvent } = useEventContext();
+  const { events, bookmarks, bookmarkEvent, unbookmarkEvent, registered, registerEvent, getUserEventStatus } = useEventContext();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('All');
+  const [userEventStatuses, setUserEventStatuses] = useState<{[key: string]: any}>({});
+
+  // Load user event statuses
+  useEffect(() => {
+    const loadUserEventStatuses = async () => {
+      const statuses: {[key: string]: any} = {};
+      
+      for (const event of events) {
+        const userStatus = await getUserEventStatus(event.id, 'user-123');
+        if (userStatus) {
+          statuses[event.id] = userStatus;
+        }
+      }
+      
+      setUserEventStatuses(statuses);
+    };
+
+    if (events.length > 0) {
+      loadUserEventStatuses();
+    }
+  }, [events, getUserEventStatus]);
 
   // Filter events based on tab and search
   const filteredEvents = events.filter(e => {
@@ -32,6 +53,9 @@ export default function EventsScreen() {
           <Text style={styles.headerTitle}>MIT<Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => router.push('/my-events' as any)} style={styles.headerIcon}>
+            <Feather name="calendar" size={20} color="#222" />
+          </TouchableOpacity>
           <Feather name="globe" size={20} color="#222" style={styles.headerIcon} />
           <Feather name="bell" size={20} color="#222" style={styles.headerIcon} />
           <Feather name="user" size={20} color="#222" style={styles.headerIcon} />
@@ -47,17 +71,26 @@ export default function EventsScreen() {
           onChangeText={setSearch}
         />
       </View>
-      {/* Tabs */}
-      <View style={styles.tabsRow}>
-        {TABS.map(tab => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tab, activeTab === tab && styles.tabActive]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
-          </TouchableOpacity>
-        ))}
+      {/* Tabs and My Events Button */}
+      <View style={styles.tabsContainer}>
+        <View style={styles.tabsRow}>
+          {TABS.map(tab => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tab, activeTab === tab && styles.tabActive]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TouchableOpacity
+          style={styles.myEventsButton}
+          onPress={() => router.push('/my-events' as any)}
+        >
+          <MaterialIcons name="event-available" size={20} color="#fff" style={{ marginRight: 6 }} />
+          <Text style={styles.myEventsButtonText}>My Events</Text>
+        </TouchableOpacity>
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
         {/* Featured Event */}
@@ -68,19 +101,23 @@ export default function EventsScreen() {
             <Text style={styles.featuredDesc}>{featured.desc}</Text>
             <Text style={styles.featuredMeta}>{featured.date} • {featured.time} • {featured.location}</Text>
             <TouchableOpacity
-              style={[styles.registerBtn, registered.includes(featured.id) && styles.registerBtnDisabled]}
-              onPress={() => {
+              style={[styles.registerBtn, (registered.includes(featured.id) || userEventStatuses[featured.id]?.status === 'completed') && styles.registerBtnDisabled]}
+              onPress={async () => {
                 console.log('Button pressed for event:', featured.id);
                 console.log('Current registered events:', registered);
-                registerEvent(featured.id);
-                console.log('After registration, registered events:', [...registered, featured.id]);
-                router.push('registration-success' as any);
+                const success = await registerEvent(featured.id);
+                if (success) {
+                  console.log('After registration, registered events:', [...registered, featured.id]);
+                  router.push('registration-success' as any);
+                } else {
+                  console.log('Registration failed - user may have already completed this event');
+                }
               }}
-              disabled={registered.includes(featured.id)}
+              disabled={registered.includes(featured.id) || userEventStatuses[featured.id]?.status === 'completed'}
               activeOpacity={0.7}
             >
-              <Text style={[styles.registerBtnText, registered.includes(featured.id) && styles.registerBtnTextDisabled]}>
-                {registered.includes(featured.id) ? 'Registered' : 'Register'}
+              <Text style={[styles.registerBtnText, (registered.includes(featured.id) || userEventStatuses[featured.id]?.status === 'completed') && styles.registerBtnTextDisabled]}>
+                {userEventStatuses[featured.id]?.status === 'completed' ? 'Completed' : registered.includes(featured.id) ? 'Registered' : 'Register'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -154,11 +191,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
+  tabsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
   tabsRow: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    paddingHorizontal: 16,
-    marginBottom: 8,
   },
   tab: {
     paddingVertical: 8,
@@ -291,6 +336,19 @@ const styles = StyleSheet.create({
   registeredBadgeText: {
     color: '#fff',
     fontSize: 12,
+    fontWeight: 'bold',
+  },
+  myEventsButton: {
+    backgroundColor: '#43C6AC',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  myEventsButtonText: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: 'bold',
   },
 }); 
