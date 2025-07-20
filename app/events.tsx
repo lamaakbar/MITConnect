@@ -129,7 +129,6 @@ export default function EventsScreen() {
         </TouchableOpacity>
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
-<<<<<<< HEAD
         {/* Empty State */}
         {events.length === 0 ? (
           <View style={styles.emptyState}>
@@ -138,35 +137,6 @@ export default function EventsScreen() {
             <Text style={styles.emptyStateText}>
               There are no events scheduled at the moment. Check back later for exciting activities!
             </Text>
-=======
-        {/* Featured Event */}
-        {featured && (
-          <View style={styles.featuredCard}>
-            <Image source={featured.image} style={styles.featuredImage} />
-            <Text style={styles.featuredTitle}>{featured.title}</Text>
-            <Text style={styles.featuredDesc}>{featured.desc}</Text>
-            <Text style={styles.featuredMeta}>{featured.date} • {featured.time} • {featured.location}</Text>
-            <TouchableOpacity
-              style={[styles.registerBtn, getEventButtonState(featured.id, featured.date).disabled && styles.registerBtnDisabled]}
-              onPress={async () => {
-                console.log('Button pressed for event:', featured.id);
-                console.log('Current registered events:', registered);
-                const success = await registerEvent(featured.id);
-                if (success) {
-                  console.log('After registration, registered events:', [...registered, featured.id]);
-                  router.push('registration-success' as any);
-                } else {
-                  console.log('Registration failed - event may have passed or user already completed');
-                }
-              }}
-              disabled={getEventButtonState(featured.id, featured.date).disabled}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.registerBtnText, getEventButtonState(featured.id, featured.date).disabled && styles.registerBtnTextDisabled]}>
-                {getEventButtonState(featured.id, featured.date).text}
-              </Text>
-            </TouchableOpacity>
->>>>>>> eeb9c86659111ac5ee704886c9945b524298f82b
           </View>
         ) : (
           <>
