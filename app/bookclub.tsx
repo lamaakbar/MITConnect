@@ -79,14 +79,6 @@ export default function BookClubScreen() {
               <Text style={styles.sectionTitle}>
                 <Ionicons name="star" size={20} color="#1abc9c" /> Featured Book This Week
               </Text>
-              <TouchableOpacity
-                style={[styles.goLibraryBtn, books.length === 0 && styles.goLibraryBtnDisabled]}
-                onPress={() => router.push('/books-management')}
-                disabled={books.length === 0}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.goLibraryBtnText}>Go to Library</Text>
-              </TouchableOpacity>
             </View>
             <View style={styles.featuredCard}>
           <View style={{ flexDirection: 'row' }}>
@@ -199,9 +191,6 @@ export default function BookClubScreen() {
         {/* Recent Selections */}
         <View style={styles.recentHeaderRow}>
           <Text style={styles.sectionTitle}><Feather name="clock" size={16} color="#3AC569" /> Recent Selections</Text>
-          <TouchableOpacity style={styles.goLibraryBtnSmall} onPress={() => router.push('/library')}>
-            <Text style={styles.goLibraryBtnTextSmall}>Go to MITC Library</Text>
-          </TouchableOpacity>
         </View>
         <FlatList
           data={recentBooks}
@@ -217,7 +206,7 @@ export default function BookClubScreen() {
                   <Text style={styles.genreText}>{item.genre}</Text>
                 </View>
               </View>
-              <TouchableOpacity style={{ alignSelf: 'center' }} onPress={() => router.push(`/library/${item.id}/details`)}>
+              <TouchableOpacity style={{ alignSelf: 'center' }} onPress={() => router.push({ pathname: '/library/[id]/details', params: { id: item.id } })}>
                 <Text style={styles.moreDetails}>More Details</Text>
               </TouchableOpacity>
             </View>
