@@ -3,7 +3,7 @@ import { View, Text, Button, FlatList, TouchableOpacity, StyleSheet, Animated, I
 import { ThemedView } from '../components/ThemedView';
 import { ThemedText } from '../components/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
-import StandardHeader from '../components/StandardHeader';
+import AdminHeader from '../components/AdminHeader';
 
 // Mock data for ads
 const initialAds = [
@@ -107,7 +107,7 @@ export default function ShopManagementScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <StandardHeader 
+      <AdminHeader 
         title="Shop Management"
         rightComponent={
           <Ionicons name="pricetags" size={24} color="#4F8EF7" />

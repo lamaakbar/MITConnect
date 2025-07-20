@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import AdminTabBar from '../components/AdminTabBar';
-import StandardHeader from '../components/StandardHeader';
+import AdminHeader from '../components/AdminHeader';
 
 // Idea status types
 const IDEA_STATUS = {
@@ -153,8 +153,8 @@ export default function IdeasManagement() {
 
   return (
     <View style={[styles.mainContainer, { backgroundColor }]}>
-      {/* Header */}
-      <StandardHeader title="Ideas Management" />
+      {/* Unified Admin Header */}
+      <AdminHeader title="Ideas Management" />
 
       {/* Toast */}
       {toast && <View style={styles.toast}><Text style={styles.toastText}>{toast}</Text></View>}

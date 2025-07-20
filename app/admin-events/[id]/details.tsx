@@ -1,5 +1,5 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
     FlatList,
@@ -9,6 +9,7 @@ import {
     Text,
     View,
 } from 'react-native';
+import AdminHeader from '../../../components/AdminHeader';
 
 const mockEvent = {
   id: '1',
@@ -27,46 +28,49 @@ const mockEvent = {
 
 const EventDetailsScreen: React.FC = () => {
   const { id } = useLocalSearchParams();
+  const router = useRouter();
   // In a real app, fetch event by id
   const event = mockEvent;
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-      {/* Header (logo and title row can be added if needed) */}
-      <Image source={event.coverImage} style={styles.coverImage} />
-      {/* Bookmark icon placeholder */}
-      <View style={styles.bookmarkIconBox}>
-        <Ionicons name="bookmark-outline" size={28} color="#222" />
-      </View>
-      <Text style={styles.title}>{event.title}</Text>
-      {/* Date, Time, Location */}
-      <View style={styles.infoRow}>
-        <View style={styles.infoIconBox}><MaterialIcons name="calendar-today" size={20} color="#222" /></View>
-        <Text style={styles.infoText}>July  22, 2025</Text>
-      </View>
-      <View style={styles.infoRow}>
-        <View style={styles.infoIconBox}><Ionicons name="time-outline" size={20} color="#222" /></View>
-        <Text style={styles.infoText}>{event.time}</Text>
-      </View>
-      <View style={styles.infoRow}>
-        <View style={styles.infoIconBox}><Ionicons name="location-outline" size={20} color="#222" /></View>
-        <Text style={styles.infoText}>{event.location}</Text>
-      </View>
-      {/* Attendees */}
-      <Text style={styles.attendeeTitle}>Events  Attendee</Text>
-      <FlatList
-        data={event.attendees}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.attendeeRow}>
-            <Text style={styles.attendeeName}>{item.name}</Text>
-            <Text style={styles.attendeeId}>{item.id}</Text>
-          </View>
-        )}
-        scrollEnabled={false}
-        style={{ marginBottom: 24 }}
-      />
-    </ScrollView>
+    <View style={styles.container}>
+      <AdminHeader title="Event Details" />
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        <Image source={event.coverImage} style={styles.coverImage} />
+        {/* Bookmark icon placeholder */}
+        <View style={styles.bookmarkIconBox}>
+          <Ionicons name="bookmark-outline" size={28} color="#222" />
+        </View>
+        <Text style={styles.title}>{event.title}</Text>
+        {/* Date, Time, Location */}
+        <View style={styles.infoRow}>
+          <View style={styles.infoIconBox}><MaterialIcons name="calendar-today" size={20} color="#222" /></View>
+          <Text style={styles.infoText}>July  22, 2025</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <View style={styles.infoIconBox}><Ionicons name="time-outline" size={20} color="#222" /></View>
+          <Text style={styles.infoText}>{event.time}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <View style={styles.infoIconBox}><Ionicons name="location-outline" size={20} color="#222" /></View>
+          <Text style={styles.infoText}>{event.location}</Text>
+        </View>
+        {/* Attendees */}
+        <Text style={styles.attendeeTitle}>Events  Attendee</Text>
+        <FlatList
+          data={event.attendees}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.attendeeRow}>
+              <Text style={styles.attendeeName}>{item.name}</Text>
+              <Text style={styles.attendeeId}>{item.id}</Text>
+            </View>
+          )}
+          scrollEnabled={false}
+          style={{ marginBottom: 24 }}
+        />
+      </ScrollView>
+    </View>
   );
 };
 
@@ -74,10 +78,14 @@ const styles = StyleSheet.create({
   scroll: {
     backgroundColor: '#fff',
   },
-  container: {
+  scrollContent: {
     padding: 0,
     backgroundColor: '#fff',
     alignItems: 'stretch',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
   coverImage: {
     width: '100%',

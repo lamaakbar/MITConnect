@@ -12,6 +12,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import AdminHeader from '../../../components/AdminHeader';
 
 const EVENT_TYPES = ['Seminar', 'Workshop', 'Conference', 'Meetup'];
 
@@ -54,14 +55,9 @@ const EditEventScreen: React.FC = () => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.headerRow}>
-          {/* Removed back arrow */}
-          <Text style={styles.headerTitle}>Edit Event</Text>
-          <View style={{ width: 24 }} />
-        </View>
+    <View style={styles.container}>
+      <AdminHeader title="Edit Event" />
+      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         {/* Image Upload */}
         <Text style={styles.label}>Event Cover Image</Text>
         <TouchableOpacity style={styles.imageUploadBox} onPress={pickImage} activeOpacity={0.8}>
@@ -146,8 +142,8 @@ const EditEventScreen: React.FC = () => {
         <Pressable style={styles.createBtn} onPress={() => {}}>
           <Text style={styles.createBtnText}>Save Event</Text>
         </Pressable>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -155,13 +151,12 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     backgroundColor: '#fff',
+    paddingHorizontal: 16,
     paddingBottom: 24,
   },
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingTop: 32,
   },
   headerRow: {
     flexDirection: 'row',

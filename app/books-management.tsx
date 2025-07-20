@@ -8,7 +8,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useBooks } from '../components/BookContext';
 import AdminTabBar from '../components/AdminTabBar';
 import Toast from 'react-native-root-toast';
-import StandardHeader from '../components/StandardHeader';
+import AdminHeader from '../components/AdminHeader';
 
 export default function AdminBooksScreen() {
   const router = useRouter();
@@ -46,8 +46,8 @@ export default function AdminBooksScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      {/* Header */}
-      <StandardHeader 
+      {/* Unified Admin Header */}
+      <AdminHeader 
         title="MITConnect Library"
         rightComponent={
           <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/add-book')}>

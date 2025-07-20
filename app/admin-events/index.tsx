@@ -22,6 +22,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import AdminTabBar from '../../components/AdminTabBar';
+import AdminHeader from '../../components/AdminHeader';
 
 // Empty events array - no mock data
 const mockEvents: any[] = [];
@@ -205,16 +206,15 @@ const AdminEventListScreen: React.FC = () => {
 
   return (
     <View style={[styles.mainContainer, { backgroundColor }]}>
-      {/* Header */}
-      <View style={[styles.headerRow, { backgroundColor, borderBottomColor: borderColor }]}>
-        <TouchableOpacity onPress={() => router.push('/admin-home')} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={textColor} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: textColor }]}>Events Management</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)}>
-          <Ionicons name="add" size={20} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      {/* Unified Admin Header */}
+      <AdminHeader 
+        title="Events Management"
+        rightComponent={
+          <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)}>
+            <Ionicons name="add" size={20} color="#fff" />
+          </TouchableOpacity>
+        }
+      />
 
       {/* Search Bar */}
       <View style={[styles.searchBar, { backgroundColor: searchBackground }]}>

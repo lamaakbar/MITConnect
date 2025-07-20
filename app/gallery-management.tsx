@@ -26,7 +26,7 @@ import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import AdminTabBar from '../components/AdminTabBar';
-import StandardHeader from '../components/StandardHeader';
+import AdminHeader from '../components/AdminHeader';
 
 // Album and Photo Types
 interface Photo {
@@ -133,8 +133,8 @@ export default function GalleryManagement() {
   if (!showCreate && !selectedAlbumId) {
     return (
       <View style={[styles.mainContainer, { backgroundColor }]}>
-        {/* Header */}
-        <StandardHeader 
+        {/* Unified Admin Header */}
+        <AdminHeader 
           title="Gallery Management"
           rightComponent={
             <TouchableOpacity
@@ -319,8 +319,8 @@ export default function GalleryManagement() {
   if (showCreate) {
     return (
       <View style={styles.mainContainer}>
-        {/* Header */}
-        <StandardHeader title="New Album" />
+        {/* Unified Admin Header */}
+        <AdminHeader title="New Album" />
         {/* Form */}
         <ScrollView 
           style={styles.scrollContainer}
@@ -422,7 +422,7 @@ export default function GalleryManagement() {
     if (selectedAlbumId && currentAlbum) {
       return (
         <View style={styles.mainContainer}>
-          <StandardHeader 
+          <AdminHeader 
             title={currentAlbum.title}
             rightComponent={
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>

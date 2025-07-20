@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import AdminTabBar from '../components/AdminTabBar';
-import StandardHeader from '../components/StandardHeader';
+import AdminHeader from '../components/AdminHeader';
 
 export default function HighlightManagement() {
   const router = useRouter();
@@ -133,8 +133,8 @@ export default function HighlightManagement() {
 
   return (
     <View style={[styles.mainContainer, { backgroundColor }]}>
-      {/* Header */}
-      <StandardHeader title="Highlight Management" />
+      {/* Unified Admin Header */}
+      <AdminHeader title="Highlight Management" />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
