@@ -3,10 +3,17 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, 
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+<<<<<<< HEAD
 import { useState, useMemo } from 'react';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
 import RoleGuard from '../components/RoleGuard';
+=======
+import { useState } from 'react';
+
+// Empty data arrays - no mock data
+const events: any[] = [];
+>>>>>>> f24d1a708ce9253a6bec757fb8a2b86ed35b4151
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
@@ -16,20 +23,7 @@ const portalLinks = [
   { key: 'bookclub', label: 'Book Club', icon: <Ionicons name="book-outline" size={28} color="#FF8C42" /> },
 ];
 
-const featuredNews = [
-  {
-    id: '1',
-    image: require('../assets/images/react-logo.png'),
-    text: 'Trainee of the Week',
-    progress: 0.7,
-  },
-  {
-    id: '2',
-    image: require('../assets/images/partial-react-logo.png'),
-    text: 'Best Project',
-    progress: 0.8,
-  },
-];
+const featuredNews: any[] = [];
 
 export default function TraineeHome() {
   const router = useRouter();
@@ -77,6 +71,7 @@ export default function TraineeHome() {
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+<<<<<<< HEAD
         <Text style={styles.sectionTitle}>Featured This Week</Text>
         <FlatList
           data={featuredNews}
@@ -114,6 +109,66 @@ export default function TraineeHome() {
             contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
             renderItem={({ item }) => (
               <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
+=======
+        {featuredNews.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="star-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyStateTitle}>No Featured Content</Text>
+            <Text style={styles.emptyStateText}>
+              There are no featured highlights this week. Check back later for exciting updates!
+            </Text>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>Featured This Week</Text>
+            <FlatList
+              data={featuredNews}
+              keyExtractor={item => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingLeft: 18, paddingBottom: 8 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => router.push({ pathname: '/feature-details' })}
+                >
+                  <LinearGradient
+                    colors={['#A259FF', '#3BB2B8']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.featuredGradientCard}
+                  >
+                    <Image source={item.image} style={styles.featuredImage} />
+                    <Text style={styles.featuredMonoText}>{item.text}</Text>
+                    <View style={styles.featuredProgressBarBg}>
+                      <View style={[styles.featuredProgressBar, { width: `${item.progress * 100}%` }]} />
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+            />
+          </>
+        )}
+        
+        {events.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyStateTitle}>No Upcoming Events</Text>
+            <Text style={styles.emptyStateText}>
+              There are no upcoming events scheduled. Check back later for exciting activities!
+            </Text>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>Upcoming Events</Text>
+            <FlatList
+              data={events}
+              keyExtractor={item => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
+              renderItem={({ item }) => (
+>>>>>>> f24d1a708ce9253a6bec757fb8a2b86ed35b4151
                 <View style={styles.eventCard}>
                   <View style={styles.eventCardHeader}>
                     <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
@@ -121,10 +176,27 @@ export default function TraineeHome() {
                   </View>
                   <Text style={styles.eventTitle}>{item.title}</Text>
                   <Text style={styles.eventDesc}>{item.desc}</Text>
+<<<<<<< HEAD
                   {registered.includes(item.id) && (
                     <View style={styles.registeredBadge}><Text style={styles.registeredBadgeText}>Registered</Text></View>
                   )}
                   <TouchableOpacity style={styles.eventBtn}><Text style={styles.eventBtnText}>Register Now!</Text></TouchableOpacity>
+=======
+                  <TouchableOpacity
+                    style={[styles.eventBtn, registered.includes(item.id) && { backgroundColor: '#aaa' }]}
+                    onPress={() => {
+                      setRegistered(prev => [...prev, item.id]);
+                      Alert.alert('Registered', 'You have successfully registered for this event!');
+                    }}
+                    disabled={registered.includes(item.id)}
+                    accessibilityLabel={`Register for ${item.title}`}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.eventBtnText}>
+                      {registered.includes(item.id) ? 'Registered' : 'Register Now!'}
+                    </Text>
+                  </TouchableOpacity>
+>>>>>>> f24d1a708ce9253a6bec757fb8a2b86ed35b4151
                   <View style={styles.eventCardFooter}>
                     <View style={styles.eventFooterItem}>
                       <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
@@ -138,6 +210,7 @@ export default function TraineeHome() {
                     ) : null}
                   </View>
                 </View>
+<<<<<<< HEAD
               </TouchableOpacity>
             )}
           />
@@ -145,6 +218,11 @@ export default function TraineeHome() {
           <View style={styles.noEventsContainer}>
             <Text style={styles.noEventsText}>No upcoming events at the moment</Text>
           </View>
+=======
+              )}
+            />
+          </>
+>>>>>>> f24d1a708ce9253a6bec757fb8a2b86ed35b4151
         )}
         <Text style={styles.sectionTitle}>Portal Access</Text>
         <View style={styles.portalRow}>
@@ -167,13 +245,29 @@ export default function TraineeHome() {
           ))}
         </View>
         <Text style={styles.sectionTitle}>Book of the Month</Text>
-        <TouchableOpacity style={styles.bookCard} onPress={() => router.push({ pathname: '/book-details' })}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.bookTitle}>White Nights</Text>
-            <Text style={styles.bookAuthor}>By Fyodor Dostoevsky</Text>
-            <Text style={styles.bookMore}>More Details</Text>
+        <TouchableOpacity style={styles.featuredBookCard} onPress={() => router.push('/library/featured/details')}>
+          <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
+          <View style={{ flex: 1, marginLeft: 16 }}>
+            <View style={styles.genreChip}><Text style={styles.genreText}>Philosophical Fiction</Text></View>
+            <Text style={styles.featuredBookTitle}>The Alchemist</Text>
+            <Text style={styles.featuredBookAuthor}>By Paulo Coelho</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              {[1,2,3,4,5].map(i => (
+                <MaterialIcons
+                  key={i}
+                  name={i <= 5 ? 'star' : 'star-border'}
+                  size={20}
+                  color="#F4B400"
+                  style={{ marginRight: 2 }}
+                />
+              ))}
+              <Text style={styles.ratingText}>4.9</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+              <Ionicons name="person" size={16} color="#888" style={{ marginRight: 4 }} />
+              <Text style={styles.recommender}>Nizar Naghi</Text>
+            </View>
           </View>
-          <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.bookImg} />
         </TouchableOpacity>
       </ScrollView>
       <RNScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bottomNavScroll}>
@@ -486,5 +580,83 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+<<<<<<< HEAD
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 60,
+    marginBottom: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+=======
+  featuredBookCard: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 16,
+    marginHorizontal: 18,
+    marginBottom: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
+    alignItems: 'center',
+  },
+  featuredBookCover: {
+    width: 110,
+    height: 160,
+    borderRadius: 12,
+    backgroundColor: '#eee',
+  },
+  genreChip: {
+    alignSelf: 'flex-start',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    backgroundColor: '#A3C9A8',
+    marginBottom: 6,
+  },
+  genreText: {
+    fontSize: 12,
+    color: '#222',
+    fontWeight: '500',
+  },
+  featuredBookTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#222',
+    marginBottom: 2,
+    marginTop: 2,
+  },
+  featuredBookAuthor: {
+    fontSize: 15,
+    color: '#888',
+    marginBottom: 8,
+  },
+  ratingText: {
+    fontSize: 15,
+    color: '#222',
+    marginLeft: 6,
+    fontWeight: 'bold',
+  },
+  recommender: {
+    fontSize: 13,
+    color: '#888',
+>>>>>>> ad557c2 (Uptade the bookClub)
   },
 }); 

@@ -4,6 +4,7 @@ import { Feather, MaterialIcons, MaterialCommunityIcons, Ionicons, FontAwesome5 
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import AdminTabBar from '../components/AdminTabBar';
+import AdminHeader from '../components/AdminHeader';
 
 // Mock user data for admin
 const mockAdminUser = {
@@ -46,36 +47,15 @@ export default function AdminHome() {
 
   return (
     <View style={[styles.mainContainer, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.headerContainer, { backgroundColor: colors.background }]}>
-        <View style={styles.headerLeft}>
-          {/* Placeholder logo */}
-          <View style={[styles.logoCircle, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F8F5' }]}>
-            <Feather name="users" size={22} color="#004080" />
-          </View>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
-        </View>
-        <View style={styles.headerRight}>
-          {/* Night Mode Toggle */}
-          <TouchableOpacity onPress={toggleDarkMode} style={styles.headerIcon}>
-            <Feather 
-              name={isDarkMode ? "sun" : "moon"} 
-              size={20} 
-              color={colors.icon} 
-            />
-          </TouchableOpacity>
-          {/* Account Button */}
-          <TouchableOpacity 
-            onPress={() => setShowAccountModal(true)} 
-            style={styles.headerIcon}
-          >
-            <Feather name="user" size={20} color={colors.icon} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIcon}>
-            <Feather name="menu" size={20} color={colors.icon} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Unified Admin Header */}
+      <AdminHeader 
+        title="Admin Dashboard"
+        showBackButton={false}
+        showLogo={true}
+        showDarkModeToggle={true}
+        showAccountButton={true}
+        showMenuButton={true}
+      />
 
       {/* Scrollable Content */}
       <ScrollView 

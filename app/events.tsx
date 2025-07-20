@@ -129,69 +129,96 @@ export default function EventsScreen() {
         </TouchableOpacity>
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
-        {/* Featured Event */}
-        {featured && (
-          <View style={styles.featuredCard}>
-            <Image source={featured.image} style={styles.featuredImage} />
-            <Text style={styles.featuredTitle}>{featured.title}</Text>
-            <Text style={styles.featuredDesc}>{featured.desc}</Text>
-            <Text style={styles.featuredMeta}>{featured.date} • {featured.time} • {featured.location}</Text>
-            <TouchableOpacity
-              style={[styles.registerBtn, getEventButtonState(featured.id, featured.date).disabled && styles.registerBtnDisabled]}
-              onPress={async () => {
-                console.log('Button pressed for event:', featured.id);
-                console.log('Current registered events:', registered);
-                const success = await registerEvent(featured.id);
-                if (success) {
-                  console.log('After registration, registered events:', [...registered, featured.id]);
-                  router.push('registration-success' as any);
-                } else {
-                  console.log('Registration failed - event may have passed or user already completed');
-                }
-              }}
-              disabled={getEventButtonState(featured.id, featured.date).disabled}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.registerBtnText, getEventButtonState(featured.id, featured.date).disabled && styles.registerBtnTextDisabled]}>
-                {getEventButtonState(featured.id, featured.date).text}
-              </Text>
-            </TouchableOpacity>
+        {/* Empty State */}
+        {events.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyStateTitle}>No Events Available</Text>
+            <Text style={styles.emptyStateText}>
+              There are no events scheduled at the moment. Check back later for exciting activities!
+            </Text>
           </View>
-        )}
-        {/* All Events */}
-        <Text style={styles.sectionTitle}>All Events</Text>
-        <FlatList
-          data={filteredEvents}
-          keyExtractor={item => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft: 16, paddingRight: 8 }}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.eventCard}
-              onPress={() => router.push({ pathname: 'event-details' as any, params: { id: item.id } })}
-            >
-              <Image source={item.image} style={styles.eventImage} />
-              <TouchableOpacity
-                style={styles.bookmarkIcon}
-                onPress={() => bookmarks.includes(item.id) ? unbookmarkEvent(item.id) : bookmarkEvent(item.id)}
-              >
-                <Ionicons
-                  name={bookmarks.includes(item.id) ? 'bookmark' : 'bookmark-outline'}
-                  size={22}
-                  color={bookmarks.includes(item.id) ? '#43C6AC' : '#888'}
+        ) : (
+          <>
+            {/* Featured Event */}
+            {featured && (
+              <View style={styles.featuredCard}>
+                <Image source={featured.image} style={styles.featuredImage} />
+                <Text style={styles.featuredTitle}>{featured.title}</Text>
+                <Text style={styles.featuredDesc}>{featured.desc}</Text>
+                <Text style={styles.featuredMeta}>{featured.date} • {featured.time} • {featured.location}</Text>
+                <TouchableOpacity
+                  style={[styles.registerBtn, (registered.includes(featured.id) || userEventStatuses[featured.id]?.status === 'completed') && styles.registerBtnDisabled]}
+                  onPress={async () => {
+                    console.log('Button pressed for event:', featured.id);
+                    console.log('Current registered events:', registered);
+                    const success = await registerEvent(featured.id);
+                    if (success) {
+                      console.log('After registration, registered events:', [...registered, featured.id]);
+                      router.push('registration-success' as any);
+                    } else {
+                      console.log('Registration failed - user may have already completed this event');
+                    }
+                  }}
+                  disabled={registered.includes(featured.id) || userEventStatuses[featured.id]?.status === 'completed'}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.registerBtnText, (registered.includes(featured.id) || userEventStatuses[featured.id]?.status === 'completed') && styles.registerBtnTextDisabled]}>
+                    {userEventStatuses[featured.id]?.status === 'completed' ? 'Completed' : registered.includes(featured.id) ? 'Registered' : 'Register'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {/* All Events */}
+            {filteredEvents.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>All Events</Text>
+                <FlatList
+                  data={filteredEvents}
+                  keyExtractor={item => item.id}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingLeft: 16, paddingRight: 8 }}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.eventCard}
+                      onPress={() => router.push({ pathname: 'event-details' as any, params: { id: item.id } })}
+                    >
+                      <Image source={item.image} style={styles.eventImage} />
+                      <TouchableOpacity
+                        style={styles.bookmarkIcon}
+                        onPress={() => bookmarks.includes(item.id) ? unbookmarkEvent(item.id) : bookmarkEvent(item.id)}
+                      >
+                        <Ionicons
+                          name={bookmarks.includes(item.id) ? 'bookmark' : 'bookmark-outline'}
+                          size={22}
+                          color={bookmarks.includes(item.id) ? '#43C6AC' : '#888'}
+                        />
+                      </TouchableOpacity>
+                      <Text style={styles.eventTitle}>{item.title}</Text>
+                      <Text style={styles.eventDate}>{item.date}</Text>
+                      {registered.includes(item.id) && (
+                        <View style={styles.registeredBadge}>
+                          <Text style={styles.registeredBadgeText}>Registered</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  )}
                 />
-              </TouchableOpacity>
-              <Text style={styles.eventTitle}>{item.title}</Text>
-              <Text style={styles.eventDate}>{item.date}</Text>
-              {registered.includes(item.id) && (
-                <View style={styles.registeredBadge}>
-                  <Text style={styles.registeredBadgeText}>Registered</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          )}
-        />
+              </>
+            )}
+            {/* No events match search */}
+            {events.length > 0 && filteredEvents.length === 0 && search.length > 0 && (
+              <View style={styles.emptySearchState}>
+                <Ionicons name="search-outline" size={48} color="#ccc" />
+                <Text style={styles.emptyStateTitle}>No Events Found</Text>
+                <Text style={styles.emptyStateText}>
+                  No events match your search "{search}". Try different keywords.
+                </Text>
+              </View>
+            )}
+          </>
+        )}
         <EventsTabBar />
       </ScrollView>
     </View>
@@ -386,5 +413,33 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 60,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  emptySearchState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 40,
   },
 }); 

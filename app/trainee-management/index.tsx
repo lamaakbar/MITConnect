@@ -4,17 +4,12 @@ import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import AdminTabBar from '../../components/AdminTabBar';
+import AdminHeader from '../../components/AdminHeader';
 
 const TABS = ['Dashboard', 'Registrations', 'Progress'];
 
-const DEPARTMENTS = [
-  { name: 'IT Governance and Architecture', value: 30 },
-  { name: 'IT Transformation', value: 60 },
-  { name: 'IT Services', value: 40 },
-  { name: 'Production', value: 70 },
-  { name: 'Enterprise Project Delivery', value: 50 },
-  { name: 'Development', value: 80 },
-];
+// Empty data arrays - no mock data
+const DEPARTMENTS: any[] = [];
 
 const PROGRAMS = [
   'All Programs',
@@ -23,94 +18,11 @@ const PROGRAMS = [
   'Technology',
 ];
 
-const TRAINEE_PROGRESS = [
-  {
-    name: 'Bayan Alsahafi',
-    department: 'IT Production',
-    progress: 90,
-    weeks: [
-      { status: 'done', hours: 40, tasks: 8 },
-      { status: 'done', hours: 40, tasks: 9 },
-      { status: 'done', hours: 40, tasks: 8 },
-      { status: 'done', hours: 40, tasks: 7 },
-      { status: 'in-progress', hours: 25, tasks: 3 },
-    ],
-  },
-  {
-    name: 'Deema Alsini',
-    department: 'EPD',
-    progress: 70,
-    weeks: [
-      { status: 'done', hours: 20, tasks: 4 },
-      { status: 'done', hours: 22, tasks: 5 },
-      { status: 'done', hours: 18, tasks: 6 },
-      { status: 'in-progress', hours: 15, tasks: 5 },
-      { status: 'not-started', hours: 0, tasks: 0 },
-    ],
-  },
-  {
-    name: 'Hadeel Kufiah',
-    department: 'IT Services',
-    progress: 45,
-    weeks: [
-      { status: 'done', hours: 40, tasks: 8 },
-      { status: 'done', hours: 40, tasks: 9 },
-      { status: 'in-progress', hours: 25, tasks: 6 },
-      { status: 'not-started', hours: 0, tasks: 0 },
-      { status: 'not-started', hours: 0, tasks: 0 },
-    ],
-  },
-];
+const TRAINEE_PROGRESS: any[] = [];
 
-const REGISTRATIONS = Array(6).fill({
-  name: 'Lama Akbar',
-  email: '903204@alahli.com',
-  duration: '8 weeks',
-  type: 'CO-OP',
-});
+const REGISTRATIONS: any[] = [];
 
-const OVERVIEW_TRAINEES = [
-  {
-    name: 'Bayan Alsahafi',
-    department: 'IT Production',
-    weeksDone: 4,
-    totalWeeks: 5,
-    hoursLogged: 192,
-    totalHours: 200,
-    progress: 96,
-    color: '#4ECB71',
-  },
-  {
-    name: 'Hadeel Kufiah',
-    department: 'IT Services',
-    weeksDone: 2,
-    totalWeeks: 5,
-    hoursLogged: 88,
-    totalHours: 200,
-    progress: 44,
-    color: '#F4D03F',
-  },
-  {
-    name: 'Khalid Alkhaibari',
-    department: 'Enterprise Project Delivery',
-    weeksDone: 3,
-    totalWeeks: 5,
-    hoursLogged: 102,
-    totalHours: 200,
-    progress: 51,
-    color: '#4A90E2',
-  },
-  {
-    name: 'Lama Akbar',
-    department: 'Enterprise Project Delivery',
-    weeksDone: 4,
-    totalWeeks: 5,
-    hoursLogged: 160,
-    totalHours: 200,
-    progress: 80,
-    color: '#4ECB71',
-  },
-];
+const OVERVIEW_TRAINEES: any[] = [];
 
 export default function TraineeDashboard() {
   const colorScheme = useColorScheme();
@@ -137,13 +49,8 @@ export default function TraineeDashboard() {
   return (
     <View style={[styles.container, { backgroundColor }]}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
-        {/* Header */}
-        <View style={styles.header}>
-          <FontAwesome5 name="project-diagram" size={32} color={isDarkMode ? '#3CB371' : '#004080'} style={{ marginRight: 8 }} />
-          <Text style={[styles.headerTitle, { color: textColor }]}>
-            <Text style={{ color: '#3CB371' }}>Tracking</Text> Trainee Hub
-          </Text>
-        </View>
+        {/* Unified Admin Header */}
+        <AdminHeader title="Trainee Management" />
         <Text style={[styles.headerSubtitle, { color: secondaryTextColor }]}>Check your Trainees!</Text>
         
         {/* Tabs */}
@@ -196,20 +103,30 @@ export default function TraineeDashboard() {
         {/* Tab Content */}
         {selectedTab === 'Dashboard' && (
           <>
-            {/* Summary Cards */}
-            <TouchableOpacity 
-              style={[styles.card, { backgroundColor: cardBackground, borderColor }]} 
-              onPress={() => setShowTraineeModal(true)}
-            >
-              <View style={styles.cardRow}>
-                <View>
-                  <Text style={[styles.cardTitle, { color: textColor }]}>Total Trainees</Text>
-                  <Text style={[styles.cardSubtitle, { color: secondaryTextColor }]}>Across all Programs</Text>
-                </View>
-                <Ionicons name="people-outline" size={28} color="#3CB371" />
+            {OVERVIEW_TRAINEES.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="people-outline" size={64} color="#ccc" />
+                <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Trainees Yet</Text>
+                <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+                  There are no trainees registered in the system yet. Start by adding trainees to track their progress.
+                </Text>
               </View>
-              <Text style={[styles.cardValue, { color: textColor }]}>30</Text>
-            </TouchableOpacity>
+            ) : (
+              <>
+                {/* Summary Cards */}
+                <TouchableOpacity 
+                  style={[styles.card, { backgroundColor: cardBackground, borderColor }]} 
+                  onPress={() => setShowTraineeModal(true)}
+                >
+                  <View style={styles.cardRow}>
+                    <View>
+                      <Text style={[styles.cardTitle, { color: textColor }]}>Total Trainees</Text>
+                      <Text style={[styles.cardSubtitle, { color: secondaryTextColor }]}>Across all Programs</Text>
+                    </View>
+                    <Ionicons name="people-outline" size={28} color="#3CB371" />
+                  </View>
+                  <Text style={[styles.cardValue, { color: textColor }]}>30</Text>
+                </TouchableOpacity>
             
             {/* Modal for trainee names */}
             <Modal
@@ -277,6 +194,8 @@ export default function TraineeDashboard() {
                 </View>
               ))}
             </View>
+              </>
+            )}
           </>
         )}
         
@@ -739,5 +658,24 @@ const styles = StyleSheet.create({
   },
   noResults: {
     fontSize: 16,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 60,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
   },
 }); 

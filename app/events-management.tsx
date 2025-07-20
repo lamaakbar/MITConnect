@@ -4,6 +4,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import AdminTabBar from '../components/AdminTabBar';
+import AdminHeader from '../components/AdminHeader';
 
 const mockEvents = [
   {
@@ -60,13 +61,8 @@ export default function EventsManagement() {
         showsVerticalScrollIndicator={false}
         bounces={true}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <MaterialIcons name="event" size={32} color={isDarkMode ? '#3CB371' : '#004080'} style={{ marginRight: 8 }} />
-          <Text style={[styles.headerTitle, { color: textColor }]}>
-            <Text style={{ color: '#3CB371' }}>Events</Text> Management
-          </Text>
-        </View>
+        {/* Unified Admin Header */}
+        <AdminHeader title="Events Management" />
         <Text style={[styles.headerSubtitle, { color: secondaryTextColor }]}>Manage your events and attendees</Text>
 
         {/* Events List */}

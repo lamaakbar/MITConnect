@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useBooks } from '../components/BookContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import StandardHeader from '../components/StandardHeader';
+import AdminHeader from '../components/AdminHeader';
 
 const GENRES = [
   { name: 'Philosophical Fiction', color: '#A3C9A8' },
@@ -98,7 +98,7 @@ export default function AddBookScreen() {
 
   return (
     <ScrollView contentContainerStyle={[styles.scrollContainer, { backgroundColor }]} keyboardShouldPersistTaps="handled">
-      <StandardHeader title="Add New Book" />
+      <AdminHeader title="Add New Book" />
       <Text style={[styles.subHeader, { color: secondaryTextColor }]}>Add a new book to the MITConnect Library</Text>
       {error ? <Text style={[styles.errorText, { color: '#E74C3C' }]}>{error}</Text> : null}
       {/* Book Information Card */}

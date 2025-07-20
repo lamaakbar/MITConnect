@@ -1,24 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-const albums = [
-  {
-    id: '1',
-    title: 'Summer 2024',
-    photos: [
-      'https://images.unsplash.com/photo-1506744038136-46273834b3fb',
-      'https://images.unsplash.com/photo-1465101046530-73398c7f28ca',
-    ],
-  },
-  {
-    id: '2',
-    title: 'Team Building',
-    photos: [
-      'https://images.unsplash.com/photo-1519125323398-675f0ddb6308',
-      'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e',
-    ],
-  },
-];
+// Empty albums array - no mock data
+const albums: any[] = [];
 
 export default function GalleryScreen() {
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
@@ -44,20 +29,32 @@ export default function GalleryScreen() {
           />
         </View>
       ) : (
-        <FlatList
-          data={albums}
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.albumCard} onPress={() => setSelectedAlbum(item.id)}>
-              <Text style={styles.albumTitle}>{item.title}</Text>
-              <View style={styles.albumPreviewRow}>
-                {item.photos.slice(0, 2).map((photo, idx) => (
-                  <Image key={idx} source={{ uri: photo }} style={styles.albumPreview} />
-                ))}
-              </View>
-            </TouchableOpacity>
+        <>
+          {albums.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="images-outline" size={64} color="#ccc" />
+              <Text style={styles.emptyStateTitle}>No Albums Available</Text>
+              <Text style={styles.emptyStateText}>
+                There are no photo albums in the gallery yet. Check back later for exciting memories!
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={albums}
+              keyExtractor={item => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.albumCard} onPress={() => setSelectedAlbum(item.id)}>
+                  <Text style={styles.albumTitle}>{item.title}</Text>
+                  <View style={styles.albumPreviewRow}>
+                    {item.photos.slice(0, 2).map((photo, idx) => (
+                      <Image key={idx} source={{ uri: photo }} style={styles.albumPreview} />
+                    ))}
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
           )}
-        />
+        </>
       )}
     </View>
   );
@@ -109,5 +106,26 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 12,
     margin: 8,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 60,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
   },
 }); 

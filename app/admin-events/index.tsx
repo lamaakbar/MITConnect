@@ -22,64 +22,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import AdminTabBar from '../../components/AdminTabBar';
+import AdminHeader from '../../components/AdminHeader';
 
-// Mock data for events
-const mockEvents = [
-  {
-    id: '1',
-    title: 'Technology Table Tennis',
-    type: 'Workshop',
-    date: '2024-06-24',
-    time: '12:00 PM',
-    location: 'MITC, Grand floor',
-    description: 'A fun table tennis event with a tech twist!',
-    coverImage: require('../../assets/images/partial-react-logo.png'),
-    featured: true,
-    attendees: [
-      { name: "Hassan Ahmed", email: "hassan.ahmed@email.com", status: "Confirmed" },
-      { name: "Mona Khateeb", email: "mona.khateeb@email.com", status: "Confirmed" },
-      { name: "Lama Akbar", email: "lama.akbar@email.com", status: "Canceled" },
-      { name: "Youseef Naytah", email: "youseef.naytah@email.com", status: "Canceled" },
-      { name: "Khalid Alkhaibari", email: "khalid.alkhaibari@email.com", status: "Confirmed" },
-    ],
-  },
-  {
-    id: '2',
-    title: 'AI in Business Conference',
-    type: 'Seminar',
-    date: '2025-01-20',
-    time: '8:00 AM',
-    location: 'Digital Banking Center',
-    description: 'Explore the future of AI in business.',
-    coverImage: require('../../assets/images/react-logo.png'),
-    featured: false,
-    attendees: [
-      { name: "Bayan Alsahafi", email: "bayan.alsahafi@email.com", status: "Confirmed" },
-      { name: "Hadeel Kufiah", email: "hadeel.kufiah@email.com", status: "Confirmed" },
-      { name: "Hassan Ahmed", email: "hassan.ahmed@email.com", status: "Canceled" },
-      { name: "Mona Khateeb", email: "mona.khateeb@email.com", status: "Canceled" },
-      { name: "Lama Akbar", email: "lama.akbar@email.com", status: "Confirmed" },
-    ],
-  },
-  {
-    id: '3',
-    title: 'Design Thinking Workshop',
-    type: 'Workshop',
-    date: '2024-12-05',
-    time: '10:00 AM',
-    location: 'MITC',
-    description: 'Hands-on workshop on design thinking.',
-    coverImage: require('../../assets/images/splash-icon.png'),
-    featured: false,
-    attendees: [
-      { name: "Youseef Naytah", email: "youseef.naytah@email.com", status: "Confirmed" },
-      { name: "Khalid Alkhaibari", email: "khalid.alkhaibari@email.com", status: "Canceled" },
-      { name: "Bayan Alsahafi", email: "bayan.alsahafi@email.com", status: "Confirmed" },
-      { name: "Hadeel Kufiah", email: "hadeel.kufiah@email.com", status: "Canceled" },
-      { name: "Hassan Ahmed", email: "hassan.ahmed@email.com", status: "Confirmed" },
-    ],
-  },
-];
+// Empty events array - no mock data
+const mockEvents: any[] = [];
 
 const FILTERS = ['All', 'Upcoming', 'Past'];
 
@@ -260,16 +206,15 @@ const AdminEventListScreen: React.FC = () => {
 
   return (
     <View style={[styles.mainContainer, { backgroundColor }]}>
-      {/* Header */}
-      <View style={[styles.headerRow, { backgroundColor, borderBottomColor: borderColor }]}>
-        <TouchableOpacity onPress={() => router.push('/admin-home')} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={textColor} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: textColor }]}>Events Management</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)}>
-          <Ionicons name="add" size={20} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      {/* Unified Admin Header */}
+      <AdminHeader 
+        title="Events Management"
+        rightComponent={
+          <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)}>
+            <Ionicons name="add" size={20} color="#fff" />
+          </TouchableOpacity>
+        }
+      />
 
       {/* Search Bar */}
       <View style={[styles.searchBar, { backgroundColor: searchBackground }]}>
@@ -313,55 +258,75 @@ const AdminEventListScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         bounces={true}
       >
-        {/* Featured Event */}
-        {featuredEvent && (
-          <TouchableOpacity 
-            style={styles.featuredCard}
-            onPress={() => router.push(`/admin-events/${featuredEvent.id}/details`)}
-            activeOpacity={0.8}
-          >
-            <Image source={featuredEvent.coverImage} style={styles.featuredImage} />
-            <View style={styles.featuredOverlay}>
-              <View style={styles.featuredBadge}>
-                <Text style={styles.featuredText}>Featured</Text>
-              </View>
-              <Text style={styles.featuredTitle}>{featuredEvent.title}</Text>
-              <Text style={styles.featuredSubtitle}>{featuredEvent.type} • {formatDate(featuredEvent.date)}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
+        {/* Empty State */}
+        {events.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={64} color="#ccc" />
+            <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Events Created</Text>
+            <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+              Start by creating your first event to manage activities and track attendees.
+            </Text>
+            <TouchableOpacity 
+              style={styles.emptyStateButton}
+              onPress={() => setShowAddModal(true)}
+            >
+              <Ionicons name="add" size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.emptyStateButtonText}>Create First Event</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            {/* Featured Event */}
+            {featuredEvent && (
+              <TouchableOpacity 
+                style={styles.featuredCard}
+                onPress={() => router.push(`/admin-events/${featuredEvent.id}/details`)}
+                activeOpacity={0.8}
+              >
+                <Image source={featuredEvent.coverImage} style={styles.featuredImage} />
+                <View style={styles.featuredOverlay}>
+                  <View style={styles.featuredBadge}>
+                    <Text style={styles.featuredText}>Featured</Text>
+                  </View>
+                  <Text style={styles.featuredTitle}>{featuredEvent.title}</Text>
+                  <Text style={styles.featuredSubtitle}>{featuredEvent.type} • {formatDate(featuredEvent.date)}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
 
-        {/* Regular Events */}
-        {filteredEvents.map((event, index) => (
-          <TouchableOpacity 
-            key={event.id}
-            style={[styles.eventCard, { backgroundColor: cardBackground, borderColor }]}
-            onPress={() => router.push(`/admin-events/${event.id}/details`)}
-            activeOpacity={0.8}
-          >
-            <Image source={event.coverImage} style={styles.eventImage} />
-            <View style={styles.eventInfo}>
-              <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
-              <Text style={[styles.eventType, { color: '#3CB371' }]}>{event.type}</Text>
-              <Text style={[styles.eventDate, { color: secondaryTextColor }]}>{formatDate(event.date)} • {event.time}</Text>
-              <Text style={[styles.eventLocation, { color: secondaryTextColor }]}>{event.location}</Text>
-            </View>
-            <View style={styles.eventActions}>
+            {/* Regular Events */}
+            {filteredEvents.map((event, index) => (
               <TouchableOpacity 
-                style={styles.actionBtn}
-                onPress={() => openAttendeesModal(event.id)}
+                key={event.id}
+                style={[styles.eventCard, { backgroundColor: cardBackground, borderColor }]}
+                onPress={() => router.push(`/admin-events/${event.id}/details`)}
+                activeOpacity={0.8}
               >
-                <Ionicons name="people" size={20} color="#3CB371" />
+                <Image source={event.coverImage} style={styles.eventImage} />
+                <View style={styles.eventInfo}>
+                  <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
+                  <Text style={[styles.eventType, { color: '#3CB371' }]}>{event.type}</Text>
+                  <Text style={[styles.eventDate, { color: secondaryTextColor }]}>{formatDate(event.date)} • {event.time}</Text>
+                  <Text style={[styles.eventLocation, { color: secondaryTextColor }]}>{event.location}</Text>
+                </View>
+                <View style={styles.eventActions}>
+                  <TouchableOpacity 
+                    style={styles.actionBtn}
+                    onPress={() => openAttendeesModal(event.id)}
+                  >
+                    <Ionicons name="people" size={20} color="#3CB371" />
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.actionBtn}
+                    onPress={() => openEditModal(index)}
+                  >
+                    <Ionicons name="create" size={20} color="#4A90E2" />
+                  </TouchableOpacity>
+                </View>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.actionBtn}
-                onPress={() => openEditModal(index)}
-              >
-                <Ionicons name="create" size={20} color="#4A90E2" />
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        ))}
+            ))}
+          </>
+        )}
       </ScrollView>
 
       {/* Bottom Tab Bar */}
@@ -1012,6 +977,44 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 12,
     color: '#fff',
+    fontWeight: '600',
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 60,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  emptyStateButton: {
+    backgroundColor: '#3CB371',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  emptyStateButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
   });

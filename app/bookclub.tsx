@@ -32,7 +32,7 @@ export default function BookClubScreen() {
   const [mainCommentInput, setMainCommentInput] = useState('');
 
   // Exclude featured book from recent selections
-  const recentBooks = books.filter(b => b.title !== FEATURED_BOOK.title);
+  const recentBooks = books.filter(b => FEATURED_BOOK && b.title !== FEATURED_BOOK.title);
 
   const openBookModal = (book: Book) => {
     setSelectedBook(book);
@@ -57,21 +57,45 @@ export default function BookClubScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Featured Book Section */}
-        {/* Header row with button */}
-        <View style={styles.featuredHeaderRow}>
-          <Text style={styles.sectionTitle}>
-            <Ionicons name="star" size={20} color="#1abc9c" /> Featured Book This Week
-          </Text>
-          <TouchableOpacity
-            style={[styles.goLibraryBtn, books.length === 0 && styles.goLibraryBtnDisabled]}
-            onPress={() => router.push('/books-management')}
-            disabled={books.length === 0}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.goLibraryBtnText}>Go to Library</Text>
-          </TouchableOpacity>
-        </View>
+<<<<<<< HEAD
+        {!FEATURED_BOOK ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="book-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyStateTitle}>No Featured Book</Text>
+            <Text style={styles.emptyStateText}>
+              There's no featured book this week. Check the library for great reads!
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyStateButton}
+              onPress={() => router.push('/books-management')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.emptyStateButtonText}>Browse Library</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            {/* Header row with button */}
+            <View style={styles.featuredHeaderRow}>
+              <Text style={styles.sectionTitle}>
+                <Ionicons name="star" size={20} color="#1abc9c" /> Featured Book This Week
+              </Text>
+              <TouchableOpacity
+                style={[styles.goLibraryBtn, books.length === 0 && styles.goLibraryBtnDisabled]}
+                onPress={() => router.push('/books-management')}
+                disabled={books.length === 0}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.goLibraryBtnText}>Go to Library</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.featuredCard}>
+=======
+        <Text style={styles.sectionTitle}>
+          <Ionicons name="star" size={20} color="#1abc9c" /> Featured Book This Week
+        </Text>
         <View style={styles.featuredCard}>
+>>>>>>> ad557c2 (Uptade the bookClub)
           <View style={{ flexDirection: 'row' }}>
             <Image source={{ uri: FEATURED_BOOK.cover }} style={styles.featuredCover} />
             <View style={{ flex: 1, marginLeft: 16 }}>
@@ -174,11 +198,18 @@ export default function BookClubScreen() {
                 ))
               )}
             </View>
-          </View>
+                    </View>
         </View>
 
+
+
         {/* Recent Selections */}
-        <Text style={styles.sectionTitle}><Feather name="clock" size={16} color="#3AC569" /> Recent Selections</Text>
+        <View style={styles.recentHeaderRow}>
+          <Text style={styles.sectionTitle}><Feather name="clock" size={16} color="#3AC569" /> Recent Selections</Text>
+          <TouchableOpacity style={styles.goLibraryBtnSmall} onPress={() => router.push('/library')}>
+            <Text style={styles.goLibraryBtnTextSmall}>Go to MITC Library</Text>
+          </TouchableOpacity>
+        </View>
         <FlatList
           data={recentBooks}
           keyExtractor={item => item.id}
@@ -193,13 +224,15 @@ export default function BookClubScreen() {
                   <Text style={styles.genreText}>{item.genre}</Text>
                 </View>
               </View>
-              <TouchableOpacity style={{ alignSelf: 'center' }} onPress={() => openBookModal(item)}>
+              <TouchableOpacity style={{ alignSelf: 'center' }} onPress={() => router.push(`/library/${item.id}/details`)}>
                 <Text style={styles.moreDetails}>More Details</Text>
               </TouchableOpacity>
             </View>
           )}
           ListEmptyComponent={<Text style={{ color: '#888', textAlign: 'center', marginTop: 16 }}>No recent selections.</Text>}
         />
+          </>
+        )}
       </ScrollView>
       {/* Bottom Navigation Bar */}
       <View style={styles.bottomNav}>
@@ -298,11 +331,8 @@ const styles = StyleSheet.create({
     color: '#222',
     marginTop: 0,
     marginBottom: 0,
-    flexShrink: 1,
-    minWidth: 0,
+    flexShrink: 0,
     flexGrow: 1,
-    flexBasis: 'auto',
-    overflow: 'hidden',
   },
   featuredCard: {
     backgroundColor: '#fff',
@@ -625,19 +655,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 18,
     marginBottom: 18,
-    gap: 12,
-    overflow: 'visible',
+    paddingHorizontal: 4,
   },
   goLibraryBtn: {
     backgroundColor: '#1abc9c',
-    borderRadius: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
     marginLeft: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 90,
-    maxWidth: 140,
+    minWidth: 70,
+    maxWidth: 100,
     flexGrow: 0,
     flexShrink: 0,
   },
@@ -647,6 +676,80 @@ const styles = StyleSheet.create({
   goLibraryBtnText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: 14,
+  },
+  recentHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 18,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  recentHeaderButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  seeMoreBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  seeMoreText: {
+    color: '#3AC569',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  goLibraryBtnSmall: {
+    backgroundColor: '#1abc9c',
+    borderRadius: 6,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  goLibraryBtnTextSmall: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 60,
+    marginBottom: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
     fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  emptyStateButton: {
+    backgroundColor: '#1abc9c',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  emptyStateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

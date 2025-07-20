@@ -33,7 +33,7 @@ interface FeedbackData {
 
 class EventService {
   private baseUrl: string = 'https://api.mitconnect.com'; // Future API endpoint
-  private useMockData: boolean = true; // Toggle between mock and real API
+  private useMockData: boolean = true; // Use mock data to avoid network failures - no backend API available yet
   private mockFeedback: EventFeedback[] = []; // Store mock feedback data
   private mockUserEventTracking: UserEventTracking[] = []; // Track user event status
 
@@ -53,7 +53,7 @@ class EventService {
       return result.data;
     } catch (error) {
       console.error('Error fetching events:', error);
-      return this.getMockEvents(); // Fallback to mock data
+      return []; // Return empty array instead of mock data
     }
   }
 
@@ -100,7 +100,7 @@ class EventService {
       return result.data;
     } catch (error) {
       console.error('Error fetching featured events:', error);
-      return this.getMockEvents().filter(event => event.featured);
+      return []; // Return empty array instead of mock data
     }
   }
 
@@ -307,7 +307,7 @@ class EventService {
   }
 
   /**
-   * Bookmark/unbookmark an event
+   * Toggle event bookmark
    */
   async toggleEventBookmark(eventId: string, userId: string, isBookmarked: boolean): Promise<boolean> {
     if (this.useMockData) {
@@ -316,9 +316,8 @@ class EventService {
     }
 
     try {
-      const method = isBookmarked ? 'POST' : 'DELETE';
       const response = await fetch(`${this.baseUrl}/events/${eventId}/bookmark`, {
-        method,
+        method: isBookmarked ? 'POST' : 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -337,20 +336,20 @@ class EventService {
    */
   async submitEventFeedback(feedbackData: FeedbackData): Promise<boolean> {
     if (this.useMockData) {
-      // Check if user has attended this event
+      // Find user's tracking for this event
       const userTracking = this.mockUserEventTracking.find(
         tracking => tracking.eventId === feedbackData.eventId && 
                    tracking.userId === feedbackData.userId
       );
       
-      if (!userTracking || userTracking.status !== 'attended') {
-        console.log('User has not attended this event - feedback submission blocked');
+      if (!userTracking) {
+        console.log('User not registered for this event');
         return false;
       }
       
       // Store feedback in mock data for demo purposes
       this.mockFeedback.push({
-        id: Date.now().toString(),
+        id: `feedback-${Date.now()}`,
         eventId: feedbackData.eventId,
         userId: feedbackData.userId,
         rating: feedbackData.rating,
@@ -394,7 +393,7 @@ class EventService {
   }
 
   /**
-   * Get event statistics including ratings and feedback
+   * Get event statistics
    */
   async getEventStats(eventId: string): Promise<EventStats | null> {
     if (this.useMockData) {
@@ -402,42 +401,25 @@ class EventService {
       const eventFeedback = this.mockFeedback.filter(f => f.eventId === eventId);
       
       if (eventFeedback.length === 0) {
-        // Return default stats for events with no feedback
-        return {
-          totalRegistrations: 0,
-          totalAttendees: 0,
-          averageRating: 0,
-          totalReviews: 0,
-          ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-        };
+        return null;
       }
-
-      const totalReviews = eventFeedback.length;
+      
       const totalRating = eventFeedback.reduce((sum, f) => sum + f.rating, 0);
-      const averageRating = totalRating / totalReviews;
-
-      // Calculate rating distribution
-      const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-      eventFeedback.forEach(f => {
-        distribution[f.rating as keyof typeof distribution]++;
-      });
-
-      // Convert to percentages
-      const ratingDistribution = {
-        1: Math.round((distribution[1] / totalReviews) * 100),
-        2: Math.round((distribution[2] / totalReviews) * 100),
-        3: Math.round((distribution[3] / totalReviews) * 100),
-        4: Math.round((distribution[4] / totalReviews) * 100),
-        5: Math.round((distribution[5] / totalReviews) * 100),
-      };
-
-      return {
-        totalRegistrations: 0, // Would come from registration data
-        totalAttendees: 0, // Would come from attendance data
-        averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal
-        totalReviews,
-        ratingDistribution,
-      };
+      const averageRating = totalRating / eventFeedback.length;
+      
+              return {
+          totalRegistrations: 0, // Would need to track this separately
+          totalAttendees: 0, // Would need to track this separately
+          averageRating,
+          totalReviews: eventFeedback.length,
+          ratingDistribution: {
+            1: eventFeedback.filter(f => f.rating === 1).length,
+            2: eventFeedback.filter(f => f.rating === 2).length,
+            3: eventFeedback.filter(f => f.rating === 3).length,
+            4: eventFeedback.filter(f => f.rating === 4).length,
+            5: eventFeedback.filter(f => f.rating === 5).length,
+          },
+        };
     }
 
     try {
@@ -451,7 +433,7 @@ class EventService {
   }
 
   /**
-   * Get all feedback for an event
+   * Get event feedback
    */
   async getEventFeedback(eventId: string): Promise<EventFeedback[]> {
     if (this.useMockData) {
@@ -469,7 +451,7 @@ class EventService {
   }
 
   /**
-   * Get user's event status for a specific event
+   * Get user's status for a specific event
    */
   async getUserEventStatus(eventId: string, userId: string): Promise<UserEventTracking | null> {
     if (this.useMockData) {
@@ -489,7 +471,7 @@ class EventService {
   }
 
   /**
-   * Mark user as attended for an event (simulate attendance)
+   * Mark user as attended for an event
    */
   async markUserAsAttended(eventId: string, userId: string): Promise<boolean> {
     if (this.useMockData) {
@@ -503,10 +485,9 @@ class EventService {
           status: 'attended',
           attendanceDate: new Date(),
         };
-        console.log('User marked as attended for event:', eventId);
-        return true;
       }
-      return false;
+      
+      return true;
     }
 
     try {
@@ -626,81 +607,10 @@ class EventService {
     return 'mock-admin-token';
   }
 
-  // MARK: - Mock Data (Temporary)
+  // MARK: - Mock Data (Temporary) - Returns empty arrays to avoid network failures
 
   private getMockEvents(): Event[] {
-    return [
-      {
-        id: '1',
-        title: 'Technology Table Tennis',
-        desc: 'Innovation meets friendly competition. Connect with fellow tech enthusiasts, enjoy some fast-paced fun, and take a well-deserved break while rallying around the spirit of technology and teamwork.',
-        date: 'July 22, 2025',
-        time: '12:00 PM - 1:00 PM',
-        location: 'MITC, Jeddah',
-        image: require('../assets/images/react-logo.png'),
-        category: 'Activity',
-        registeredCount: 47,
-        featured: true,
-        status: 'upcoming',
-        type: 'MITC',
-      },
-      {
-        id: '2',
-        title: 'Future of Tech',
-        desc: 'A look into the future of technology and innovation.',
-        date: 'Nov 15, 2025',
-        time: '10:00 AM - 12:00 PM',
-        location: 'Online',
-        image: require('../assets/images/partial-react-logo.png'),
-        category: 'Seminar',
-        registeredCount: 120,
-        featured: false,
-        status: 'upcoming',
-        type: 'Online',
-      },
-      {
-        id: '3',
-        title: 'Startup Strategies',
-        desc: 'Learn how to launch and grow your startup.',
-        date: 'Dec 5, 2025',
-        time: '2:00 PM - 4:00 PM',
-        location: 'MITC, Jeddah',
-        image: require('../assets/images/icon.png'),
-        category: 'Workshop',
-        registeredCount: 80,
-        featured: false,
-        status: 'upcoming',
-        type: 'MITC',
-      },
-      {
-        id: '4',
-        title: 'Design Thinking Workshop',
-        desc: 'Hands-on workshop on design thinking methodologies.',
-        date: '2024-02-10',
-        time: '9:00 AM - 11:00 AM',
-        location: 'MITC, Jeddah',
-        image: require('../assets/images/splash-icon.png'),
-        category: 'Workshop',
-        registeredCount: 45,
-        featured: false,
-        status: 'completed',
-        type: 'MITC',
-      },
-      {
-        id: '5',
-        title: 'AI in Business Conference',
-        desc: 'Explore the future of AI in business applications.',
-        date: '2024-01-20',
-        time: '8:00 AM - 5:00 PM',
-        location: 'Online',
-        image: require('../assets/images/react-logo.png'),
-        category: 'Conference',
-        registeredCount: 200,
-        featured: false,
-        status: 'completed',
-        type: 'Online',
-      },
-    ];
+    return []; // Return empty array - no mock data
   }
 }
 

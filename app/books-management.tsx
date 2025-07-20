@@ -8,7 +8,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useBooks } from '../components/BookContext';
 import AdminTabBar from '../components/AdminTabBar';
 import Toast from 'react-native-root-toast';
-import StandardHeader from '../components/StandardHeader';
+import AdminHeader from '../components/AdminHeader';
 
 export default function AdminBooksScreen() {
   const router = useRouter();
@@ -46,8 +46,8 @@ export default function AdminBooksScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      {/* Header */}
-      <StandardHeader 
+      {/* Unified Admin Header */}
+      <AdminHeader 
         title="MITConnect Library"
         rightComponent={
           <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/add-book')}>
@@ -78,40 +78,57 @@ export default function AdminBooksScreen() {
       </View>
 
       {/* Books List */}
-      <FlatList
-        data={books}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => router.push(`/books-management/${item.id}/details`)}
-            activeOpacity={0.8}
+      {books.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="library-outline" size={64} color="#ccc" />
+          <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Books in Library</Text>
+          <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+            Start building your library by adding the first book. Share knowledge and inspire your team!
+          </Text>
+          <TouchableOpacity 
+            style={styles.emptyStateButton}
+            onPress={() => router.push('/add-book')}
           >
-            <View style={[styles.card, { backgroundColor: cardBackground, borderColor }]}>
-              <Image source={{ uri: item.cover }} style={styles.cover} />
-              <View style={styles.info}>
-                <Text style={[styles.title, { color: textColor }]}>{item.title}</Text>
-                <Text style={[styles.author, { color: secondaryTextColor }]}>By {item.author}</Text>
-                <View style={[styles.genreChip, { backgroundColor: item.genreColor }]}> 
-                  <Text style={[styles.genreText, { color: textColor }]}>{item.genre}</Text>
-                </View>
-              </View>
-              <TouchableOpacity 
-                style={[styles.removeBtn, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F2F2F2' }]} 
-                onPress={() => handleRemove(item.id, item.title)}
-              >
-                <Text style={[styles.removeBtnText, { color: isDarkMode ? '#E74C3C' : '#444' }]}>Remove</Text>
-              </TouchableOpacity>
-            </View>
+            <Ionicons name="add" size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.emptyStateButtonText}>Add First Book</Text>
           </TouchableOpacity>
-        )}
-      />
+        </View>
+      ) : (
+        <FlatList
+          data={books}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              onPress={() => router.push(`/books-management/${item.id}/details`)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.card, { backgroundColor: cardBackground, borderColor }]}>
+                <Image source={{ uri: item.cover }} style={styles.cover} />
+                <View style={styles.info}>
+                  <Text style={[styles.title, { color: textColor }]}>{item.title}</Text>
+                  <Text style={[styles.author, { color: secondaryTextColor }]}>By {item.author}</Text>
+                  <View style={[styles.genreChip, { backgroundColor: item.genreColor }]}> 
+                    <Text style={[styles.genreText, { color: textColor }]}>{item.genre}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity 
+                  style={[styles.removeBtn, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F2F2F2' }]} 
+                  onPress={() => handleRemove(item.id, item.title)}
+                >
+                  <Text style={[styles.removeBtnText, { color: isDarkMode ? '#E74C3C' : '#444' }]}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          )}
+        />
+      )}
 
       {/* Bottom Tab Bar */}
       <AdminTabBar activeTab="books" isDarkMode={isDarkMode} />
     </View>
-  );
+  ); 
 }
 
 const styles = StyleSheet.create({
@@ -216,5 +233,43 @@ const styles = StyleSheet.create({
   removeBtnText: {
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 60,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  emptyStateButton: {
+    backgroundColor: '#3AC569',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  emptyStateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 
