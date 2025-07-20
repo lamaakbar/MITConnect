@@ -51,6 +51,15 @@ export default function RootLayout() {
             <Stack.Screen name="book-details" options={{ headerShown: false }} />
             <Stack.Screen name="feature-details" options={{ headerShown: false }} />
             <Stack.Screen name="events-management" options={{ headerShown: false }} />
+            <Stack.Screen name="admin-events/index" options={{ headerShown: false }} />
+            <Stack.Screen name="admin-events/add" options={{ headerShown: false }} />
+            <Stack.Screen name="admin-events/[id]/details" options={{ headerShown: false }} />
+            <Stack.Screen name="admin-events/[id]/edit" options={{ headerShown: false }} />
+            <Stack.Screen name="trainee-management/index" options={{ headerShown: false }} />
+            <Stack.Screen name="trainee-management/overview" options={{ headerShown: false }} />
+            <Stack.Screen name="trainee-management/progress" options={{ headerShown: false }} />
+            <Stack.Screen name="trainee-management/registrations" options={{ headerShown: false }} />
+            <Stack.Screen name="books-management/[id]/details" options={{ headerShown: false }} />
             <Stack.Screen name="shop-management" options={{ headerShown: false }} />
             <Stack.Screen name="shopdrop" options={{ headerShown: false }} />
             <Stack.Screen name="highlight-management" options={{ headerShown: false }} />

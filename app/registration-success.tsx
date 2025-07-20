@@ -9,7 +9,8 @@ export default function RegistrationSuccessScreen() {
   const router = useRouter();
   const { events, registered } = useEventContext();
   // Get the last registered event
-  const event = events.find(e => e.id === registered[registered.length - 1]);
+  const lastRegisteredId = registered.length > 0 ? registered[registered.length - 1] : null;
+  const event = lastRegisteredId ? events.find(e => e.id === lastRegisteredId) : null;
 
   if (!event) return <View style={styles.center}><Text>No event found.</Text></View>;
 

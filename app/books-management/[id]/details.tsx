@@ -3,39 +3,49 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useBooks } from '../../../components/BookContext';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function BookDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { books } = useBooks();
   const book = books.find(b => b.id === id);
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+  
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
 
   if (!book) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Book not found.</Text>
-        <TouchableOpacity onPress={() => router.push('/books-management')} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#222" />
+      <View style={[styles.container, { backgroundColor }]}>
+        <Text style={[styles.errorText, { color: '#E74C3C' }]}>Book not found.</Text>
+        <TouchableOpacity onPress={() => router.push('/books-management')} style={[styles.backBtn, { backgroundColor: isDarkMode ? 'rgba(30,30,30,0.8)' : 'rgba(255,255,255,0.8)' }]}>
+          <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity onPress={() => router.push('/books-management')} style={styles.backBtn}>
-        <Ionicons name="arrow-back" size={24} color="#222" />
+    <View style={[styles.container, { backgroundColor }]}>
+      <TouchableOpacity onPress={() => router.push('/books-management')} style={[styles.backBtn, { backgroundColor: isDarkMode ? 'rgba(30,30,30,0.8)' : 'rgba(255,255,255,0.8)' }]}>
+        <Ionicons name="arrow-back" size={24} color={textColor} />
       </TouchableOpacity>
       <Image source={{ uri: book.cover }} style={styles.cover} />
-      <Text style={styles.title}>{book.title}</Text>
-      <Text style={styles.author}>By {book.author}</Text>
+      <Text style={[styles.title, { color: textColor }]}>{book.title}</Text>
+      <Text style={[styles.author, { color: secondaryTextColor }]}>By {book.author}</Text>
       <View style={[styles.genreChip, { backgroundColor: book.genreColor }]}> 
-        <Text style={styles.genreText}>{book.genre}</Text>
+        <Text style={[styles.genreText, { color: textColor }]}>{book.genre}</Text>
       </View>
       {book.description ? (
-        <Text style={styles.description}>{book.description}</Text>
+        <Text style={[styles.description, { color: textColor }]}>{book.description}</Text>
       ) : null}
-      <Text style={styles.idText}>Book ID: {book.id}</Text>
+      <Text style={[styles.idText, { color: secondaryTextColor }]}>Book ID: {book.id}</Text>
     </View>
   );
 }
@@ -43,7 +53,6 @@ export default function BookDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAF9',
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingTop: 48,
@@ -53,7 +62,6 @@ const styles = StyleSheet.create({
     top: 48,
     left: 16,
     zIndex: 10,
-    backgroundColor: 'rgba(255,255,255,0.8)',
     borderRadius: 20,
     padding: 4,
   },
@@ -68,13 +76,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#222',
     marginBottom: 6,
     textAlign: 'center',
   },
   author: {
     fontSize: 15,
-    color: '#888',
     marginBottom: 10,
     textAlign: 'center',
   },
@@ -87,22 +93,18 @@ const styles = StyleSheet.create({
   },
   genreText: {
     fontSize: 13,
-    color: '#222',
   },
   description: {
     fontSize: 15,
-    color: '#444',
     marginBottom: 18,
     textAlign: 'center',
   },
   idText: {
     fontSize: 12,
-    color: '#bbb',
     marginTop: 12,
     textAlign: 'center',
   },
   errorText: {
-    color: 'red',
     fontSize: 16,
     marginTop: 80,
     textAlign: 'center',

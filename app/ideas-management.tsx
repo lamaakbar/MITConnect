@@ -1,6 +1,11 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Pressable, ActivityIndicator, Platform, ToastAndroid, Alert, TextInput } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Alert, ActivityIndicator, Platform, ToastAndroid } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import AdminTabBar from '../components/AdminTabBar';
+import StandardHeader from '../components/StandardHeader';
 
 // Idea status types
 const IDEA_STATUS = {
@@ -80,6 +85,10 @@ const mockIdeas: Idea[] = [
 ];
 
 export default function IdeasManagement() {
+  const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+  
   const [tab, setTab] = useState<'pending' | 'submitted'>('pending');
   const [manageIdea, setManageIdea] = useState<Idea | null>(null);
   const [ideas, setIdeas] = useState<Idea[]>(mockIdeas);
@@ -91,6 +100,13 @@ export default function IdeasManagement() {
   const [pollError, setPollError] = useState<string | null>(null);
   // In IdeasManagement component state, add a pendingPoll state
   const [pendingPoll, setPendingPoll] = useState<{ ideaId: string, question: string, options: string[] } | null>(null);
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#E0E0E0';
 
   // Filtered ideas
   const pendingIdeas = ideas.filter(i => i.status === IDEA_STATUS.PENDING);
@@ -156,7 +172,11 @@ export default function IdeasManagement() {
       setPollError('Question and all options are required.');
       return;
     }
-    setPendingPoll({ ideaId: pollModalIdea!.id, question: pollQuestion, options: pollOptions });
+    if (!pollModalIdea) {
+      setPollError('No idea selected for poll creation.');
+      return;
+    }
+    setPendingPoll({ ideaId: pollModalIdea.id, question: pollQuestion, options: pollOptions });
     setPollModalIdea(null);
     showToast('Poll ready to be attached. Approve to publish.');
   };
@@ -183,148 +203,176 @@ export default function IdeasManagement() {
   };
 
   return (
-    <View style={styles.pageContainer}>
+    <View style={[styles.mainContainer, { backgroundColor }]}>
+      {/* Header */}
+      <StandardHeader title="Ideas Management" />
+
       {/* Toast */}
       {toast && <View style={styles.toast}><Text style={styles.toastText}>{toast}</Text></View>}
+
+      {/* Scrollable Content */}
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
+        {/* Stats Section */}
+        <View style={styles.statsContainer}>
+          <StatCard label="Total Ideas" value={totalIdeas} icon="bulb" />
+          <StatCard label="In Progress" value={inProgress} icon="time" />
+          <StatCard label="Approved" value={approved} icon="checkmark-circle" />
+          <StatCard label="Total Votes" value={totalVotes} icon="heart" />
+        </View>
+
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            style={[styles.tab, tab === 'pending' && styles.activeTab]}
+            onPress={() => setTab('pending')}
+          >
+            <Text style={[styles.tabText, { color: textColor }, tab === 'pending' && styles.activeTabText]}>
+              Pending ({pendingIdeas.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, tab === 'submitted' && styles.activeTab]}
+            onPress={() => setTab('submitted')}
+          >
+            <Text style={[styles.tabText, { color: textColor }, tab === 'submitted' && styles.activeTabText]}>
+              Submitted ({submittedIdeas.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Ideas List */}
+        <View style={styles.ideasContainer}>
+          {(tab === 'pending' ? pendingIdeas : submittedIdeas).map((idea) => (
+            <IdeaCard
+              key={idea.id}
+              idea={idea}
+              onApprove={tab === 'pending' ? handleApprove : undefined}
+              onReject={tab === 'pending' ? handleReject : undefined}
+              onCreatePoll={tab === 'pending' ? handleCreatePoll : undefined}
+              onManage={() => setManageIdea(idea)}
+              isPending={tab === 'pending'}
+              actionLoading={actionLoading}
+            />
+          ))}
+        </View>
+      </ScrollView>
+
+      {/* Bottom Tab Bar */}
+      <AdminTabBar activeTab="ideas" isDarkMode={isDarkMode} />
+
       {/* Create Poll Modal - Fullscreen, scrollable, with close icon */}
       <Modal visible={!!pollModalIdea} animationType="slide" transparent>
         <View style={styles.pollModalOverlay}>
           <View style={styles.pollModalFullScreen}>
             <View style={styles.pollModalHeader}>
-              <Text style={styles.pollModalHeaderLabel}>Create a Poll</Text>
+              <Text style={[styles.pollModalHeaderLabel, { color: textColor }]}>Create a Poll</Text>
               <TouchableOpacity onPress={() => setPollModalIdea(null)} accessibilityLabel="Close poll modal">
-                <Ionicons name="close" size={28} color="#888" />
+                <Ionicons name="close" size={28} color={secondaryTextColor} />
               </TouchableOpacity>
             </View>
             <ScrollView contentContainerStyle={styles.pollModalScroll} keyboardShouldPersistTaps="handled">
-              <Text style={styles.pollModalLabel}>Poll Question</Text>
+              <Text style={[styles.pollModalLabel, { color: textColor }]}>Poll Question</Text>
               <TextInput
-                style={styles.pollModalTitleInput}
-                placeholder="What's on your mind?..."
+                style={[styles.pollModalInput, { backgroundColor: cardBackground, color: textColor, borderColor }]}
                 value={pollQuestion}
                 onChangeText={setPollQuestion}
-                maxLength={100}
-                autoFocus
-                placeholderTextColor="#bbb"
+                placeholder="Enter your poll question..."
+                placeholderTextColor={secondaryTextColor}
+                multiline
               />
-              <Text style={styles.pollModalLabel}>Options</Text>
-              {pollOptions.map((opt, idx) => (
-                <View key={idx} style={styles.pollOptionInputRow}>
-                  <Text style={styles.pollOptionNum}>{idx + 1}.</Text>
-                  <View style={styles.pollOptionInputBox}>
-                    <TextInput
-                      style={styles.pollOptionInput}
-                      placeholder={`Option #${idx + 1}`}
-                      value={opt}
-                      onChangeText={v => handlePollOptionChange(idx, v)}
-                      placeholderTextColor="#bbb"
-                    />
-                  </View>
+              <Text style={[styles.pollModalLabel, { color: textColor }]}>Poll Options</Text>
+              {pollOptions.map((option, idx) => (
+                <View key={idx} style={styles.pollOptionContainer}>
+                  <TextInput
+                    style={[styles.pollModalInput, { backgroundColor: cardBackground, color: textColor, borderColor }]}
+                    value={option}
+                    onChangeText={(value) => handlePollOptionChange(idx, value)}
+                    placeholder={`Option ${idx + 1}`}
+                    placeholderTextColor={secondaryTextColor}
+                  />
                   {pollOptions.length > 2 && (
-                    <TouchableOpacity onPress={() => handleRemovePollOption(idx)} accessibilityLabel="Remove option">
-                      <Ionicons name="close-circle" size={18} color="#E74C3C" />
+                    <TouchableOpacity 
+                      onPress={() => handleRemovePollOption(idx)}
+                      style={styles.removeOptionBtn}
+                    >
+                      <Ionicons name="close-circle" size={20} color="#ff4444" />
                     </TouchableOpacity>
                   )}
                 </View>
               ))}
-              <TouchableOpacity style={styles.moreOptionsBtn} onPress={handleAddPollOption} accessibilityLabel="Add more options">
-                <Text style={styles.moreOptionsText}>More options </Text>
-                <Ionicons name="add-circle" size={16} color="#C678F5" />
+              <TouchableOpacity onPress={handleAddPollOption} style={styles.addOptionBtn}>
+                <Ionicons name="add-circle" size={20} color="#3CB371" />
+                <Text style={[styles.addOptionText, { color: '#3CB371' }]}>Add Option</Text>
               </TouchableOpacity>
               {pollError && <Text style={styles.pollError}>{pollError}</Text>}
-              <TouchableOpacity style={styles.createPollMainBtn} onPress={handlePollCreate} accessibilityLabel="Create poll">
-                <Text style={styles.createPollMainBtnText}>Create</Text>
+              <TouchableOpacity onPress={handlePollCreate} style={styles.createPollBtn}>
+                <Text style={styles.createPollBtnText}>Create Poll</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
       </Modal>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <Ionicons name="bulb-outline" size={24} color="#F7B32B" style={{ marginRight: 8 }} />
-        <View>
-          <Text style={styles.headerTitle}>Inspire Corner</Text>
-          <Text style={styles.headerSubtitle}>Innovation & Ideas Hub</Text>
-        </View>
-      </View>
-      {/* Summary Cards */}
-      <View style={styles.statsRow}>
-        <StatCard label="Total Ideas" value={totalIdeas} icon="bulb-outline" />
-        <StatCard label="In Progress" value={inProgress} icon="time-outline" />
-        <StatCard label="Approved" value={approved} icon="checkmark-circle-outline" />
-        <StatCard label="Total Votes" value={totalVotes} icon="people-outline" />
-      </View>
-      {/* Tabs */}
-      <View style={styles.tabsRow}>
-        <TouchableOpacity
-          style={[styles.tabBtn, tab === 'pending' && styles.tabBtnActive]}
-          onPress={() => setTab('pending')}
-          accessibilityLabel="Show pending ideas"
-        >
-          <Text style={[styles.tabText, tab === 'pending' && styles.tabTextActive]}>Pending Ideas</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabBtn, tab === 'submitted' && styles.tabBtnActive]}
-          onPress={() => setTab('submitted')}
-          accessibilityLabel="Show submitted ideas"
-        >
-          <Text style={[styles.tabText, tab === 'submitted' && styles.tabTextActive]}>Submitted Ideas</Text>
-        </TouchableOpacity>
-      </View>
-      {/* Ideas List */}
-      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
-        {tab === 'pending' ? (
-          <>
-            <Text style={styles.sectionTitle}>{pendingIdeas.length} Pending Ideas</Text>
-            {pendingIdeas.map(idea => (
-              <IdeaCard
-                key={idea.id}
-                idea={idea}
-                onApprove={handleApprove}
-                onReject={handleReject}
-                onCreatePoll={handleCreatePoll}
-                isPending
-                actionLoading={actionLoading}
-              />
-            ))}
-          </>
-        ) : (
-          <>
-            <Text style={styles.sectionTitle}>{submittedIdeas.length} Submitted Ideas</Text>
-            {submittedIdeas.map(idea => (
-              <IdeaCard
-                key={idea.id}
-                idea={idea}
-                onManage={() => setManageIdea(idea)}
-              />
-            ))}
-          </>
-        )}
-      </ScrollView>
+
       {/* Manage Idea Modal */}
-      <Modal visible={!!manageIdea} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Manage Idea</Text>
-            {manageIdea && (
-              <>
-                <Text style={styles.modalIdeaTitle}>{manageIdea.title}</Text>
-                {/* Status Action Buttons Row */}
-                <View style={styles.manageActionsRow}>
-                  <TouchableOpacity style={styles.inProgressBtn} onPress={() => handleUpdateStatus(manageIdea.id, IDEA_STATUS.IN_PROGRESS)}>
-                    <Text style={styles.inProgressBtnText}>In Progress</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.rejectBtn} onPress={() => handleUpdateStatus(manageIdea.id, IDEA_STATUS.PENDING)}>
-                    <Text style={styles.rejectBtnText}>Reject</Text>
-                  </TouchableOpacity>
-                </View>
-                {/* Poll Results Section */}
-                <PollResult votesYes={manageIdea.votes} votesNo={5} />
-              </>
-            )}
-            <Pressable style={styles.closeModalBtn} onPress={() => setManageIdea(null)}>
-              <Text style={styles.closeModalText}>Close</Text>
-            </Pressable>
+      <Modal visible={!!manageIdea} animationType="slide" transparent>
+        <View style={[styles.modalOverlay, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.3)' }]}>
+          <View style={[styles.modalContent, { backgroundColor: cardBackground }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: textColor }]}>Manage Idea</Text>
+              <TouchableOpacity onPress={() => setManageIdea(null)}>
+                <Ionicons name="close" size={24} color={secondaryTextColor} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalScroll}>
+              <Text style={[styles.modalLabel, { color: textColor }]}>Status</Text>
+              <View style={styles.statusButtons}>
+                <TouchableOpacity 
+                  style={[
+                    styles.statusBtn,
+                    { backgroundColor: isDarkMode ? '#2A2A2A' : '#eee' },
+                    manageIdea?.status === IDEA_STATUS.IN_PROGRESS && styles.activeStatusBtn
+                  ]}
+                  onPress={() => manageIdea && handleUpdateStatus(manageIdea.id, IDEA_STATUS.IN_PROGRESS)}
+                  disabled={actionLoading === (manageIdea?.id || '') + '-status'}
+                >
+                  <Text style={[
+                    styles.statusBtnText,
+                    { color: textColor },
+                    manageIdea?.status === IDEA_STATUS.IN_PROGRESS && styles.activeStatusBtnText
+                  ]}>
+                    In Progress
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[
+                    styles.statusBtn,
+                    { backgroundColor: isDarkMode ? '#2A2A2A' : '#eee' },
+                    manageIdea?.status === IDEA_STATUS.APPROVED && styles.activeStatusBtn
+                  ]}
+                  onPress={() => manageIdea && handleUpdateStatus(manageIdea.id, IDEA_STATUS.APPROVED)}
+                  disabled={actionLoading === (manageIdea?.id || '') + '-status'}
+                >
+                  <Text style={[
+                    styles.statusBtnText,
+                    { color: textColor },
+                    manageIdea?.status === IDEA_STATUS.APPROVED && styles.activeStatusBtnText
+                  ]}>
+                    Approved
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                style={styles.deleteBtn}
+                onPress={() => manageIdea && handleDelete(manageIdea.id)}
+              >
+                <Text style={styles.deleteBtnText}>Delete Idea</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -334,11 +382,17 @@ export default function IdeasManagement() {
 
 // Stat Card Component
 function StatCard({ label, value, icon }: { label: string; value: number; icon: any }) {
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const textColor = isDarkMode ? '#ECEDEE' : '#222';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  
   return (
-    <View style={styles.statCard}>
+    <View style={[styles.statCard, { backgroundColor: cardBackground }]}>
       <Ionicons name={icon} size={24} color="#7D3C98" style={{ marginBottom: 4 }} />
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statValue, { color: textColor }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: secondaryTextColor }]}>{label}</Text>
     </View>
   );
 }
@@ -353,13 +407,20 @@ function IdeaCard({ idea, onApprove, onReject, onCreatePoll, onManage, isPending
   isPending?: boolean;
   actionLoading?: string | null;
 }) {
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const textColor = isDarkMode ? '#ECEDEE' : '#222';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  
   const isApproveLoading = actionLoading === idea.id + '-approve';
   const isRejectLoading = actionLoading === idea.id + '-reject';
   const isPollLoading = actionLoading === idea.id + '-poll';
+  
   return (
-    <View style={styles.ideaCard}>
+    <View style={[styles.ideaCard, { backgroundColor: cardBackground }]}>
       <View style={styles.ideaCardHeader}>
-        <Text style={styles.ideaCardTitle}>{idea.title}</Text>
+        <Text style={[styles.ideaCardTitle, { color: textColor }]}>{idea.title}</Text>
         {isPending && (
           <TouchableOpacity style={[styles.createPollBtn, isPollLoading && styles.btnDisabled]} onPress={() => !isPollLoading && onCreatePoll && onCreatePoll(idea.id)} disabled={isPollLoading} accessibilityLabel="Create a poll for this idea">
             {isPollLoading ? <ActivityIndicator size={12} color="#fff" /> : <Text style={styles.createPollText}>CREATE A POLL</Text>}
@@ -371,16 +432,16 @@ function IdeaCard({ idea, onApprove, onReject, onCreatePoll, onManage, isPending
           </View>
         )}
       </View>
-      <Text style={styles.ideaCardCategory}>Category: {idea.category}</Text>
-      <Text style={styles.ideaCardDesc}>{idea.description}</Text>
+      <Text style={[styles.ideaCardCategory, { color: secondaryTextColor }]}>Category: {idea.category}</Text>
+      <Text style={[styles.ideaCardDesc, { color: textColor }]}>{idea.description}</Text>
       {/* Show poll if present and not pending */}
       {!isPending && idea.poll && (
         <View style={styles.ideaPollBox}>
-          <Text style={styles.ideaPollQuestion}>{idea.poll.question}</Text>
+          <Text style={[styles.ideaPollQuestion, { color: textColor }]}>{idea.poll.question}</Text>
           {idea.poll.options.map((opt, idx) => (
             <View key={idx} style={styles.ideaPollOptionRow}>
               <Text style={styles.ideaPollOptionNum}>{idx + 1}.</Text>
-              <Text style={styles.ideaPollOptionText}>{opt}</Text>
+              <Text style={[styles.ideaPollOptionText, { color: textColor }]}>{opt}</Text>
             </View>
           ))}
         </View>
@@ -435,81 +496,49 @@ function PollResult({ votesYes, votesNo }: { votesYes: number; votesNo: number }
 }
 
 const styles = StyleSheet.create({
-  pageContainer: {
+  mainContainer: {
     flex: 1,
-    backgroundColor: '#fff',
     paddingTop: 24,
   },
-  headerRow: {
+
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 32, // Add some padding at the bottom for the tab bar
+  },
+  statsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 8,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#222',
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 2,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     paddingHorizontal: 12,
     marginBottom: 16,
   },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    alignItems: 'center',
-    marginHorizontal: 4,
-    paddingVertical: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#3CB371',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
-    textAlign: 'center',
-  },
-  tabsRow: {
+  tabContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-around',
     marginBottom: 8,
     marginTop: 2,
   },
-  tabBtn: {
+  tab: {
     flex: 1,
     paddingVertical: 10,
     marginHorizontal: 12,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
-  tabBtnActive: {
+  activeTab: {
     borderBottomColor: '#7D3C98',
   },
   tabText: {
     fontSize: 15,
-    color: '#888',
     textAlign: 'center',
     fontWeight: 'bold',
   },
-  tabTextActive: {
+  activeTabText: {
     color: '#7D3C98',
+  },
+  ideasContainer: {
+    paddingHorizontal: 16,
   },
   sectionTitle: {
     fontSize: 16,
@@ -520,9 +549,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   ideaCard: {
-    backgroundColor: '#fff',
     borderRadius: 14,
-    marginHorizontal: 16,
     marginBottom: 16,
     padding: 16,
     shadowColor: '#000',
@@ -540,7 +567,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#222',
   },
   createPollBtn: {
     backgroundColor: '#E1BEE7',
@@ -573,12 +599,10 @@ const styles = StyleSheet.create({
   },
   ideaCardCategory: {
     fontSize: 13,
-    color: '#666',
     marginBottom: 2,
   },
   ideaCardDesc: {
     fontSize: 13,
-    color: '#444',
     marginBottom: 10,
     marginTop: 2,
   },
@@ -624,12 +648,10 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 24,
     width: '85%',
@@ -639,54 +661,36 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#222',
+  },
+  modalLabel: {
+    fontSize: 14,
     marginBottom: 8,
   },
-  modalIdeaTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#222',
-    marginBottom: 2,
-  },
-  modalIdeaCategory: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 2,
-  },
-  modalIdeaDesc: {
-    fontSize: 13,
-    color: '#444',
-    marginBottom: 10,
-    marginTop: 2,
-  },
-  modalRow: {
+  statusButtons: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  statusLabel: {
-    fontSize: 14,
-    color: '#222',
-    marginRight: 8,
+    justifyContent: 'space-around',
+    marginBottom: 16,
   },
   statusBtn: {
-    backgroundColor: '#eee',
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 16,
     marginHorizontal: 4,
   },
-  statusBtnActive: {
+  activeStatusBtn: {
     backgroundColor: '#3CB371',
   },
-  statusBtnText: {
-    color: '#222',
-    fontWeight: 'bold',
-    fontSize: 13,
+  activeStatusBtnText: {
+    color: '#fff',
   },
   deleteBtn: {
     backgroundColor: '#E74C3C',
@@ -699,55 +703,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 13,
-  },
-  pollResultsBox: {
-    backgroundColor: '#E1BEE7',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginLeft: 8,
-  },
-  pollResultsLabel: {
-    color: '#7D3C98',
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  pollResultsVotes: {
-    color: '#222',
-    fontWeight: 'bold',
-    fontSize: 15,
-    marginTop: 2,
-  },
-  closeModalBtn: {
-    marginTop: 18,
-    alignSelf: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 24,
-    backgroundColor: '#888',
-    borderRadius: 8,
-  },
-  closeModalText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  manageActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  inProgressBtn: {
-    backgroundColor: '#2D3A8C',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    marginHorizontal: 4,
-  },
-  inProgressBtnText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
   },
   pollBox: {
     marginTop: 18,
@@ -778,7 +733,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 8,
-    marginRight: 8,
     paddingVertical: 4,
     paddingHorizontal: 8,
   },
@@ -830,7 +784,6 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   pollModalContent: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 24,
     width: '90%',
@@ -847,60 +800,39 @@ const styles = StyleSheet.create({
     color: '#888',
     marginBottom: 12,
   },
-  pollModalTitleInput: {
+  pollModalInput: {
     fontWeight: 'bold',
     fontSize: 15,
-    color: '#888',
     marginBottom: 12,
-    backgroundColor: '#F5F5F5',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    borderWidth: 1,
   },
-  pollOptionInputRow: {
+  pollOptionContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
   },
-  pollOptionInputBox: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 16,
-    marginLeft: 4,
-    marginRight: 4,
+  removeOptionBtn: {
+    marginLeft: 8,
   },
-  pollOptionInput: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-    color: '#444',
-  },
-  moreOptionsBtn: {
+  addOptionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-end',
     marginTop: 2,
     marginBottom: 10,
   },
-  moreOptionsText: {
-    color: '#C678F5',
+  addOptionText: {
     fontWeight: 'bold',
     fontSize: 13,
+    marginLeft: 4,
   },
-  createPollMainBtn: {
-    backgroundColor: '#C678F5',
-    borderRadius: 20,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
-    shadowColor: '#C678F5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  createPollMainBtnText: {
+
+  createPollBtnText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 18,
@@ -938,7 +870,6 @@ const styles = StyleSheet.create({
   },
   ideaPollOptionText: {
     fontSize: 13,
-    color: '#444',
   },
   pollModalOverlay: {
     flex: 1,
@@ -952,7 +883,11 @@ const styles = StyleSheet.create({
     minHeight: '70%',
     maxHeight: '90%',
     paddingBottom: 16,
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.12, shadowRadius: 12 }, android: { elevation: 8 } }),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
   },
   pollModalHeader: {
     flexDirection: 'row',
@@ -965,7 +900,6 @@ const styles = StyleSheet.create({
   pollModalHeaderLabel: {
     fontWeight: 'bold',
     fontSize: 20,
-    color: '#7D3C98',
   },
   pollModalScroll: {
     paddingHorizontal: 20,
@@ -974,8 +908,35 @@ const styles = StyleSheet.create({
   pollModalLabel: {
     fontWeight: 'bold',
     fontSize: 15,
-    color: '#444',
     marginTop: 12,
     marginBottom: 4,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginHorizontal: 4,
+    paddingVertical: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  statLabel: {
+    fontSize: 12,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  modalScroll: {
+    flex: 1,
+  },
+  statusBtnText: {
+    fontWeight: 'bold',
+    fontSize: 13,
   },
 }); 

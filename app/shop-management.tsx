@@ -3,6 +3,7 @@ import { View, Text, Button, FlatList, TouchableOpacity, StyleSheet, Animated, I
 import { ThemedView } from '../components/ThemedView';
 import { ThemedText } from '../components/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
+import StandardHeader from '../components/StandardHeader';
 
 // Mock data for ads
 const initialAds = [
@@ -106,10 +107,12 @@ export default function ShopManagementScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.headerRow}>
-        <Ionicons name="pricetags" size={28} color="#4F8EF7" style={{ marginRight: 8 }} />
-        <ThemedText style={styles.header}>Shop Management</ThemedText>
-      </View>
+      <StandardHeader 
+        title="Shop Management"
+        rightComponent={
+          <Ionicons name="pricetags" size={24} color="#4F8EF7" />
+        }
+      />
       <Text style={styles.subHeader}>Review and manage new shop ads submitted by employees and trainees.</Text>
       <FlatList
         data={ads}
@@ -128,16 +131,7 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#F6F8FB',
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#222',
-  },
+
   subHeader: {
     fontSize: 15,
     color: '#4F8EF7',

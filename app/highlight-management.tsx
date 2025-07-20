@@ -1,11 +1,27 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, Alert, Image, FlatList, TouchableOpacity, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Dimensions, Modal } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { View, Text, TextInput, StyleSheet, Pressable, Alert, Image, FlatList, TouchableOpacity, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Dimensions, Modal, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { useThemeColor } from '@/hooks/useThemeColor';
+import AdminTabBar from '../components/AdminTabBar';
+import StandardHeader from '../components/StandardHeader';
 
 export default function HighlightManagement() {
-  const navigation = typeof useNavigation === 'function' ? useNavigation() : { goBack: () => {} };
+  const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+  
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#E0E0E0';
+  const searchBackground = isDarkMode ? '#2A2A2A' : '#F2F4F7';
+  const modalBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const overlayBackground = isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.3)';
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState<string | null>(null);
@@ -116,30 +132,36 @@ export default function HighlightManagement() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: '#F8F9F9' }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-    >
+    <View style={[styles.mainContainer, { backgroundColor }]}>
+      {/* Header */}
+      <StandardHeader title="Highlight Management" />
+
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      >
       {/* Add Highlight Modal */}
       <Modal visible={showAddModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.infoTitle}>Add Highlight</Text>
-            <Text style={styles.label}>Title</Text>
+        <View style={[styles.modalOverlay, { backgroundColor: overlayBackground }]}>
+          <View style={[styles.modalContent, { backgroundColor: modalBackground }]}>
+            <Text style={[styles.infoTitle, { color: textColor }]}>Add Highlight</Text>
+            <Text style={[styles.label, { color: textColor }]}>Title</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: textColor, backgroundColor: searchBackground, borderColor }]}
               placeholder="Add your Title..."
+              placeholderTextColor={secondaryTextColor}
               value={addTitle}
               onChangeText={setAddTitle}
               returnKeyType="done"
               onSubmitEditing={handleInputSubmit}
               blurOnSubmit
             />
-            <Text style={styles.label}>Description</Text>
+            <Text style={[styles.label, { color: textColor }]}>Description</Text>
             <TextInput
-              style={[styles.input, styles.textarea]}
+              style={[styles.input, styles.textarea, { color: textColor, backgroundColor: searchBackground, borderColor }]}
               placeholder="Description..."
+              placeholderTextColor={secondaryTextColor}
               value={addDescription}
               onChangeText={setAddDescription}
               multiline
@@ -166,8 +188,8 @@ export default function HighlightManagement() {
       </Modal>
       {/* Edit Highlight Modal */}
       <Modal visible={showEditModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <View style={[styles.modalOverlay, { backgroundColor: overlayBackground }]}>
+          <View style={[styles.modalContent, { backgroundColor: modalBackground }]}>
             <Text style={styles.infoTitle}>Edit Highlight</Text>
             <Text style={styles.label}>Title</Text>
             <TextInput
@@ -214,72 +236,91 @@ export default function HighlightManagement() {
         data={highlights}
         keyExtractor={(_, idx) => idx.toString()}
         numColumns={numColumns}
-        contentContainerStyle={{ gap: 16, paddingBottom: 40, paddingHorizontal: 20 }}
-        columnWrapperStyle={{ gap: 16, justifyContent: 'flex-start' }}
+        contentContainerStyle={{ gap: 20, paddingBottom: 40, paddingHorizontal: 8, flexGrow: 1 }}
+        columnWrapperStyle={{ gap: 16, justifyContent: 'space-between', flexWrap: 'wrap' }}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <View style={styles.container}>
-            <View style={styles.headerRow}>
-              <Feather name="map-pin" size={24} color="#3CB371" style={{ marginRight: 8 }} />
-              <Text style={styles.headerTitle}>Weekly Highlight</Text>
+          <View style={[styles.container, { backgroundColor }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Ionicons name="location" size={24} color="#3CB371" style={{ marginRight: 8 }} />
+              <Text style={[styles.sectionTitle, { color: textColor }]}>Weekly Highlight</Text>
             </View>
-            <Text style={styles.headerSubtitle}>Manage and submit weekly highlights</Text>
+            <Text style={[styles.headerSubtitle, { color: secondaryTextColor }]}>Manage and submit weekly highlights</Text>
             {/* Add New Highlight Button */}
             <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)} activeOpacity={0.85}>
-              <Feather name="plus" size={18} color="#fff" />
+              <Ionicons name="add" size={18} color="#fff" />
               <Text style={styles.addBtnText}>Add New Highlight</Text>
             </TouchableOpacity>
-            {/* Highlights List (always visible) */}
-            <Text style={[styles.infoTitle, { marginTop: 24, marginBottom: 8 }]}>Highlights List</Text>
+            
+            {/* Highlights List Section */}
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: textColor }]}>Highlights List</Text>
+              <Text style={[styles.sectionSubtitle, { color: secondaryTextColor }]}>Your current highlights</Text>
+            </View>
             {highlights.length === 0 && (
-              <Text style={{ color: '#888', textAlign: 'center', marginTop: 12 }}>No highlights submitted yet.</Text>
+              <View style={styles.emptyState}>
+                <Ionicons name="images-outline" size={48} color={secondaryTextColor} />
+                <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>No highlights submitted yet</Text>
+                <Text style={[styles.emptyStateSubtext, { color: secondaryTextColor }]}>Add your first highlight to get started</Text>
+              </View>
             )}
           </View>
         }
         renderItem={({ item, index }) => (
-          <View style={styles.highlightCard}>
+                      <View style={[styles.highlightCard, { backgroundColor: cardBackground, borderColor }]}>
             {item.image ? (
               <Image source={{ uri: item.image }} style={styles.highlightImg} resizeMode="cover" />
             ) : (
               <View style={[styles.highlightImg, { backgroundColor: '#eee', justifyContent: 'center', alignItems: 'center' }]}> 
-                <Feather name="image" size={32} color="#bbb" />
+                <Ionicons name="image" size={32} color="#bbb" />
               </View>
             )}
-            <Text style={styles.highlightTitle} numberOfLines={1}>{item.title}</Text>
-            <Text style={styles.highlightDesc} numberOfLines={2}>{item.description}</Text>
-            <View style={styles.highlightActions}>
-              <TouchableOpacity onPress={() => openEditModal(index)} style={styles.actionBtn} activeOpacity={0.7}>
-                <Feather name="edit" size={18} color="#3CB371" />
-              </TouchableOpacity>
-            </View>
+                          <Text style={[styles.highlightTitle, { color: textColor }]} numberOfLines={1}>{item.title}</Text>
+              <Text style={[styles.highlightDesc, { color: secondaryTextColor }]} numberOfLines={2}>{item.description}</Text>
+                          <View style={styles.highlightActions}>
+                <TouchableOpacity onPress={() => openEditModal(index)} style={[styles.actionBtn, { backgroundColor: searchBackground }]} activeOpacity={0.7}>
+                  <Ionicons name="create" size={18} color="#3CB371" />
+                </TouchableOpacity>
+              </View>
           </View>
         )}
       />
+      
+      {/* Bottom Tab Bar */}
+      <AdminTabBar activeTab="highlights" isDarkMode={isDarkMode} />
     </KeyboardAvoidingView>
+  </View>
   );
 }
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F8F9F9',
-    padding: 20,
-    paddingBottom: 40,
+    padding: 16,
+    paddingBottom: 100,
+    minHeight: '100%',
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#222',
-  },
+
   headerSubtitle: {
     fontSize: 14,
-    color: '#888',
-    marginBottom: 18,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  sectionHeader: {
+    marginTop: 32,
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   card: {
     backgroundColor: '#fff',
@@ -354,70 +395,81 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   highlightCard: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: 20,
+    padding: 18,
     flex: 1,
-    marginBottom: 8,
+    marginBottom: 16,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 4,
     minWidth: 140,
-    maxWidth: 220,
+    maxWidth: 280,
+    borderWidth: 1,
+    minHeight: 180,
+    flexGrow: 1,
   },
   highlightImg: {
-    width: 140,
+    width: '100%',
     height: 100,
-    borderRadius: 12,
-    marginBottom: 8,
+    borderRadius: 16,
+    marginBottom: 12,
+    maxWidth: 150,
   },
   highlightTitle: {
-    fontWeight: 'bold',
-    fontSize: 15,
-    color: '#222',
-    marginBottom: 2,
+    fontWeight: '600',
+    fontSize: 16,
+    marginBottom: 4,
     textAlign: 'center',
-    maxWidth: 140,
+    maxWidth: '100%',
+    lineHeight: 22,
+    flexShrink: 1,
   },
   highlightDesc: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 6,
+    fontSize: 14,
+    marginBottom: 8,
     textAlign: 'center',
-    maxWidth: 140,
+    maxWidth: '100%',
+    lineHeight: 20,
+    flexShrink: 1,
   },
   highlightActions: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 2,
+    marginTop: 8,
   },
   actionBtn: {
-    padding: 6,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 12,
     backgroundColor: '#F2F4F7',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
   },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#3CB371',
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    borderRadius: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 28,
     alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 8,
+    marginTop: 12,
+    marginBottom: 12,
     shadowColor: '#3CB371',
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 4,
+    minWidth: 200,
   },
   addBtnText: {
     color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 17,
-    marginLeft: 10,
+    fontWeight: '600',
+    fontSize: 16,
+    marginLeft: 12,
   },
   cancelBtn: {
     marginTop: 12,
@@ -458,5 +510,23 @@ const styles = StyleSheet.create({
     color: '#E74C3C',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 }); 
