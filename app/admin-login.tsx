@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 
 const ADMIN_PASSWORD = 'AdminSecret123';
 const ADMIN_EMAILS = ['admin@company.com'];
@@ -9,6 +10,7 @@ export default function AdminLoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleLogin = () => {
     setLoading(true);
@@ -22,7 +24,10 @@ export default function AdminLoginScreen() {
         Alert.alert('Invalid Password', 'Incorrect admin password.');
         return;
       }
-      Alert.alert('Success', 'Admin logged in!');
+      
+      Alert.alert('Success', 'Admin logged in!', [
+        { text: 'OK', onPress: () => router.replace('/admin-home') }
+      ]);
     }, 800);
   };
 

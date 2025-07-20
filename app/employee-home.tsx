@@ -160,10 +160,19 @@ export default function EmployeeHome() {
           ))}
         </View>
         <Text style={styles.sectionTitle}>Book of the Month</Text>
-        <TouchableOpacity style={styles.featuredBookCard} onPress={() => router.push('/library/featured/details')}>
-          <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
+        <TouchableOpacity
+          style={styles.featuredBookCard}
+          activeOpacity={0.85}
+          onPress={() => router.push('/book-details')}
+        >
+          <Image
+            source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }}
+            style={styles.featuredBookCover}
+          />
           <View style={{ flex: 1, marginLeft: 16 }}>
-            <View style={styles.genreChip}><Text style={styles.genreText}>Philosophical Fiction</Text></View>
+            <View style={styles.genreChip}>
+              <Text style={styles.genreText}>Philosophical Fiction</Text>
+            </View>
             <Text style={styles.featuredBookTitle}>The Alchemist</Text>
             <Text style={styles.featuredBookAuthor}>By Paulo Coelho</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
@@ -455,7 +464,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 4,
   },
-<<<<<<< HEAD
   registeredBadge: {
     backgroundColor: '#43C6AC',
     borderRadius: 8,
@@ -477,7 +485,17 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
-=======
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  noEventsText: {
+    color: '#888',
+    fontSize: 16,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
   featuredBookCard: {
     flexDirection: 'row',
     backgroundColor: '#fff',
@@ -485,19 +503,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginHorizontal: 18,
     marginBottom: 18,
->>>>>>> ad557c2 (Uptade the bookClub)
     shadowColor: '#000',
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 1,
-<<<<<<< HEAD
-  },
-  noEventsText: {
-    color: '#888',
-    fontSize: 16,
-    textAlign: 'center',
-    fontStyle: 'italic',
-=======
     alignItems: 'center',
   },
   featuredBookCover: {
@@ -540,6 +549,5 @@ const styles = StyleSheet.create({
   recommender: {
     fontSize: 13,
     color: '#888',
->>>>>>> ad557c2 (Uptade the bookClub)
   },
-}); 
+});

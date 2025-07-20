@@ -149,7 +149,7 @@ export default function TraineeHome() {
           ))}
         </View>
         <Text style={styles.sectionTitle}>Book of the Month</Text>
-        <TouchableOpacity style={styles.featuredBookCard} onPress={() => router.push('/library/featured/details')}>
+        <TouchableOpacity style={styles.featuredBookCard} onPress={() => router.push('/book-details')}>
           <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
           <View style={{ flex: 1, marginLeft: 16 }}>
             <View style={styles.genreChip}><Text style={styles.genreText}>Philosophical Fiction</Text></View>
@@ -440,29 +440,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginLeft: 12,
   },
-<<<<<<< HEAD
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 60,
-    marginBottom: 20,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 24,
-=======
   featuredBookCard: {
     flexDirection: 'row',
     backgroundColor: '#fff',
@@ -516,6 +493,27 @@ const styles = StyleSheet.create({
   recommender: {
     fontSize: 13,
     color: '#888',
->>>>>>> ad557c2 (Uptade the bookClub)
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 60,
+    marginBottom: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
   },
 }); 

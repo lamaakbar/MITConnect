@@ -18,10 +18,6 @@ interface BookContextType {
 
 const BookContext = createContext<BookContextType | undefined>(undefined);
 
-<<<<<<< HEAD
-// Empty books array - no mock data
-const DEFAULT_BOOKS: Book[] = [];
-=======
 const DEFAULT_BOOKS: Book[] = [
   {
     id: '1',
@@ -51,7 +47,6 @@ const DEFAULT_BOOKS: Book[] = [
     description: 'A revolutionary guide to building good habits and breaking bad ones. Clear presents a proven framework for improving every day, showing how tiny changes in behavior can result in remarkable outcomes over time.',
   },
 ];
->>>>>>> ad557c2 (Uptade the bookClub)
 
 export function BookProvider({ children }: { children: ReactNode }) {
   const [books, setBooks] = useState<Book[]>(DEFAULT_BOOKS);

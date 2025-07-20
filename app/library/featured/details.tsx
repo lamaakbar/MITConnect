@@ -123,7 +123,7 @@ export default function FeaturedBookDetailsScreen() {
         {/* Recent Selections */}
         <View style={styles.recentHeaderRow}>
           <Text style={styles.sectionTitle}><Feather name="clock" size={16} color="#3AC569" /> Recent Selections</Text>
-          <TouchableOpacity style={styles.goLibraryBtnSmall} onPress={() => router.push('/library')}>
+          <TouchableOpacity style={styles.goLibraryBtnSmall} onPress={() => router.push('/books-management')}>
             <Text style={styles.goLibraryBtnTextSmall}>Go to MITC Library</Text>
           </TouchableOpacity>
         </View>
@@ -141,7 +141,7 @@ export default function FeaturedBookDetailsScreen() {
                   <Text style={styles.genreText}>{item.genre}</Text>
                 </View>
               </View>
-              <TouchableOpacity style={{ alignSelf: 'center' }} onPress={() => router.push(`/library/${item.id}/details`)}>
+              <TouchableOpacity style={{ alignSelf: 'center' }} onPress={() => router.push('/book-details')}>
                 <Text style={styles.moreDetails}>More Details</Text>
               </TouchableOpacity>
             </View>
