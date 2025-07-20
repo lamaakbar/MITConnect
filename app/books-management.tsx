@@ -128,7 +128,7 @@ export default function AdminBooksScreen() {
       {/* Bottom Tab Bar */}
       <AdminTabBar activeTab="books" isDarkMode={isDarkMode} />
     </View>
-  );
+  ); 
 }
 
 const styles = StyleSheet.create({

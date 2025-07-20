@@ -149,13 +149,29 @@ export default function TraineeHome() {
           ))}
         </View>
         <Text style={styles.sectionTitle}>Book of the Month</Text>
-        <TouchableOpacity style={styles.bookCard} onPress={() => router.push({ pathname: '/book-details' })}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.bookTitle}>White Nights</Text>
-            <Text style={styles.bookAuthor}>By Fyodor Dostoevsky</Text>
-            <Text style={styles.bookMore}>More Details</Text>
+        <TouchableOpacity style={styles.featuredBookCard} onPress={() => router.push('/library/featured/details')}>
+          <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
+          <View style={{ flex: 1, marginLeft: 16 }}>
+            <View style={styles.genreChip}><Text style={styles.genreText}>Philosophical Fiction</Text></View>
+            <Text style={styles.featuredBookTitle}>The Alchemist</Text>
+            <Text style={styles.featuredBookAuthor}>By Paulo Coelho</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              {[1,2,3,4,5].map(i => (
+                <MaterialIcons
+                  key={i}
+                  name={i <= 5 ? 'star' : 'star-border'}
+                  size={20}
+                  color="#F4B400"
+                  style={{ marginRight: 2 }}
+                />
+              ))}
+              <Text style={styles.ratingText}>4.9</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+              <Ionicons name="person" size={16} color="#888" style={{ marginRight: 4 }} />
+              <Text style={styles.recommender}>Nizar Naghi</Text>
+            </View>
           </View>
-          <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.bookImg} />
         </TouchableOpacity>
       </ScrollView>
       <RNScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bottomNavScroll}>
@@ -424,6 +440,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginLeft: 12,
   },
+<<<<<<< HEAD
   emptyState: {
     flex: 1,
     alignItems: 'center',
@@ -445,5 +462,60 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 24,
+=======
+  featuredBookCard: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 16,
+    marginHorizontal: 18,
+    marginBottom: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
+    alignItems: 'center',
+  },
+  featuredBookCover: {
+    width: 110,
+    height: 160,
+    borderRadius: 12,
+    backgroundColor: '#eee',
+  },
+  genreChip: {
+    alignSelf: 'flex-start',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    backgroundColor: '#A3C9A8',
+    marginBottom: 6,
+  },
+  genreText: {
+    fontSize: 12,
+    color: '#222',
+    fontWeight: '500',
+  },
+  featuredBookTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#222',
+    marginBottom: 2,
+    marginTop: 2,
+  },
+  featuredBookAuthor: {
+    fontSize: 15,
+    color: '#888',
+    marginBottom: 8,
+  },
+  ratingText: {
+    fontSize: 15,
+    color: '#222',
+    marginLeft: 6,
+    fontWeight: 'bold',
+  },
+  recommender: {
+    fontSize: 13,
+    color: '#888',
+>>>>>>> ad557c2 (Uptade the bookClub)
   },
 }); 
