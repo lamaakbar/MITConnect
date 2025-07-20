@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable, Alert, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import { useUserContext } from '../components/UserContext';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { setUserRole, getHomeRoute } = useUserContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,14 +37,11 @@ export default function LoginScreen() {
       } else {
         await AsyncStorage.removeItem('rememberedCredentials');
       }
+      // Set the user role in context
+      await setUserRole(role as 'admin' | 'employee' | 'trainee');
+      
       // Navigate to the correct home screen based on role
-      if (role === 'admin') {
-        router.replace('/admin-home');
-      } else if (role === 'employee') {
-        router.replace('/employee-home');
-      } else {
-        router.replace('/trainee-home');
-      }
+      router.replace(getHomeRoute() as any);
     }, 800);
   };
 

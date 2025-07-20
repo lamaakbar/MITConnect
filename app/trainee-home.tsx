@@ -3,28 +3,13 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, 
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-
-const events = [
-  {
-    id: '1',
-    title: 'Orientation',
-    desc: 'Welcome session for new trainees',
-    date: 'Today',
-    time: '10:00 am',
-    daysLeft: 2,
-  },
-  {
-    id: '2',
-    title: 'Weekly Check-in',
-    desc: 'Progress review and Q&A',
-    date: '20 July',
-    time: '2:00 pm',
-    daysLeft: 7,
-  },
-];
+import { useState, useMemo } from 'react';
+import { useEventContext } from '../components/EventContext';
+import { useUserContext } from '../components/UserContext';
+import RoleGuard from '../components/RoleGuard';
 
 const portalLinks = [
+  { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
   { key: 'hub', label: 'Trainee Hub', icon: <MaterialIcons name="dashboard" size={28} color="#43C6AC" /> },
   { key: 'gallery', label: 'Gallery', icon: <Ionicons name="image-outline" size={28} color="#F7B801" /> },
   { key: 'inspire', label: 'Inspire Corner', icon: <Feather name="users" size={28} color="#43C6AC" /> },
@@ -49,9 +34,39 @@ const featuredNews = [
 export default function TraineeHome() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('home');
-  const [registered, setRegistered] = useState<string[]>([]);
+  const { events, registered } = useEventContext();
+  const { userRole, isInitialized } = useUserContext();
+
+  // Debug logging
+  console.log('TraineeHome: Current userRole:', userRole, 'isInitialized:', isInitialized);
+
+  // Get upcoming events (events with future dates)
+  const upcomingEvents = useMemo(() => {
+    const today = new Date();
+    return events
+      .filter(event => {
+        const eventDate = new Date(event.date);
+        return eventDate > today;
+      })
+      .slice(0, 5) // Show max 5 upcoming events
+      .map(event => {
+        const eventDate = new Date(event.date);
+        const daysLeft = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        return {
+          id: event.id,
+          title: event.title,
+          desc: event.desc,
+          date: event.date,
+          time: event.time,
+          daysLeft: daysLeft,
+          image: event.image,
+        };
+      });
+  }, [events]);
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <RoleGuard allowedRoles={['trainee']}>
+      <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <Image source={require('../assets/images/icon.png')} style={styles.logo} />
         <Text style={styles.appName}><Text style={{ color: '#222' }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
@@ -90,49 +105,47 @@ export default function TraineeHome() {
           )}
         />
         <Text style={styles.sectionTitle}>Upcoming Events</Text>
-        <FlatList
-          data={events}
-          keyExtractor={item => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
-          renderItem={({ item }) => (
-            <View style={styles.eventCard}>
-              <View style={styles.eventCardHeader}>
-                <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
-                <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
-              </View>
-              <Text style={styles.eventTitle}>{item.title}</Text>
-              <Text style={styles.eventDesc}>{item.desc}</Text>
-              <TouchableOpacity
-                style={[styles.eventBtn, registered.includes(item.id) && { backgroundColor: '#aaa' }]}
-                onPress={() => {
-                  setRegistered(prev => [...prev, item.id]);
-                  Alert.alert('Registered', 'You have successfully registered for this event!');
-                }}
-                disabled={registered.includes(item.id)}
-                accessibilityLabel={`Register for ${item.title}`}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Text style={styles.eventBtnText}>
-                  {registered.includes(item.id) ? 'Registered' : 'Register Now!'}
-                </Text>
-              </TouchableOpacity>
-              <View style={styles.eventCardFooter}>
-                <View style={styles.eventFooterItem}>
-                  <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
-                  <Text style={styles.eventFooterText}>{item.date}</Text>
-                </View>
-                {item.time ? (
-                  <View style={styles.eventFooterItem}>
-                    <Ionicons name="time-outline" size={16} color="#7B61FF" />
-                    <Text style={styles.eventFooterText}>{item.time}</Text>
+        {upcomingEvents.length > 0 ? (
+          <FlatList
+            data={upcomingEvents}
+            keyExtractor={item => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
+            renderItem={({ item }) => (
+              <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
+                <View style={styles.eventCard}>
+                  <View style={styles.eventCardHeader}>
+                    <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
+                    <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
                   </View>
-                ) : null}
-              </View>
-            </View>
-          )}
-        />
+                  <Text style={styles.eventTitle}>{item.title}</Text>
+                  <Text style={styles.eventDesc}>{item.desc}</Text>
+                  {registered.includes(item.id) && (
+                    <View style={styles.registeredBadge}><Text style={styles.registeredBadgeText}>Registered</Text></View>
+                  )}
+                  <TouchableOpacity style={styles.eventBtn}><Text style={styles.eventBtnText}>Register Now!</Text></TouchableOpacity>
+                  <View style={styles.eventCardFooter}>
+                    <View style={styles.eventFooterItem}>
+                      <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
+                      <Text style={styles.eventFooterText}>{item.date}</Text>
+                    </View>
+                    {item.time ? (
+                      <View style={styles.eventFooterItem}>
+                        <Ionicons name="time-outline" size={16} color="#7B61FF" />
+                        <Text style={styles.eventFooterText}>{item.time}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        ) : (
+          <View style={styles.noEventsContainer}>
+            <Text style={styles.noEventsText}>No upcoming events at the moment</Text>
+          </View>
+        )}
         <Text style={styles.sectionTitle}>Portal Access</Text>
         <View style={styles.portalRow}>
           {portalLinks.map(link => (
@@ -141,7 +154,8 @@ export default function TraineeHome() {
               style={styles.portalIconBox}
               activeOpacity={0.8}
               onPress={() => {
-                if (link.key === 'hub') router.push('/trainee-management');
+                if (link.key === 'events') router.push('/events');
+                else if (link.key === 'hub') router.push('/trainee-management');
                 else if (link.key === 'gallery') router.push('/gallery');
                 else if (link.key === 'inspire') router.push('/inspirer-corner');
                 else if (link.key === 'bookclub') router.push('/bookclub');
@@ -190,6 +204,7 @@ export default function TraineeHome() {
         </View>
       </RNScrollView>
     </SafeAreaView>
+    </RoleGuard>
   );
 }
 
@@ -298,134 +313,178 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   featuredGradientCard: {
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 24,
     marginHorizontal: 18,
-    marginBottom: 12,
-    flexDirection: 'column',
+    marginBottom: 18,
+    padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
+    shadowColor: '#43C6AC',
+    shadowOpacity: 0.10,
     shadowRadius: 12,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+    minHeight: 180,
   },
   featuredImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 64,
+    height: 64,
     marginBottom: 12,
+    resizeMode: 'contain',
   },
   featuredMonoText: {
-    fontSize: 14,
     color: '#fff',
-    fontWeight: '700',
+    fontSize: 28,
+    fontFamily: 'SpaceMono-Regular',
+    marginBottom: 24,
     textAlign: 'center',
-    marginBottom: 12,
   },
   featuredProgressBarBg: {
-    width: '100%',
+    width: '80%',
     height: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255,255,255,0.3)',
     borderRadius: 4,
     overflow: 'hidden',
+    alignSelf: 'center',
   },
   featuredProgressBar: {
-    height: '100%',
+    width: '60%', // Example progress
+    height: 8,
+    backgroundColor: '#fff',
     borderRadius: 4,
   },
   eventCard: {
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: 18,
+    marginRight: 16,
     padding: 16,
-    marginHorizontal: 18,
-    marginBottom: 12,
+    width: 220,
     shadowColor: '#000',
     shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
   eventCardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginBottom: 6,
   },
   eventDaysLeft: {
-    fontSize: 12,
-    color: '#43C6AC',
+    backgroundColor: '#F2F2F7',
+    color: '#7B61FF',
     fontWeight: '600',
+    fontSize: 12,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   eventTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#222',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   eventDesc: {
     fontSize: 13,
-    color: '#666',
-    marginBottom: 12,
+    color: '#888',
+    marginBottom: 8,
   },
   eventBtn: {
-    backgroundColor: '#43C6AC',
-    borderRadius: 12,
-    paddingVertical: 10,
+    backgroundColor: '#E6F0FF',
+    borderRadius: 8,
+    paddingVertical: 6,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   eventBtnText: {
-    color: '#fff',
+    color: '#2196F3',
+    fontWeight: '700',
     fontSize: 14,
-    fontWeight: '600',
   },
   eventCardFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
+    alignItems: 'center',
+    marginTop: 2,
   },
   eventFooterItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginRight: 12,
   },
   eventFooterText: {
-    fontSize: 12,
     color: '#7B61FF',
-    marginLeft: 4,
+    fontSize: 13,
+    marginLeft: 3,
   },
   bookCard: {
-    flexDirection: 'row',
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 18,
     marginHorizontal: 18,
-    marginBottom: 18,
+    marginBottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
     shadowColor: '#000',
     shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
   bookTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#222',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   bookAuthor: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+    fontSize: 13,
+    color: '#888',
+    marginBottom: 6,
   },
   bookMore: {
-    fontSize: 13,
-    color: '#43C6AC',
+    color: '#2196F3',
     fontWeight: '600',
+    fontSize: 13,
   },
   bookImg: {
-    width: 80,
-    height: 120,
+    width: 54,
+    height: 74,
     borderRadius: 8,
     marginLeft: 12,
+    backgroundColor: '#eee',
+  },
+  registeredBadge: {
+    backgroundColor: '#43C6AC',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  registeredBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  noEventsContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    marginHorizontal: 18,
+    marginBottom: 18,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  noEventsText: {
+    color: '#888',
+    fontSize: 16,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 }); 

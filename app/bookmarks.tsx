@@ -2,19 +2,21 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
+import { useUserContext } from '../components/UserContext';
 import { Ionicons } from '@expo/vector-icons';
 import EventsTabBar from '../components/EventsTabBar';
 
 export default function BookmarksScreen() {
   const router = useRouter();
   const { events, bookmarks, unbookmarkEvent } = useEventContext();
+  const { getHomeRoute } = useUserContext();
   const bookmarkedEvents = events.filter(e => bookmarks.includes(e.id));
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       {/* Header with back */}
       <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => router.replace('/employee-home')} style={styles.iconBtn}>
+        <TouchableOpacity onPress={() => router.replace(getHomeRoute() as any)} style={styles.iconBtn}>
           <Ionicons name="arrow-back" size={24} color="#222" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Bookmarked Events</Text>

@@ -5,6 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState, useMemo } from 'react';
 import { useEventContext } from '../components/EventContext';
+import { useUserContext } from '../components/UserContext';
+import RoleGuard from '../components/RoleGuard';
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
@@ -34,6 +36,10 @@ export default function EmployeeHome() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('home');
   const { events, registered } = useEventContext();
+  const { userRole, isInitialized } = useUserContext();
+
+  // Debug logging
+  console.log('EmployeeHome: Current userRole:', userRole, 'isInitialized:', isInitialized);
 
   // Get upcoming events (events with future dates)
   const upcomingEvents = useMemo(() => {
@@ -60,7 +66,8 @@ export default function EmployeeHome() {
       });
   }, [events]);
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <RoleGuard allowedRoles={['employee']}>
+      <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <Image source={require('../assets/images/icon.png')} style={styles.logo} />
         <Text style={styles.appName}><Text style={{ color: '#222' }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
@@ -170,6 +177,7 @@ export default function EmployeeHome() {
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
+    </RoleGuard>
   );
 }
 

@@ -2,12 +2,14 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
+import { useUserContext } from '../components/UserContext';
 import { Ionicons } from '@expo/vector-icons';
 import EventsTabBar from '../components/EventsTabBar';
 
 export default function RegistrationSuccessScreen() {
   const router = useRouter();
   const { events, registered } = useEventContext();
+  const { getHomeRoute } = useUserContext();
   // Get the last registered event
   const lastRegisteredId = registered.length > 0 ? registered[registered.length - 1] : null;
   const event = lastRegisteredId ? events.find(e => e.id === lastRegisteredId) : null;
@@ -34,7 +36,7 @@ export default function RegistrationSuccessScreen() {
         <Text style={styles.calendarBtnText}>Add to Calendar</Text>
         <Ionicons name="calendar-outline" size={20} color="#222" style={{ marginLeft: 8 }} />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.doneBtn} onPress={() => router.replace('/employee-home')}>
+      <TouchableOpacity style={styles.doneBtn} onPress={() => router.replace(getHomeRoute() as any)}>
         <Text style={styles.doneBtnText}>Done</Text>
       </TouchableOpacity>
       <EventsTabBar />
