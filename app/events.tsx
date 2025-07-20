@@ -36,13 +36,49 @@ export default function EventsScreen() {
 
   // Filter events based on tab and search
   const filteredEvents = events.filter(e => {
-    if (activeTab === 'Upcoming') return true; // TODO: Add real date logic
-    if (activeTab === 'Past') return false; // TODO: Add real date logic
+    const eventDate = new Date(e.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+    
+    if (activeTab === 'Upcoming') {
+      // Show only future events
+      return eventDate >= today;
+    }
+    if (activeTab === 'Past') {
+      // Show only past events
+      return eventDate < today;
+    }
+    // For 'All' tab, show all events
     return true;
   }).filter(e => e.title.toLowerCase().includes(search.toLowerCase()));
 
-  const featured = events.find(e => e.featured);
-  const allEvents = events.filter(e => !e.featured);
+  // Dynamically select the nearest upcoming event as featured
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const upcomingEvents = events
+    .filter(e => new Date(e.date) >= today)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  const featured = upcomingEvents.length > 0 ? upcomingEvents[0] : null;
+
+  // Helper function to check if an event is in the past
+  const isEventInPast = (eventDate: string) => {
+    const eventDateObj = new Date(eventDate);
+    return eventDateObj < today;
+  };
+
+  // Helper function to get button text and state for an event
+  const getEventButtonState = (eventId: string, eventDate: string) => {
+    const isPast = isEventInPast(eventDate);
+    const isRegistered = registered.includes(eventId);
+    const isCompleted = userEventStatuses[eventId]?.status === 'completed';
+    
+    if (isCompleted) return { text: 'Completed', disabled: true };
+    if (isRegistered) return { text: 'Registered', disabled: true };
+    if (isPast) return { text: 'Event Passed', disabled: true };
+    return { text: 'Register', disabled: false };
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f6f7f9' }}>
@@ -101,7 +137,7 @@ export default function EventsScreen() {
             <Text style={styles.featuredDesc}>{featured.desc}</Text>
             <Text style={styles.featuredMeta}>{featured.date} • {featured.time} • {featured.location}</Text>
             <TouchableOpacity
-              style={[styles.registerBtn, (registered.includes(featured.id) || userEventStatuses[featured.id]?.status === 'completed') && styles.registerBtnDisabled]}
+              style={[styles.registerBtn, getEventButtonState(featured.id, featured.date).disabled && styles.registerBtnDisabled]}
               onPress={async () => {
                 console.log('Button pressed for event:', featured.id);
                 console.log('Current registered events:', registered);
@@ -110,14 +146,14 @@ export default function EventsScreen() {
                   console.log('After registration, registered events:', [...registered, featured.id]);
                   router.push('registration-success' as any);
                 } else {
-                  console.log('Registration failed - user may have already completed this event');
+                  console.log('Registration failed - event may have passed or user already completed');
                 }
               }}
-              disabled={registered.includes(featured.id) || userEventStatuses[featured.id]?.status === 'completed'}
+              disabled={getEventButtonState(featured.id, featured.date).disabled}
               activeOpacity={0.7}
             >
-              <Text style={[styles.registerBtnText, (registered.includes(featured.id) || userEventStatuses[featured.id]?.status === 'completed') && styles.registerBtnTextDisabled]}>
-                {userEventStatuses[featured.id]?.status === 'completed' ? 'Completed' : registered.includes(featured.id) ? 'Registered' : 'Register'}
+              <Text style={[styles.registerBtnText, getEventButtonState(featured.id, featured.date).disabled && styles.registerBtnTextDisabled]}>
+                {getEventButtonState(featured.id, featured.date).text}
               </Text>
             </TouchableOpacity>
           </View>

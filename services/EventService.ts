@@ -207,6 +207,23 @@ class EventService {
    */
   async registerForEvent(registrationData: RegistrationData): Promise<boolean> {
     if (this.useMockData) {
+      // Get the event to check its date
+      const event = this.getMockEvents().find(e => e.id === registrationData.eventId);
+      if (!event) {
+        console.log('Event not found - registration blocked');
+        return false;
+      }
+
+      // Check if event date has passed
+      const eventDate = new Date(event.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+      
+      if (eventDate < today) {
+        console.log('Event date has passed - registration blocked');
+        return false;
+      }
+
       // Check if user has already completed this event (attended + feedback)
       const existingTracking = this.mockUserEventTracking.find(
         tracking => tracking.eventId === registrationData.eventId && 
@@ -247,6 +264,8 @@ class EventService {
     }
 
     try {
+      // For API version, we'll rely on the backend to validate dates
+      // But we can add client-side validation as well
       const response = await fetch(`${this.baseUrl}/events/register`, {
         method: 'POST',
         headers: {
