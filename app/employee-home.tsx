@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView, ScrollView as RNScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { useEventContext } from '../components/EventContext';
 
 const events = [
   {
@@ -37,19 +38,21 @@ const featuredNews = [
     image: require('../assets/images/react-logo.png'),
     text: 'Winner of this week',
     progress: 0.6,
+    eventId: '1', // Link to event id
   },
-  // Add more news items as needed
   {
     id: '2',
     image: require('../assets/images/partial-react-logo.png'),
     text: 'Employee of the Month',
     progress: 0.9,
+    eventId: '2',
   },
 ];
 
 export default function EmployeeHome() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('home');
+  const { registered } = useEventContext();
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -72,7 +75,7 @@ export default function EmployeeHome() {
           renderItem={({ item }) => (
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => router.push({ pathname: '/feature-details' })}
+              onPress={() => router.push({ pathname: '/event-details', params: { id: item.eventId } })}
             >
               <LinearGradient
                 colors={['#A259FF', '#3BB2B8']}
@@ -97,27 +100,32 @@ export default function EmployeeHome() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
           renderItem={({ item }) => (
-            <View style={styles.eventCard}>
-              <View style={styles.eventCardHeader}>
-                <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
-                <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
-              </View>
-              <Text style={styles.eventTitle}>{item.title}</Text>
-              <Text style={styles.eventDesc}>{item.desc}</Text>
-              <TouchableOpacity style={styles.eventBtn}><Text style={styles.eventBtnText}>Register Now!</Text></TouchableOpacity>
-              <View style={styles.eventCardFooter}>
-                <View style={styles.eventFooterItem}>
-                  <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
-                  <Text style={styles.eventFooterText}>{item.date}</Text>
+            <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
+              <View style={styles.eventCard}>
+                <View style={styles.eventCardHeader}>
+                  <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
+                  <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
                 </View>
-                {item.time ? (
+                <Text style={styles.eventTitle}>{item.title}</Text>
+                <Text style={styles.eventDesc}>{item.desc}</Text>
+                {registered.includes(item.id) && (
+                  <View style={styles.registeredBadge}><Text style={styles.registeredBadgeText}>Registered</Text></View>
+                )}
+                <TouchableOpacity style={styles.eventBtn}><Text style={styles.eventBtnText}>Register Now!</Text></TouchableOpacity>
+                <View style={styles.eventCardFooter}>
                   <View style={styles.eventFooterItem}>
-                    <Ionicons name="time-outline" size={16} color="#7B61FF" />
-                    <Text style={styles.eventFooterText}>{item.time}</Text>
+                    <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
+                    <Text style={styles.eventFooterText}>{item.date}</Text>
                   </View>
-                ) : null}
+                  {item.time ? (
+                    <View style={styles.eventFooterItem}>
+                      <Ionicons name="time-outline" size={16} color="#7B61FF" />
+                      <Text style={styles.eventFooterText}>{item.time}</Text>
+                    </View>
+                  ) : null}
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
           )}
         />
         <Text style={styles.sectionTitle}>Portal Access</Text>
@@ -149,33 +157,6 @@ export default function EmployeeHome() {
           <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.bookImg} />
         </TouchableOpacity>
       </ScrollView>
-      <RNScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bottomNavScroll}>
-        <View style={styles.bottomNav}>
-          <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('home'); router.push('/employee-home'); }}>
-            <Ionicons name="home" size={26} color={activeTab === 'home' ? '#43C6AC' : '#bbb'} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('events'); router.push('/events'); }}>
-            <MaterialIcons name="event" size={26} color={activeTab === 'events' ? '#43C6AC' : '#bbb'} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('gallery'); router.push('/gallery'); }}>
-            <Ionicons name="image-outline" size={26} color={activeTab === 'gallery' ? '#43C6AC' : '#bbb'} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('bookclub'); router.push('/bookclub'); }}>
-            <Ionicons name="book-outline" size={26} color={activeTab === 'bookclub' ? '#43C6AC' : '#bbb'} />
-          </TouchableOpacity>
-          {/*
-          <TouchableOpacity
-            style={styles.navBtn}
-            onPress={() => {
-              setActiveTab('profile');
-              router.push({ pathname: '/profile' });
-            }}
-          >
-            <Ionicons name="person-circle-outline" size={26} color={activeTab === 'profile' ? '#43C6AC' : '#bbb'} />
-          </TouchableOpacity>
-          */}
-        </View>
-      </RNScrollView>
     </SafeAreaView>
   );
 }
@@ -380,24 +361,6 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     backgroundColor: '#eee',
   },
-  bottomNavScroll: {
-    backgroundColor: '#fff',
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F2F2F7',
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    minWidth: 400,
-    paddingHorizontal: 12,
-  },
-  navBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-  },
   featuredCard: {
     backgroundColor: '#fff',
     borderRadius: 18,
@@ -463,5 +426,18 @@ const styles = StyleSheet.create({
     height: 8,
     backgroundColor: '#fff',
     borderRadius: 4,
+  },
+  registeredBadge: {
+    backgroundColor: '#43C6AC',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  registeredBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
   },
 }); 
