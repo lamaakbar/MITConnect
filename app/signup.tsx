@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useUserContext } from '../components/UserContext';
 
 export default function SignupScreen() {
   const { role: initialRole } = useLocalSearchParams();
   const router = useRouter();
+  const { setUserRole, getHomeRoute } = useUserContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState(initialRole || 'employee');
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     setLoading(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       setLoading(false);
       if (!email || !password || !confirm) {
         Alert.alert('Error', 'Please fill all fields.');
@@ -23,14 +25,12 @@ export default function SignupScreen() {
         Alert.alert('Error', 'Passwords do not match.');
         return;
       }
+      // Set the user role in context
+      await setUserRole(role as 'admin' | 'employee' | 'trainee');
+      
       Alert.alert('Success', `Account created for ${role}. Please log in.`);
-      if (role === 'admin') {
-        router.replace('/admin-home');
-      } else if (role === 'employee') {
-        router.replace('/employee-home');
-      } else {
-        router.replace('/trainee-home');
-      }
+      // Navigate to the correct home screen based on role
+      router.replace(getHomeRoute() as any);
     }, 800);
   };
 

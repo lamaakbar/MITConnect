@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useUserContext } from '../components/UserContext';
 
 const roles = [
   { label: 'Admin', value: 'admin' },
@@ -9,8 +10,12 @@ const roles = [
 
 export default function RoleSelectionScreen() {
   const router = useRouter();
+  const { setUserRole } = useUserContext();
 
-  const handleSelect = (role: string) => {
+  const handleSelect = async (role: string) => {
+    // Set the user role in context
+    await setUserRole(role as 'admin' | 'employee' | 'trainee');
+    
     if (role === 'admin') {
       router.replace('/admin-login');
     } else {

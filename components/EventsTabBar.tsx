@@ -2,13 +2,14 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
+import { useUserContext } from './UserContext';
 
 const TABS = [
   {
     key: 'home',
     label: 'Home',
     icon: (color: string) => <Ionicons name="home" size={26} color={color} />,
-    route: '/employee-home',
+    route: 'home', // Will be resolved dynamically
   },
   {
     key: 'events',
@@ -30,18 +31,20 @@ const INACTIVE_COLOR = '#6E7E6F';
 export default function EventsTabBar() {
   const router = useRouter();
   const pathname = usePathname();
+  const { getHomeRoute } = useUserContext();
 
   return (
     <View style={styles.tabBar}>
       {TABS.map(tab => {
+        const route = tab.route === 'home' ? getHomeRoute() : tab.route;
         const isActive =
           (tab.route === '/events' && pathname.startsWith('/event')) ||
-          pathname === tab.route;
+          pathname === route;
         return (
           <TouchableOpacity
             key={tab.key}
             style={styles.tabBtn}
-            onPress={() => router.replace(tab.route as any)}
+            onPress={() => router.replace(route as any)}
             activeOpacity={0.7}
           >
             {tab.icon(isActive ? ACTIVE_COLOR : INACTIVE_COLOR)}
