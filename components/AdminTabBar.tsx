@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useUserContext } from './UserContext';
 
 interface AdminTabBarProps {
   activeTab: string;
@@ -10,6 +11,7 @@ interface AdminTabBarProps {
 
 export default function AdminTabBar({ activeTab, isDarkMode = false }: AdminTabBarProps) {
   const router = useRouter();
+  const { getHomeRoute } = useUserContext();
 
   const getThemeColors = () => {
     return isDarkMode ? {
@@ -32,7 +34,7 @@ export default function AdminTabBar({ activeTab, isDarkMode = false }: AdminTabB
   const handleTabPress = (tabName: string) => {
     switch (tabName) {
       case 'home':
-        router.push('/admin-home');
+        router.push(getHomeRoute() as any);
         break;
       case 'events':
         router.push('/admin-events');
