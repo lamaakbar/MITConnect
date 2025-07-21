@@ -61,6 +61,8 @@ export default function RootLayout() {
               <Stack.Screen name="trainee-management/overview" options={{ headerShown: false }} />
               <Stack.Screen name="trainee-management/progress" options={{ headerShown: false }} />
               <Stack.Screen name="trainee-management/registrations" options={{ headerShown: false }} />
+              <Stack.Screen name="trainee-hub" options={{ headerShown: false }} />
+              <Stack.Screen name="trainee-checklist" options={{ headerShown: false }} />
               <Stack.Screen name="books-management/[id]/details" options={{ headerShown: false }} />
               <Stack.Screen name="shop-management" options={{ headerShown: false }} />
               <Stack.Screen name="shopdrop" options={{ headerShown: false }} />

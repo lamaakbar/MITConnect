@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useState, useMemo } from 'react';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
-import RoleGuard from '../components/RoleGuard';
+
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
@@ -67,8 +67,7 @@ export default function EmployeeHome() {
   }, [events]);
 
   return (
-    <RoleGuard allowedRoles={['employee']}>
-      <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <Image source={require('../assets/images/icon.png')} style={styles.logo} />
           <Text style={styles.appName}><Text style={{ color: '#222' }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
@@ -106,8 +105,9 @@ export default function EmployeeHome() {
               </TouchableOpacity>
             )}
           />
+              {/* Upcoming Events Section */}
           <Text style={styles.sectionTitle}>Upcoming Events</Text>
-          {upcomingEvents.length > 0 ? (
+          {upcomingEvents && upcomingEvents.length > 0 ? (
             <FlatList
               data={upcomingEvents}
               keyExtractor={item => item.id}
@@ -115,7 +115,10 @@ export default function EmployeeHome() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
               renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
+                <TouchableOpacity
+                  onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                  activeOpacity={0.85}
+                >
                   <View style={styles.eventCard}>
                     <View style={styles.eventCardHeader}>
                       <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
@@ -123,12 +126,16 @@ export default function EmployeeHome() {
                     </View>
                     <Text style={styles.eventTitle}>{item.title}</Text>
                     <Text style={styles.eventDesc}>{item.desc}</Text>
-                    {registered.includes(item.id) && (
+                    {registered && registered.includes(item.id) && (
                       <View style={styles.registeredBadge}>
                         <Text style={styles.registeredBadgeText}>Registered</Text>
                       </View>
                     )}
-                    <TouchableOpacity style={styles.eventBtn}>
+                    <TouchableOpacity
+                      style={styles.eventBtn}
+                      activeOpacity={0.85}
+                      onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                    >
                       <Text style={styles.eventBtnText}>Register Now!</Text>
                     </TouchableOpacity>
                     <View style={styles.eventCardFooter}>
@@ -152,6 +159,8 @@ export default function EmployeeHome() {
               <Text style={styles.noEventsText}>No upcoming events at the moment</Text>
             </View>
           )}
+
+          {/* Portal Access Section */}
           <Text style={styles.sectionTitle}>Portal Access</Text>
           <View style={styles.portalRow}>
             {portalLinks.map(link => (
@@ -171,11 +180,22 @@ export default function EmployeeHome() {
               </TouchableOpacity>
             ))}
           </View>
+
+          {/* Book of the Month Section */}
           <Text style={styles.sectionTitle}>Book of the Month</Text>
-          <TouchableOpacity style={styles.featuredBookCard} onPress={() => router.push('/library/featured/details')}>
-            <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
+          <TouchableOpacity
+            style={styles.featuredBookCard}
+            activeOpacity={0.85}
+            onPress={() => router.push('/book-details')}
+          >
+            <Image
+              source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }}
+              style={styles.featuredBookCover}
+            />
             <View style={{ flex: 1, marginLeft: 16 }}>
-              <View style={styles.genreChip}><Text style={styles.genreText}>Philosophical Fiction</Text></View>
+              <View style={styles.genreChip}>
+                <Text style={styles.genreText}>Philosophical Fiction</Text>
+              </View>
               <Text style={styles.featuredBookTitle}>The Alchemist</Text>
               <Text style={styles.featuredBookAuthor}>By Paulo Coelho</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
@@ -198,9 +218,8 @@ export default function EmployeeHome() {
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
-    </RoleGuard>
   );
-}
+};
 
 const styles = StyleSheet.create({
   safeArea: {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView, ScrollView as RNScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView, ScrollView as RNScrollView, Alert, Modal, TextInput } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -14,6 +14,7 @@ const portalLinks = [
   { key: 'gallery', label: 'Gallery', icon: <Ionicons name="image-outline" size={28} color="#F7B801" /> },
   { key: 'inspire', label: 'Inspire Corner', icon: <Feather name="users" size={28} color="#43C6AC" /> },
   { key: 'bookclub', label: 'Book Club', icon: <Ionicons name="book-outline" size={28} color="#FF8C42" /> },
+  { key: 'checklist', label: 'Check List', icon: <Ionicons name="checkmark-done-circle-outline" size={28} color="#34C759" /> },
 ];
 
 const featuredNews: any[] = [];
@@ -23,6 +24,13 @@ export default function TraineeHome() {
   const [activeTab, setActiveTab] = useState('home');
   const { events, registered } = useEventContext();
   const { userRole, isInitialized } = useUserContext();
+
+  // Trainee Hub modal state
+  const [showHub, setShowHub] = useState(false);
+  const [hubTab, setHubTab] = useState('Dashboard');
+  const [plan, setPlan] = useState(''); // empty means no plan
+  const [planInput, setPlanInput] = useState('');
+  const [planSubmitted, setPlanSubmitted] = useState(false);
 
   // Debug logging
   console.log('TraineeHome: Current userRole:', userRole, 'isInitialized:', isInitialized);
@@ -161,10 +169,11 @@ export default function TraineeHome() {
               activeOpacity={0.8}
               onPress={() => {
                 if (link.key === 'events') router.push('/events');
-                else if (link.key === 'hub') router.push('/trainee-management');
+                else if (link.key === 'hub') router.push('/trainee-hub');
                 else if (link.key === 'gallery') router.push('/gallery');
                 else if (link.key === 'inspire') router.push('/inspirer-corner');
                 else if (link.key === 'bookclub') router.push('/bookclub');
+                else if (link.key === 'checklist') router.push('/trainee-checklist');
               }}
             >
               {link.icon}
@@ -173,7 +182,7 @@ export default function TraineeHome() {
           ))}
         </View>
         <Text style={styles.sectionTitle}>Book of the Month</Text>
-        <TouchableOpacity style={styles.featuredBookCard} onPress={() => router.push('/library/featured/details')}>
+        <TouchableOpacity style={styles.featuredBookCard} onPress={() => router.push('/book-details')}>
           <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
           <View style={{ flex: 1, marginLeft: 16 }}>
             <View style={styles.genreChip}><Text style={styles.genreText}>Philosophical Fiction</Text></View>
@@ -203,7 +212,7 @@ export default function TraineeHome() {
           <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('home'); router.push('/trainee-home'); }}>
             <Ionicons name="home" size={26} color={activeTab === 'home' ? '#43C6AC' : '#bbb'} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('hub'); router.push('/trainee-management'); }}>
+          <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('hub'); router.push('/trainee-hub'); }}>
             <MaterialIcons name="dashboard" size={26} color={activeTab === 'hub' ? '#43C6AC' : '#bbb'} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('gallery'); router.push('/gallery'); }}>
@@ -225,6 +234,79 @@ export default function TraineeHome() {
           */}
         </View>
       </RNScrollView>
+      <Modal visible={showHub} animationType="slide" transparent={true} onRequestClose={() => setShowHub(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.15)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 18, width: '92%', minHeight: 420, padding: 18, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#43C6AC' }}>Trainee Hub</Text>
+              <TouchableOpacity onPress={() => setShowHub(false)}><Ionicons name="close" size={28} color="#888" /></TouchableOpacity>
+            </View>
+            {/* Tabs */}
+            <View style={{ flexDirection: 'row', marginBottom: 16 }}>
+              {['Dashboard', 'Plan', 'Progress'].map(tab => (
+                <TouchableOpacity
+                  key={tab}
+                  style={{
+                    backgroundColor: hubTab === tab ? '#43C6AC' : '#F2F4F7',
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    marginRight: 8,
+                  }}
+                  onPress={() => setHubTab(tab)}
+                >
+                  <Text style={{ color: hubTab === tab ? '#fff' : '#222', fontWeight: 'bold' }}>{tab}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {/* Tab Content */}
+            {hubTab === 'Dashboard' && (
+              <View style={{ minHeight: 200, justifyContent: 'center', alignItems: 'center' }}>
+                {plan ? (
+                  <>
+                    <Text style={{ fontSize: 16, color: '#222', marginBottom: 12 }}>Your Plan:</Text>
+                    <Text style={{ fontSize: 15, color: '#43C6AC', fontWeight: 'bold', marginBottom: 18 }}>{plan}</Text>
+                  </>
+                ) : (
+                  <Text style={{ color: '#888', fontSize: 16 }}>No plan found. Please fill your plan in the Plan tab.</Text>
+                )}
+              </View>
+            )}
+            {hubTab === 'Plan' && (
+              <View style={{ minHeight: 200, justifyContent: 'center', alignItems: 'center' }}>
+                {plan ? (
+                  <Text style={{ color: '#43C6AC', fontSize: 16 }}>You already have a plan.</Text>
+                ) : (
+                  <>
+                    <Text style={{ fontSize: 16, color: '#222', marginBottom: 12 }}>Enter your plan:</Text>
+                    <TextInput
+                      style={{ borderWidth: 1, borderColor: '#43C6AC', borderRadius: 8, padding: 10, width: '100%', marginBottom: 12, fontSize: 15 }}
+                      placeholder="Describe your plan..."
+                      value={planInput}
+                      onChangeText={setPlanInput}
+                      multiline
+                      numberOfLines={3}
+                    />
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#43C6AC', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 24 }}
+                      onPress={() => { setPlan(planInput); setPlanInput(''); setPlanSubmitted(true); setHubTab('Dashboard'); }}
+                      disabled={!planInput.trim()}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Submit Plan</Text>
+                    </TouchableOpacity>
+                    {planSubmitted && <Text style={{ color: '#24B26B', marginTop: 10 }}>Plan submitted!</Text>}
+                  </>
+                )}
+              </View>
+            )}
+            {hubTab === 'Progress' && (
+              <View style={{ minHeight: 200, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontSize: 16, color: '#222', marginBottom: 12 }}>Progress coming soon!</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
     </RoleGuard>
   );
@@ -286,7 +368,7 @@ const styles = StyleSheet.create({
   portalRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginHorizontal: 18,
     marginBottom: 18,
     marginTop: 8,
@@ -299,7 +381,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     minWidth: 70,
-    width: '22%',
+    width: 100,
     maxWidth: 100,
     height: 90,
     marginBottom: 8,

@@ -138,7 +138,7 @@ export default function FeaturedBookDetailsScreen() {
                   <Text style={styles.genreText}>{item.genre}</Text>
                 </View>
               </View>
-              <TouchableOpacity style={{ alignSelf: 'center' }} onPress={() => router.push({ pathname: '/library/[id]/details', params: { id: item.id } })}>
+              <TouchableOpacity style={{ alignSelf: 'center' }} onPress={() => router.push('/book-details')}>
                 <Text style={styles.moreDetails}>More Details</Text>
               </TouchableOpacity>
             </View>

@@ -34,7 +34,7 @@ export default function LibraryScreen() {
             </View>
             <TouchableOpacity 
               style={styles.moreDetailsBtn}
-              onPress={() => router.push(`/library/${item.id}/details`)}
+              onPress={() => router.push('/book-details')}
             >
               <Text style={styles.moreDetailsText}>More Details</Text>
             </TouchableOpacity>
