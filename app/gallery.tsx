@@ -1,111 +1,471 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  FlatList, 
+  Image, 
+  TouchableOpacity, 
+  TextInput,
+  SafeAreaView,
+  StatusBar,
+  Modal,
+  Dimensions,
+  Alert
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
-// Empty albums array - no mock data
-const albums: any[] = [];
+// Try to import required modules
+let MediaLibrary: any = null;
+let FileSystem: any = null;
+try {
+  MediaLibrary = require('expo-media-library');
+  FileSystem = require('expo-file-system');
+} catch (error) {
+  console.log('Required modules not available');
+}
+
+const { width: screenWidth } = Dimensions.get('window');
+
+// Mock albums data with actual image URLs for proper saving
+const albums = [
+  {
+    id: '1',
+    title: 'MIT Events',
+    photoCount: 2,
+    coverImage: { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop' },
+    photos: [
+      { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop' },
+      { uri: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=400&h=300&fit=crop' },
+    ],
+  },
+  {
+    id: '2',
+    title: 'Book Club',
+    photoCount: 1,
+    coverImage: { uri: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop' },
+    photos: [
+      { uri: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop' },
+    ],
+  },
+  {
+    id: '3',
+    title: 'Team Building',
+    photoCount: 3,
+    coverImage: { uri: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=300&fit=crop' },
+    photos: [
+      { uri: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=300&fit=crop' },
+      { uri: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop' },
+      { uri: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400&h=300&fit=crop' },
+    ],
+  },
+  {
+    id: '4',
+    title: 'Workshop Sessions',
+    photoCount: 4,
+    coverImage: { uri: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=300&fit=crop' },
+    photos: [
+      { uri: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=300&fit=crop' },
+      { uri: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=400&h=300&fit=crop' },
+      { uri: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=400&h=300&fit=crop' },
+      { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop' },
+    ],
+  },
+];
 
 export default function GalleryScreen() {
+  const router = useRouter();
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
 
   const album = albums.find(a => a.id === selectedAlbum);
+  
+  // Filter albums based on search query
+  const filteredAlbums = albums.filter(album =>
+    album.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleBackPress = () => {
+    if (selectedAlbum) {
+      setSelectedAlbum(null);
+    } else {
+      router.back();
+    }
+  };
+
+  const handleDownloadPhoto = async (photoSource: any) => {
+    try {
+      if (!MediaLibrary || !FileSystem) {
+        Alert.alert('Not Available', 'Photo saving is not available in this environment.');
+        return;
+      }
+
+      // Request permissions first
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Photo album access is required to save photos. Please allow access when prompted.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Show loading state (optional - can be removed for cleaner UX)
+      // Alert.alert(
+      //   'Downloading Photo', 
+      //   'Downloading and saving photo to your device...',
+      //   [{ text: 'OK' }]
+      // );
+
+      // Extract the image URL
+      let imageUrl = '';
+      if (photoSource && photoSource.uri) {
+        imageUrl = photoSource.uri;
+      } else if (typeof photoSource === 'string') {
+        imageUrl = photoSource;
+      }
+
+      // Validate that we have a valid URL
+      if (!imageUrl || typeof imageUrl !== 'string') {
+        Alert.alert(
+          'Invalid Image',
+          'This image cannot be downloaded. Please try a different photo.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Download the image to local storage first
+      const fileName = `photo_${Date.now()}.jpg`;
+      const localUri = FileSystem.documentDirectory + fileName;
+      
+      const downloadResult = await FileSystem.downloadAsync(imageUrl, localUri);
+      
+      if (downloadResult.status !== 200) {
+        throw new Error('Failed to download image');
+      }
+
+      // Save the downloaded image to photo album
+      await MediaLibrary.saveToLibraryAsync(downloadResult.uri);
+
+      // Show success message
+      Alert.alert(
+        'Success!', 
+        'Photo has been downloaded and saved to your photo album successfully.',
+        [{ text: 'OK' }]
+      );
+      
+    } catch (error) {
+      console.error('Save error:', error);
+      Alert.alert('Error', 'Failed to download and save photo. Please try again.');
+    }
+  };
+
+  const renderAlbumCard = ({ item }: { item: typeof albums[0] }) => (
+    <TouchableOpacity 
+      style={styles.albumCard} 
+      onPress={() => setSelectedAlbum(item.id)}
+      activeOpacity={0.8}
+    >
+      <Image source={item.coverImage} style={styles.albumCoverImage} />
+      <View style={styles.albumOverlay}>
+        <Text style={styles.albumTitle}>{item.title}</Text>
+        <Text style={styles.albumPhotoCount}>{item.photoCount} photo{item.photoCount !== 1 ? 's' : ''}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderPhoto = ({ item }: { item: any }) => (
+    <View style={styles.photoContainer}>
+      <TouchableOpacity 
+        style={styles.photoWrapper}
+        onPress={() => setSelectedPhoto(item)}
+        activeOpacity={0.9}
+      >
+        <Image source={item} style={styles.photo} />
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.downloadPhotoButton}
+        onPress={() => handleDownloadPhoto(item)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="save-outline" size={16} color="#fff" />
+        <Text style={styles.downloadPhotoText}>Save</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (selectedAlbum && album) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={24} color="#000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{album.title}</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        {/* Photos Grid */}
+        <FlatList
+          data={album.photos}
+          keyExtractor={(item, index) => `photo-${index}`}
+          numColumns={2}
+          renderItem={renderPhoto}
+          contentContainerStyle={styles.photosGrid}
+          showsVerticalScrollIndicator={false}
+        />
+
+        {/* Photo Modal */}
+        <Modal
+          visible={!!selectedPhoto}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setSelectedPhoto(null)}
+        >
+          <View style={styles.photoModalOverlay}>
+            <View style={styles.photoModalHeader}>
+              <TouchableOpacity 
+                style={styles.modalCloseButton}
+                onPress={() => setSelectedPhoto(null)}
+              >
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.downloadButton}
+                onPress={() => selectedPhoto && handleDownloadPhoto(selectedPhoto)}
+              >
+                <Ionicons name="save-outline" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity 
+              style={styles.photoModalContent}
+              onPress={() => setSelectedPhoto(null)}
+              activeOpacity={1}
+            >
+              {selectedPhoto && (
+                <Image source={selectedPhoto} style={styles.fullScreenPhoto} />
+              )}
+            </TouchableOpacity>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Gallery</Text>
-      {selectedAlbum && album ? (
-        <View>
-          <TouchableOpacity onPress={() => setSelectedAlbum(null)}>
-            <Text style={styles.backBtn}>{'< Back to Albums'}</Text>
-          </TouchableOpacity>
-          <Text style={styles.albumTitle}>{album.title}</Text>
-          <FlatList
-            data={album.photos}
-            keyExtractor={(item, idx) => item + idx}
-            numColumns={2}
-            renderItem={({ item }) => (
-              <Image source={{ uri: item }} style={styles.photo} />
-            )}
-          />
-        </View>
-      ) : (
-        <>
-          {albums.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="images-outline" size={64} color="#ccc" />
-              <Text style={styles.emptyStateTitle}>No Albums Available</Text>
-              <Text style={styles.emptyStateText}>
-                There are no photo albums in the gallery yet. Check back later for exciting memories!
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={albums}
-              keyExtractor={item => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.albumCard} onPress={() => setSelectedAlbum(item.id)}>
-                  <Text style={styles.albumTitle}>{item.title}</Text>
-                  <View style={styles.albumPreviewRow}>
-                    {item.photos.slice(0, 2).map((photo, idx) => (
-                      <Image key={idx} source={{ uri: photo }} style={styles.albumPreview} />
-                    ))}
-                  </View>
-                </TouchableOpacity>
-              )}
-            />
-          )}
-        </>
-      )}
-    </View>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Albums</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#8E8E93" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search Albums"
+          placeholderTextColor="#8E8E93"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
+      {/* Albums Grid */}
+      <FlatList
+        data={filteredAlbums}
+        keyExtractor={item => item.id}
+        renderItem={renderAlbumCard}
+        contentContainerStyle={styles.albumsGrid}
+        showsVerticalScrollIndicator={false}
+        numColumns={2}
+        columnWrapperStyle={styles.albumRow}
+      />
+
+      
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f6f7f9',
-    padding: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  albumCard: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 1,
   },
-  albumTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  albumPreviewRow: {
+  header: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
   },
-  albumPreview: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#000',
+  },
+  addButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
+    marginHorizontal: 16,
+    marginVertical: 12,
+    paddingHorizontal: 12,
+    height: 36,
+  },
+  searchIcon: {
     marginRight: 8,
   },
-  backBtn: {
-    color: '#43C6AC',
-    marginBottom: 8,
-    fontWeight: 'bold',
+  searchInput: {
+    flex: 1,
+    fontSize: 17,
+    color: '#000',
+  },
+  albumsGrid: {
+    padding: 16,
+  },
+  albumRow: {
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  albumCard: {
+    width: (Dimensions.get('window').width - 48) / 2,
+    height: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    position: 'relative',
+  },
+  albumCoverImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  albumOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  albumTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 2,
+  },
+  albumPhotoCount: {
+    fontSize: 14,
+    color: '#fff',
+    opacity: 0.8,
+  },
+  photosGrid: {
+    padding: 8,
+  },
+  photoContainer: {
+    flex: 1,
+    margin: 4,
+    position: 'relative',
+  },
+  photoWrapper: {
+    flex: 1,
+  },
+  downloadPhotoButton: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  downloadPhotoText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   photo: {
-    width: 150,
-    height: 150,
-    borderRadius: 12,
-    margin: 8,
+    width: '100%',
+    height: 180,
+    borderRadius: 8,
+    resizeMode: 'cover',
+  },
+  photoModalOverlay: {
+    flex: 1,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoModalContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenPhoto: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').width,
+    resizeMode: 'contain',
+  },
+  headerSpacer: {
+    width: 32,
+  },
+  photoModalHeader: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    zIndex: 10,
+  },
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  downloadButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyState: {
     flex: 1,
