@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Alert, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -45,89 +45,100 @@ export default function AdminBooksScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
-      {/* Unified Admin Header */}
+    <SafeAreaView style={{ flex: 1, backgroundColor }}>
       <AdminHeader 
-        title="MITConnect Library"
+        title=""
         rightComponent={
-          <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/add-book')}>
-            <Ionicons name="add" size={20} color="#fff" />
-            <Text style={styles.addBtnText}>Add</Text>
+          <TouchableOpacity
+            onPress={() => router.push('/add-book')}
+            style={{
+              backgroundColor: isDarkMode ? '#3CB371' : '#004080',
+              borderRadius: 20,
+              padding: 8,
+              marginLeft: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            activeOpacity={0.8}
+            accessibilityLabel="Add Book"
+          >
+            <Ionicons name="add" size={24} color="#fff" />
           </TouchableOpacity>
         }
       />
+      <View style={[styles.container, { backgroundColor }]}>
+        {/* Stats Cards */}
+        <View style={styles.statsContainer}>
+          <View style={[styles.statCard, { backgroundColor: cardBackground, borderColor }]}>
+            <Text style={[styles.statNumber, { color: textColor }]}>{books.length}</Text>
+            <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Total Books</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: cardBackground, borderColor }]}>
+            <Text style={[styles.statNumber, { color: textColor }]}>
+              {books.filter(book => book.genre === 'Technology').length}
+            </Text>
+            <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Technology</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: cardBackground, borderColor }]}>
+            <Text style={[styles.statNumber, { color: textColor }]}>
+              {books.filter(book => book.genre === 'Business').length}
+            </Text>
+            <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Business</Text>
+          </View>
+        </View>
 
-      {/* Stats Cards */}
-      <View style={styles.statsContainer}>
-        <View style={[styles.statCard, { backgroundColor: cardBackground, borderColor }]}>
-          <Text style={[styles.statNumber, { color: textColor }]}>{books.length}</Text>
-          <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Total Books</Text>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: cardBackground, borderColor }]}>
-          <Text style={[styles.statNumber, { color: textColor }]}>
-            {books.filter(book => book.genre === 'Technology').length}
-          </Text>
-          <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Technology</Text>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: cardBackground, borderColor }]}>
-          <Text style={[styles.statNumber, { color: textColor }]}>
-            {books.filter(book => book.genre === 'Business').length}
-          </Text>
-          <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Business</Text>
-        </View>
-      </View>
-
-      {/* Books List */}
-      {books.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="library-outline" size={64} color="#ccc" />
-          <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Books in Library</Text>
-          <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
-            Start building your library by adding the first book. Share knowledge and inspire your team!
-          </Text>
-          <TouchableOpacity 
-            style={styles.emptyStateButton}
-            onPress={() => router.push('/add-book')}
-          >
-            <Ionicons name="add" size={20} color="#fff" style={{ marginRight: 8 }} />
-            <Text style={styles.emptyStateButtonText}>Add First Book</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={books}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() => router.push(`/books-management/${item.id}/details`)}
-              activeOpacity={0.8}
+        {/* Books List */}
+        {books.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="library-outline" size={64} color="#ccc" />
+            <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Books in Library</Text>
+            <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+              Start building your library by adding the first book. Share knowledge and inspire your team!
+            </Text>
+            <TouchableOpacity 
+              style={styles.emptyStateButton}
+              onPress={() => router.push('/add-book')}
             >
-              <View style={[styles.card, { backgroundColor: cardBackground, borderColor }]}>
-                <Image source={{ uri: item.cover }} style={styles.cover} />
-                <View style={styles.info}>
-                  <Text style={[styles.title, { color: textColor }]}>{item.title}</Text>
-                  <Text style={[styles.author, { color: secondaryTextColor }]}>By {item.author}</Text>
-                  <View style={[styles.genreChip, { backgroundColor: item.genreColor }]}> 
-                    <Text style={[styles.genreText, { color: textColor }]}>{item.genre}</Text>
-                  </View>
-                </View>
-                <TouchableOpacity 
-                  style={[styles.removeBtn, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F2F2F2' }]} 
-                  onPress={() => handleRemove(item.id, item.title)}
-                >
-                  <Text style={[styles.removeBtnText, { color: isDarkMode ? '#E74C3C' : '#444' }]}>Remove</Text>
-                </TouchableOpacity>
-              </View>
+              <Ionicons name="add" size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.emptyStateButtonText}>Add First Book</Text>
             </TouchableOpacity>
-          )}
-        />
-      )}
+          </View>
+        ) : (
+          <FlatList
+            data={books}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                onPress={() => router.push(`/books-management/${item.id}/details`)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.card, { backgroundColor: cardBackground, borderColor }]}>
+                  <Image source={{ uri: item.cover }} style={styles.cover} />
+                  <View style={styles.info}>
+                    <Text style={[styles.title, { color: textColor }]}>{item.title}</Text>
+                    <Text style={[styles.author, { color: secondaryTextColor }]}>By {item.author}</Text>
+                    <View style={[styles.genreChip, { backgroundColor: item.genreColor }]}> 
+                      <Text style={[styles.genreText, { color: textColor }]}>{item.genre}</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity 
+                    style={[styles.removeBtn, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F2F2F2' }]} 
+                    onPress={() => handleRemove(item.id, item.title)}
+                  >
+                    <Text style={[styles.removeBtnText, { color: isDarkMode ? '#E74C3C' : '#444' }]}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        )}
 
-      {/* Bottom Tab Bar */}
-      <AdminTabBar activeTab="books" isDarkMode={isDarkMode} />
-    </View>
+        {/* Bottom Tab Bar */}
+        <AdminTabBar activeTab="books" isDarkMode={isDarkMode} />
+      </View>
+    </SafeAreaView>
   ); 
 }
 

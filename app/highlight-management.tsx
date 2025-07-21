@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, Alert, Image, FlatList, TouchableOpacity, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Dimensions, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable, Alert, Image, FlatList, TouchableOpacity, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Dimensions, Modal, ActivityIndicator, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -132,9 +132,8 @@ export default function HighlightManagement() {
   };
 
   return (
-    <View style={[styles.mainContainer, { backgroundColor }]}>
-      {/* Unified Admin Header */}
-      <AdminHeader title="Highlight Management" />
+    <SafeAreaView style={{ flex: 1, backgroundColor }}>
+      <AdminHeader title="" showBackButton={true} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -289,7 +288,7 @@ export default function HighlightManagement() {
       {/* Bottom Tab Bar */}
       <AdminTabBar activeTab="highlights" isDarkMode={isDarkMode} />
     </KeyboardAvoidingView>
-  </View>
+  </SafeAreaView>
   );
 }
 

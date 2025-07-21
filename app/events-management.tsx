@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -54,68 +54,65 @@ export default function EventsManagement() {
   const borderColor = isDarkMode ? '#2A2A2A' : '#E0E0E0';
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
-      <ScrollView 
-        style={{ flex: 1 }} 
-        contentContainerStyle={{ paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-        bounces={true}
-      >
-        {/* Unified Admin Header */}
-        <AdminHeader title="Events Management" />
-        <Text style={[styles.headerSubtitle, { color: secondaryTextColor }]}>Manage your events and attendees</Text>
-
-        {/* Events List */}
-        {mockEvents.map((event, index) => (
-          <TouchableOpacity 
-            key={event.id} 
-            style={[styles.eventCard, { backgroundColor: cardBackground, borderColor }]}
-            activeOpacity={0.7}
-          >
-            <View style={styles.eventHeader}>
-              <View style={[styles.eventIconContainer, { backgroundColor: isDarkMode ? 'rgba(60, 179, 113, 0.2)' : 'rgba(60, 179, 113, 0.1)' }]}>
-                <Ionicons name="calendar-outline" size={24} color={isDarkMode ? '#3CB371' : '#004080'} />
-              </View>
-              <View style={styles.eventInfo}>
-                <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
-                <Text style={[styles.attendeeCount, { color: secondaryTextColor }]}>
-                  {event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={secondaryTextColor} />
-            </View>
-            
-            <View style={styles.attendeesSection}>
-              <Text style={[styles.attendeesTitle, { color: textColor }]}>Attendees:</Text>
-              {event.attendees.length === 0 ? (
-                <Text style={[styles.noAttendees, { color: secondaryTextColor }]}>No attendees yet.</Text>
-              ) : (
-                <View style={styles.attendeesList}>
-                  {event.attendees.map((name, idx) => (
-                    <View key={idx} style={styles.attendeeItem}>
-                      <View style={[styles.attendeeAvatar, { backgroundColor: isDarkMode ? '#3CB371' : '#004080' }]}>
-                        <Text style={styles.attendeeInitial}>{name.charAt(0)}</Text>
-                      </View>
-                      <Text style={[styles.attendeeName, { color: textColor }]}>{name}</Text>
-                    </View>
-                  ))}
+    <SafeAreaView style={{ flex: 1, backgroundColor }}>
+      <AdminHeader title="" />
+      {/* Main content */}
+      <View style={[styles.container, { backgroundColor, flex: 1 }]}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          bounces={true}
+        >
+          {/* Events List */}
+          {mockEvents.map((event, index) => (
+            <TouchableOpacity 
+              key={event.id} 
+              style={[styles.eventCard, { backgroundColor: cardBackground, borderColor }]}
+              activeOpacity={0.7}
+            >
+              <View style={styles.eventHeader}>
+                <View style={[styles.eventIconContainer, { backgroundColor: isDarkMode ? 'rgba(60, 179, 113, 0.2)' : 'rgba(60, 179, 113, 0.1)' }]}>
+                  <Ionicons name="calendar-outline" size={24} color={isDarkMode ? '#3CB371' : '#004080'} />
                 </View>
-              )}
+                <View style={styles.eventInfo}>
+                  <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
+                  <Text style={[styles.attendeeCount, { color: secondaryTextColor }]}>
+                    {event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={secondaryTextColor} />
+              </View>
+              
+              <View style={styles.attendeesSection}>
+                <Text style={[styles.attendeesTitle, { color: textColor }]}>Attendees:</Text>
+                {event.attendees.length === 0 ? (
+                  <Text style={[styles.noAttendees, { color: secondaryTextColor }]}>No attendees yet.</Text>
+                ) : (
+                  <View style={styles.attendeesList}>
+                    {event.attendees.map((name, idx) => (
+                      <View key={idx} style={styles.attendeeItem}>
+                        <View style={[styles.attendeeAvatar, { backgroundColor: isDarkMode ? '#3CB371' : '#004080' }]}>
+                          <Text style={styles.attendeeInitial}>{name.charAt(0)}</Text>
+                        </View>
+                        <Text style={[styles.attendeeName, { color: textColor }]}>{name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          ))}
+          {mockEvents.length === 0 && (
+            <View style={styles.emptyState}>
+              <Ionicons name="calendar-outline" size={48} color={secondaryTextColor} />
+              <Text style={[styles.emptyText, { color: secondaryTextColor }]}>No events found</Text>
             </View>
-          </TouchableOpacity>
-        ))}
-
-        {mockEvents.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={48} color={secondaryTextColor} />
-            <Text style={[styles.emptyText, { color: secondaryTextColor }]}>No events found</Text>
-          </View>
-        )}
-      </ScrollView>
-      
-      {/* Bottom Tab Bar */}
-      <AdminTabBar activeTab="events" isDarkMode={isDarkMode} />
-    </View>
+          )}
+        </ScrollView>
+        <AdminTabBar activeTab="events" isDarkMode={isDarkMode} />
+      </View>
+    </SafeAreaView>
   );
 }
 

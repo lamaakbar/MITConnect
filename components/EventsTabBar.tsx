@@ -33,13 +33,12 @@ export default function EventsTabBar() {
   const pathname = usePathname();
   const { getHomeRoute } = useUserContext();
 
+  const iconColor = INACTIVE_COLOR; // Use the default icon color for all tabs
+
   return (
     <View style={styles.tabBar}>
       {TABS.map(tab => {
         const route = tab.route === 'home' ? getHomeRoute() : tab.route;
-        const isActive =
-          (tab.route === '/events' && pathname.startsWith('/event')) ||
-          pathname === route;
         return (
           <TouchableOpacity
             key={tab.key}
@@ -47,8 +46,8 @@ export default function EventsTabBar() {
             onPress={() => router.replace(route as any)}
             activeOpacity={0.7}
           >
-            {tab.icon(isActive ? ACTIVE_COLOR : INACTIVE_COLOR)}
-            <Text style={[styles.tabLabel, { color: isActive ? ACTIVE_COLOR : INACTIVE_COLOR }]}>{tab.label}</Text>
+            {tab.icon(iconColor)}
+            <Text style={[styles.tabLabel, { color: INACTIVE_COLOR }]}>{tab.label}</Text>
           </TouchableOpacity>
         );
       })}
