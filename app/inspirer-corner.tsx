@@ -5,6 +5,8 @@ import * as Clipboard from 'expo-clipboard';
 import { ToastAndroid, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useUserContext } from '../components/UserContext';
+import { useTheme } from '../components/ThemeContext';
+import { useThemeColor } from '../hooks/useThemeColor';
 
 type VoteType = 'yesno' | 'likedislike';
 type Idea = {
@@ -97,6 +99,14 @@ export default function InspirerCornerScreen() {
   const communityIdeas = ideas.filter(i =>
     i.status === 'Approved' || i.submitterId === userId
   );
+
+  const { isDarkMode, toggleTheme } = useTheme();
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#eee';
+  const iconColor = useThemeColor({}, 'icon');
 
   // Handle vote
   const handleVote = (ideaId: string, type: string) => {

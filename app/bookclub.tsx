@@ -15,6 +15,8 @@ import {
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useBooks } from '../components/BookContext';
+import { useTheme } from '../components/ThemeContext';
+import { useThemeColor } from '../hooks/useThemeColor';
 
 // Mock featured book data
 const FEATURED_BOOK = {
@@ -57,6 +59,13 @@ export default function BookClubScreen() {
   const [mainComments, setMainComments] = useState<string[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedBook, setSelectedBook] = useState<any>(null);
+  const { isDarkMode, toggleTheme } = useTheme();
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#eee';
+  const iconColor = useThemeColor({}, 'icon');
 
   const openBookModal = (book: any) => {
     setSelectedBook(book);
@@ -75,7 +84,9 @@ export default function BookClubScreen() {
           <Ionicons name="arrow-back" size={24} color="#222" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Book Club</Text>
-        <View style={{ width: 24 }} />
+        <TouchableOpacity onPress={toggleTheme} style={styles.themeToggleBtn}>
+          <Ionicons name={isDarkMode ? 'moon' : 'sunny'} size={24} color={iconColor} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
@@ -282,6 +293,9 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#222',
+  },
+  themeToggleBtn: {
+    padding: 4,
   },
   sectionTitle: {
     fontSize: 18,

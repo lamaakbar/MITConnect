@@ -6,6 +6,8 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import RNPickerSelect from 'react-native-picker-select';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { useTheme } from '../components/ThemeContext';
+import { useThemeColor } from '../hooks/useThemeColor';
 
 const DEPARTMENTS = [
   'IT Services',
@@ -406,6 +408,14 @@ export default function TraineeHub() {
     { label: 'Technology', value: 'Technology' },
   ];
 
+  const { isDarkMode, toggleTheme } = useTheme();
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#F2F2F7';
+  const iconColor = useThemeColor({}, 'icon');
+
   // Generate weekPlan based on overallFrom/To
   React.useEffect(() => {
     if (overallFrom && overallTo) {
@@ -512,6 +522,9 @@ export default function TraineeHub() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Trainee Hub</Text>
+        <TouchableOpacity onPress={toggleTheme}>
+          <Ionicons name={isDarkMode ? 'moon' : 'sunny'} size={24} color={iconColor} />
+        </TouchableOpacity>
       </View>
       <View style={styles.tabRow}>
         {['Departments', 'Registration', 'Dashboard'].map(t => (

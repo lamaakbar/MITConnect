@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTheme } from '../components/ThemeContext';
+import { useThemeColor } from '../hooks/useThemeColor';
 
 // Try to import required modules
 let MediaLibrary: any = null;
@@ -79,6 +81,13 @@ export default function GalleryScreen() {
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
+  const { isDarkMode, toggleTheme } = useTheme();
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#E5E5EA';
+  const iconColor = useThemeColor({}, 'icon');
 
   const album = albums.find(a => a.id === selectedAlbum);
   
@@ -198,17 +207,24 @@ export default function GalleryScreen() {
     </View>
   );
 
+  // For text and background colors
+  const searchBarBackground = isDarkMode ? '#232323' : '#F2F2F7';
+  const searchInputColor = isDarkMode ? '#fff' : '#000';
+  const headerTitleColor = isDarkMode ? '#fff' : '#000';
+  const albumCardBackground = isDarkMode ? '#18191A' : '#000';
+  const albumOverlayBackground = isDarkMode ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.3)';
+
   if (selectedAlbum && album) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <SafeAreaView style={[styles.container, { backgroundColor }]}>
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={cardBackground} />
         
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
           <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#000" />
+            <Ionicons name="chevron-back" size={24} color={iconColor} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{album.title}</Text>
+          <Text style={[styles.headerTitle, { color: headerTitleColor }]}>{album.title}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -260,25 +276,25 @@ export default function GalleryScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={cardBackground} />
       
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
         <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
+          <Ionicons name="chevron-back" size={24} color={iconColor} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Albums</Text>
+        <Text style={[styles.headerTitle, { color: headerTitleColor }]}>Albums</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#8E8E93" style={styles.searchIcon} />
+      <View style={[styles.searchContainer, { backgroundColor: searchBarBackground }]}>
+        <Ionicons name="search" size={20} color={secondaryTextColor} style={styles.searchIcon} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: searchInputColor }]}
           placeholder="Search Albums"
-          placeholderTextColor="#8E8E93"
+          placeholderTextColor={secondaryTextColor}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -288,7 +304,19 @@ export default function GalleryScreen() {
       <FlatList
         data={filteredAlbums}
         keyExtractor={item => item.id}
-        renderItem={renderAlbumCard}
+        renderItem={({ item }) => (
+          <TouchableOpacity 
+            style={[styles.albumCard, { backgroundColor: albumCardBackground }]}
+            onPress={() => setSelectedAlbum(item.id)}
+            activeOpacity={0.8}
+          >
+            <Image source={item.coverImage} style={styles.albumCoverImage} />
+            <View style={[styles.albumOverlay, { backgroundColor: albumOverlayBackground }]}>
+              <Text style={styles.albumTitle}>{item.title}</Text>
+              <Text style={styles.albumPhotoCount}>{item.photoCount} photo{item.photoCount !== 1 ? 's' : ''}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
         contentContainerStyle={styles.albumsGrid}
         showsVerticalScrollIndicator={false}
         numColumns={2}

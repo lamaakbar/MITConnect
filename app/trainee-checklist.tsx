@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platf
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useTheme } from '../components/ThemeContext';
+import { useThemeColor } from '../hooks/useThemeColor';
 
 const CHECKLIST_ITEMS = [
   'Contract',
@@ -122,6 +124,14 @@ export default function TraineeChecklist() {
     );
   };
 
+  const { isDarkMode, toggleTheme } = useTheme();
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#F2F2F7';
+  const iconColor = useThemeColor({}, 'icon');
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header Section */}
@@ -133,7 +143,16 @@ export default function TraineeChecklist() {
           <Ionicons name="chevron-back" size={24} color="#1C1C1E" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Trainee Checklist</Text>
-        <View style={styles.headerSpacer} />
+        <TouchableOpacity 
+          style={styles.themeToggleButton}
+          onPress={toggleTheme}
+        >
+          <Ionicons 
+            name={isDarkMode ? "moon" : "sunny"} 
+            size={24} 
+            color={iconColor} 
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Progress Section */}
@@ -207,6 +226,9 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 40,
+  },
+  themeToggleButton: {
+    padding: 8,
   },
   progressSection: {
     backgroundColor: '#fff',

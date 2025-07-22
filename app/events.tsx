@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import EventsTabBar from '../components/EventsTabBar';
+import { useTheme } from '../components/ThemeContext';
+import { useThemeColor } from '../hooks/useThemeColor';
 
 const EVENT_TABS = ['All', 'Upcoming', 'My Events', 'Bookmark'];
 
@@ -13,6 +15,13 @@ export default function EventsScreen() {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('All');
   const [userEventStatuses, setUserEventStatuses] = useState<{[key: string]: any}>({});
+  const { isDarkMode, toggleTheme } = useTheme();
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#f0f0f0';
+  const iconColor = useThemeColor({}, 'icon');
 
   // Load user event statuses
   useEffect(() => {
@@ -86,27 +95,30 @@ export default function EventsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f6f7f9' }}>
+    <View style={{ flex: 1, backgroundColor }}>
       {/* App Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Image source={require('../assets/images/icon.png')} style={{ width: 32, height: 32, marginRight: 8 }} />
-          <Text style={styles.headerTitle}>MIT<Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
+          <Text style={[styles.headerTitle, { color: textColor }]}>MIT<Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => router.push('/my-events' as any)} style={styles.headerIcon}>
-            <Feather name="calendar" size={20} color="#222" />
+          <TouchableOpacity onPress={toggleTheme} style={styles.headerIcon}>
+            <Feather name={isDarkMode ? 'sun' : 'moon'} size={20} color={iconColor} />
           </TouchableOpacity>
-          <Feather name="globe" size={20} color="#222" style={styles.headerIcon} />
-          <Feather name="bell" size={20} color="#222" style={styles.headerIcon} />
-          <Feather name="user" size={20} color="#222" style={styles.headerIcon} />
+          <TouchableOpacity onPress={() => router.push('/my-events' as any)} style={styles.headerIcon}>
+            <Feather name="calendar" size={20} color={iconColor} />
+          </TouchableOpacity>
+          <Feather name="globe" size={20} color={iconColor} style={styles.headerIcon} />
+          <Feather name="bell" size={20} color={iconColor} style={styles.headerIcon} />
+          <Feather name="user" size={20} color={iconColor} style={styles.headerIcon} />
         </View>
       </View>
       {/* Search Bar */}
       <View style={styles.searchBar}>
-        <Ionicons name="search" size={20} color="#888" style={{ marginRight: 8 }} />
+        <Ionicons name="search" size={20} color={secondaryTextColor} style={{ marginRight: 8 }} />
         <TextInput
-          style={{ flex: 1, fontSize: 16 }}
+          style={{ flex: 1, fontSize: 16, color: textColor }}
           placeholder="Search events..."
           value={search}
           onChangeText={setSearch}
@@ -122,7 +134,13 @@ export default function EventsScreen() {
                 style={[styles.tab, activeTab === tab && styles.tabActive]}
                 onPress={() => setActiveTab(tab)}
               >
-                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+                <Text style={[
+                  styles.tabText,
+                  activeTab === tab && styles.tabTextActive,
+                  { color: secondaryTextColor },
+                ]}>
+                  {tab}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -220,7 +238,7 @@ export default function EventsScreen() {
             )}
             ListEmptyComponent={() => (
               <View style={styles.emptyState}>
-                <Ionicons name="bookmark-outline" size={64} color="#ccc" />
+                <Ionicons name="bookmark-outline" size={64} color={secondaryTextColor} />
                 <Text style={styles.emptyStateTitle}>No Bookmarks Yet</Text>
                 <Text style={styles.emptyStateText}>
                   You haven't bookmarked any events yet. Start exploring events and save the ones you're interested in!
