@@ -182,7 +182,7 @@ export default function TraineeHome() {
           ))}
         </View>
         <Text style={styles.sectionTitle}>Book of the Month</Text>
-        <TouchableOpacity style={styles.featuredBookCard} onPress={() => router.push('/book-details')}>
+        <TouchableOpacity style={styles.featuredBookCard} onPress={() => router.push('/bookclub')}>
           <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
           <View style={{ flex: 1, marginLeft: 16 }}>
             <View style={styles.genreChip}><Text style={styles.genreText}>Philosophical Fiction</Text></View>

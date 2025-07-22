@@ -186,7 +186,7 @@ export default function EmployeeHome() {
           <TouchableOpacity
             style={styles.featuredBookCard}
             activeOpacity={0.85}
-            onPress={() => router.push('/book-details')}
+            onPress={() => router.push('/bookclub')}
           >
             <Image
               source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }}
