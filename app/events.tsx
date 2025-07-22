@@ -5,7 +5,7 @@ import { useEventContext } from '../components/EventContext';
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import EventsTabBar from '../components/EventsTabBar';
 
-const TABS = ['All', 'Upcoming', 'Past'];
+const EVENT_TABS = ['All', 'Upcoming', 'Past', 'My Events'];
 
 export default function EventsScreen() {
   const router = useRouter();
@@ -51,6 +51,9 @@ export default function EventsScreen() {
     // For 'All' tab, show all events
     return true;
   }).filter(e => e.title.toLowerCase().includes(search.toLowerCase()));
+
+  // Bookmarked events for My Events tab
+  const bookmarkedEvents = events.filter(e => bookmarks.includes(e.id));
 
   // Dynamically select the nearest upcoming event as featured
   const today = new Date();
@@ -110,7 +113,7 @@ export default function EventsScreen() {
       {/* Tabs and My Events Button */}
       <View style={styles.tabsContainer}>
         <View style={styles.tabsRow}>
-          {TABS.map(tab => (
+          {EVENT_TABS.map(tab => (
             <TouchableOpacity
               key={tab}
               style={[styles.tab, activeTab === tab && styles.tabActive]}
@@ -120,24 +123,37 @@ export default function EventsScreen() {
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity
-          style={styles.myEventsButton}
-          onPress={() => router.push('/my-events' as any)}
-        >
-          <MaterialIcons name="event-available" size={20} color="#fff" style={{ marginRight: 6 }} />
-          <Text style={styles.myEventsButtonText}>My Events</Text>
-        </TouchableOpacity>
       </View>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
-        {/* Empty State */}
-        {events.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyStateTitle}>No Events Available</Text>
-            <Text style={styles.emptyStateText}>
-              There are no events scheduled at the moment. Check back later for exciting activities!
-            </Text>
-          </View>
+      {/* Remove ScrollView and use View as container for tab content */}
+      <View style={{ flex: 1 }}>
+        {/* My Events Tab */}
+        {activeTab === 'My Events' ? (
+          <FlatList
+            data={bookmarkedEvents}
+            keyExtractor={item => item.id}
+            contentContainerStyle={{ padding: 16 }}
+            renderItem={({ item }) => (
+              <View style={styles.eventCard}>
+                <Image source={item.image} style={styles.eventImage} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.eventTitle}>{item.title}</Text>
+                  <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
+                  <TouchableOpacity style={styles.removeBtn} onPress={() => unbookmarkEvent(item.id)}>
+                    <Text style={styles.removeBtnText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyState}>
+                <Ionicons name="bookmark-outline" size={64} color="#ccc" />
+                <Text style={styles.emptyStateTitle}>No Bookmarks Yet</Text>
+                <Text style={styles.emptyStateText}>
+                  You haven't bookmarked any events yet. Start exploring events and save the ones you're interested in!
+                </Text>
+              </View>
+            )}
+          />
         ) : (
           <>
             {/* Featured Event */}
@@ -220,7 +236,7 @@ export default function EventsScreen() {
           </>
         )}
         <EventsTabBar />
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -360,12 +376,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 1,
     position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   eventImage: {
-    width: '100%',
+    width: 80,
     height: 80,
     borderRadius: 12,
-    marginBottom: 8,
+    marginRight: 12,
   },
   bookmarkIcon: {
     position: 'absolute',
@@ -380,6 +398,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: 'bold',
     marginBottom: 2,
+  },
+  eventType: {
+    fontSize: 13,
+    color: '#888',
+    marginBottom: 4,
   },
   eventDate: {
     fontSize: 13,
@@ -410,6 +433,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   myEventsButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  removeBtn: {
+    backgroundColor: '#ff6b6b',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  removeBtnText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
