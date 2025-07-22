@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
 import { useUserContext } from './UserContext';
+import { useTheme } from './ThemeContext';
 
 const TABS = [
   {
@@ -32,13 +33,29 @@ export default function EventsTabBar() {
   const router = useRouter();
   const pathname = usePathname();
   const { getHomeRoute } = useUserContext();
+  const { isDarkMode } = useTheme();
 
-  const iconColor = INACTIVE_COLOR; // Use the default icon color for all tabs
+  const colors = isDarkMode
+    ? {
+        background: '#1E1E1E',
+        border: '#2A2A2A',
+        icon: '#9BA1A6',
+        label: '#9BA1A6',
+        active: '#3CB371',
+      }
+    : {
+        background: '#fff',
+        border: '#eee',
+        icon: '#222',
+        label: '#888',
+        active: '#3CB371',
+      };
 
   return (
-    <View style={styles.tabBar}>
+    <View style={[styles.tabBar, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
       {TABS.map(tab => {
         const route = tab.route === 'home' ? getHomeRoute() : tab.route;
+        const isActive = pathname === route;
         return (
           <TouchableOpacity
             key={tab.key}
@@ -46,8 +63,8 @@ export default function EventsTabBar() {
             onPress={() => router.replace(route as any)}
             activeOpacity={0.7}
           >
-            {tab.icon(iconColor)}
-            <Text style={[styles.tabLabel, { color: INACTIVE_COLOR }]}>{tab.label}</Text>
+            {tab.icon(isActive ? colors.active : colors.icon)}
+            <Text style={[styles.tabLabel, { color: isActive ? colors.active : colors.label }]}>{tab.label}</Text>
           </TouchableOpacity>
         );
       })}

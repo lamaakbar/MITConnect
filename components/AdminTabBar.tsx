@@ -3,15 +3,17 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useUserContext } from './UserContext';
+import { useTheme } from './ThemeContext';
 
 interface AdminTabBarProps {
   activeTab: string;
   isDarkMode?: boolean;
 }
 
-export default function AdminTabBar({ activeTab, isDarkMode = false }: AdminTabBarProps) {
+export default function AdminTabBar({ activeTab }: AdminTabBarProps) {
   const router = useRouter();
   const { getHomeRoute } = useUserContext();
+  const { isDarkMode } = useTheme();
 
   const getThemeColors = () => {
     return isDarkMode ? {

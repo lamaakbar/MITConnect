@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useBooks } from '../components/BookContext';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import AdminHeader from '../components/AdminHeader';
 
@@ -28,8 +28,7 @@ const CARD_SHADOW = Platform.OS === 'ios'
 export default function AddBookScreen() {
   const router = useRouter();
   const { addBook } = useBooks();
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
+  const { isDarkMode } = useTheme();
   
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -37,7 +36,7 @@ export default function AddBookScreen() {
   const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
   const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
   const borderColor = isDarkMode ? '#2A2A2A' : '#E0E0E0';
-  const searchBackground = isDarkMode ? '#2A2A2A' : '#F2F4F7';
+  const searchBackground = isDarkMode ? '#23272b' : '#F2F4F7';
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [genre, setGenre] = useState('');

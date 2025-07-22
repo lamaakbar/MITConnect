@@ -5,13 +5,13 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useTheme } from '../components/ThemeContext';
 import AdminTabBar from '../components/AdminTabBar';
 import AdminHeader from '../components/AdminHeader';
 
 export default function HighlightManagement() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
+  const { isDarkMode } = useTheme();
   
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');

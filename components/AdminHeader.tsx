@@ -4,6 +4,7 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useTheme } from '../components/ThemeContext';
 
 interface AdminHeaderProps {
   title: string;
@@ -30,14 +31,12 @@ export default function AdminHeader({
 }: AdminHeaderProps) {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
-  
-  // Theme colors
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
+  const { isDarkMode } = useTheme();
   const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
-  const borderColor = isDarkMode ? '#2A2A2A' : '#E0E0E0';
-  const iconColor = isDarkMode ? '#9BA1A6' : '#222';
+  const logoCircleBg = isDarkMode ? '#2A2A2A' : '#E8F8F5';
+  const textColor = useThemeColor({}, 'text');
+  const borderColor = 'transparent';
+  const iconColor = useThemeColor({}, 'icon');
 
   const handleBackPress = () => {
     router.push('/admin-home');
@@ -58,19 +57,17 @@ export default function AdminHeader({
     console.log('Open menu');
   };
 
+  const showLightShadow = !isDarkMode;
+
   return (
     <View style={[
       styles.headerContainer,
       { 
-        backgroundColor: cardBackground, 
-        borderBottomColor: borderColor,
-        ...(showShadow && {
-          shadowColor: '#000',
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          shadowOffset: { width: 0, height: 2 },
-          elevation: 4,
-        })
+        backgroundColor: cardBackground,
+        borderBottomColor: 'transparent',
+        paddingTop: 48,
+        paddingBottom: 10,
+        paddingHorizontal: 20,
       }
     ]}>
       {/* Left Section */}
@@ -80,18 +77,18 @@ export default function AdminHeader({
             onPress={handleBackPress} 
             style={[
               styles.headerIcon, 
-              { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }
+              { backgroundColor: cardBackground }
             ]}
           >
-            <Ionicons name="arrow-back" size={20} color={textColor} />
+            <Ionicons name="arrow-back" size={24} color={textColor} />
           </TouchableOpacity>
         )}
         {showLogo && (
           <View style={styles.logoSection}>
-            <View style={[styles.logoCircle, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F8F5' }]}> 
+            <View style={[styles.logoCircle, { backgroundColor: logoCircleBg, width: 36, height: 36, borderRadius: 18 }]}> 
               <Feather name="users" size={18} color="#004080" />
             </View>
-            <Text style={[styles.logoText, { color: textColor }]}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
+            <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', letterSpacing: 0.5 }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
           </View>
         )}
       </View>
