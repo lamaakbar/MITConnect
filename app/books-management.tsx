@@ -3,17 +3,16 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Alert, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { useThemeColor } from '@/hooks/useThemeColor';
 import { useBooks } from '../components/BookContext';
 import AdminTabBar from '../components/AdminTabBar';
 import Toast from 'react-native-root-toast';
 import AdminHeader from '../components/AdminHeader';
+import { useTheme } from '../components/ThemeContext';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function AdminBooksScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
+  const { isDarkMode } = useTheme();
   const { books, removeBook } = useBooks();
 
   // Theme colors
@@ -52,14 +51,14 @@ export default function AdminBooksScreen() {
           <TouchableOpacity
             onPress={() => router.push('/add-book')}
             style={{
-              backgroundColor: isDarkMode ? '#3CB371' : '#004080',
+              backgroundColor: '#3CB371',
               borderRadius: 20,
               padding: 8,
               marginLeft: 8,
               alignItems: 'center',
               justifyContent: 'center',
             }}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             accessibilityLabel="Add Book"
           >
             <Ionicons name="add" size={24} color="#fff" />
@@ -111,7 +110,7 @@ export default function AdminBooksScreen() {
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
               <TouchableOpacity
-                onPress={() => router.push(`/books-management/${item.id}/details`)}
+                onPress={() => router.push('/bookclub')}
                 activeOpacity={0.8}
               >
                 <View style={[styles.card, { backgroundColor: cardBackground, borderColor }]}>
@@ -136,7 +135,7 @@ export default function AdminBooksScreen() {
         )}
 
         {/* Bottom Tab Bar */}
-        <AdminTabBar activeTab="books" isDarkMode={isDarkMode} />
+        <AdminTabBar activeTab="books" />
       </View>
     </SafeAreaView>
   ); 

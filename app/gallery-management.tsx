@@ -25,6 +25,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useTheme } from '../components/ThemeContext';
 import AdminTabBar from '../components/AdminTabBar';
 import AdminHeader from '../components/AdminHeader';
 
@@ -43,8 +44,7 @@ const initialAlbums: Album[] = [];
 
 export default function GalleryManagement() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
+  const { isDarkMode } = useTheme();
   
   const [albums, setAlbums] = useState<Album[]>(initialAlbums);
   const [showCreate, setShowCreate] = useState(false);
@@ -129,22 +129,40 @@ export default function GalleryManagement() {
   // Filtered albums for search
   const filteredAlbums = albums.filter(album => album.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
+  // Floating action button for adding album (FAB)
+  const AddAlbumFAB = (
+    <TouchableOpacity
+      onPress={() => setShowCreateModal(true)}
+      style={{
+        position: 'absolute',
+        right: 20,
+        bottom: 84,
+        backgroundColor: '#3CB371',
+        borderRadius: 30,
+        width: 60,
+        height: 60,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 10,
+        zIndex: 100,
+      }}
+      accessibilityLabel="Add Album"
+      activeOpacity={0.85}
+    >
+      <Ionicons name="add" size={34} color="#fff" />
+    </TouchableOpacity>
+  );
+
   // Albums Grid View
   if (!showCreate && !selectedAlbumId) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor }}>
         <AdminHeader 
           title=""
-          rightComponent={
-            <TouchableOpacity
-              style={[styles.addBtn, { backgroundColor: isDarkMode ? '#3CB371' : '#222' }]}
-              onPress={() => setShowCreateModal(true)}
-              accessibilityLabel="Create new album"
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add" size={20} color="#fff" />
-            </TouchableOpacity>
-          }
         />
         <View style={[styles.mainContainer, { backgroundColor }]}>
           {/* Search Bar */}
@@ -174,13 +192,6 @@ export default function GalleryManagement() {
                 <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
                   Start by creating your first album to organize and share photos with your team.
                 </Text>
-                <TouchableOpacity 
-                  style={styles.emptyStateButton}
-                  onPress={() => setShowCreateModal(true)}
-                >
-                  <Ionicons name="add" size={20} color="#fff" style={{ marginRight: 8 }} />
-                  <Text style={styles.emptyStateButtonText}>Create First Album</Text>
-                </TouchableOpacity>
               </View>
             ) : (
               <View style={styles.albumGrid}>
@@ -223,6 +234,7 @@ export default function GalleryManagement() {
 
           {/* Bottom Tab Bar */}
           <AdminTabBar activeTab="gallery" isDarkMode={isDarkMode} />
+          {AddAlbumFAB}
 
           {/* Create Album Modal */}
           <Modal

@@ -7,6 +7,8 @@ import { useState, useMemo } from 'react';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
 import RoleGuard from '../components/RoleGuard';
+import { useTheme } from '../components/ThemeContext';
+import { useThemeColor } from '../hooks/useThemeColor';
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
@@ -59,16 +61,33 @@ export default function TraineeHome() {
         };
       });
   }, [events]);
+
+  const { isDarkMode, toggleTheme } = useTheme();
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#E0E0E0';
+  const iconColor = useThemeColor({}, 'icon');
+
+  const bookTitleColor = isDarkMode ? '#fff' : textColor;
+  const bookAuthorColor = isDarkMode ? '#fff' : secondaryTextColor;
+  const bookRatingColor = isDarkMode ? '#fff' : textColor;
+  const portalLabelColor = isDarkMode ? '#fff' : textColor;
+
   return (
     <RoleGuard allowedRoles={['trainee']}>
-      <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
+      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
         <Image source={require('../assets/images/icon.png')} style={styles.logo} />
-        <Text style={styles.appName}><Text style={{ color: '#222' }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
+        <Text style={[styles.appName, { color: textColor }]}><Text style={{ color: textColor }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
         <View style={styles.headerIcons}>
-          <Ionicons name="globe-outline" size={22} color="#222" style={styles.headerIcon} />
-          <Ionicons name="notifications-outline" size={22} color="#222" style={styles.headerIcon} />
-          <Ionicons name="person-circle-outline" size={26} color="#222" />
+          <TouchableOpacity onPress={toggleTheme} style={styles.headerIcon}>
+            <Feather name={isDarkMode ? 'sun' : 'moon'} size={22} color={iconColor} />
+          </TouchableOpacity>
+          <Ionicons name="globe-outline" size={22} color={iconColor} style={styles.headerIcon} />
+          <Ionicons name="notifications-outline" size={22} color={iconColor} style={styles.headerIcon} />
+          <Ionicons name="person-circle-outline" size={26} color={iconColor} />
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -82,7 +101,7 @@ export default function TraineeHome() {
           </View>
         ) : (
           <>
-            <Text style={styles.sectionTitle}>Featured This Week</Text>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
             <FlatList
               data={featuredNews}
               keyExtractor={item => item.id}
@@ -113,16 +132,16 @@ export default function TraineeHome() {
         )}
         
         {upcomingEvents.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyStateTitle}>No Upcoming Events</Text>
-            <Text style={styles.emptyStateText}>
+          <View style={[styles.emptyState, { backgroundColor: cardBackground }]}>
+            <Ionicons name="calendar-outline" size={64} color={secondaryTextColor} />
+            <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Upcoming Events</Text>
+            <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
               There are no upcoming events scheduled. Check back later for exciting activities!
             </Text>
           </View>
         ) : (
           <>
-            <Text style={styles.sectionTitle}>Upcoming Events</Text>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>Upcoming Events</Text>
             <FlatList
               data={upcomingEvents}
               keyExtractor={item => item.id}
@@ -131,7 +150,7 @@ export default function TraineeHome() {
               contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
               renderItem={({ item }) => (
                 <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
-                <View style={styles.eventCard}>
+                <View style={[styles.eventCard, { backgroundColor: cardBackground }]}>
                   <View style={styles.eventCardHeader}>
                     <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
                     <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
@@ -160,12 +179,12 @@ export default function TraineeHome() {
           />
           </>
         )}
-        <Text style={styles.sectionTitle}>Portal Access</Text>
+        <Text style={[styles.sectionTitle, { color: textColor }]}>Portal Access</Text>
         <View style={styles.portalRow}>
           {portalLinks.map(link => (
             <TouchableOpacity
               key={link.key}
-              style={styles.portalIconBox}
+              style={[styles.portalIconBox, { backgroundColor: cardBackground }]}
               activeOpacity={0.8}
               onPress={() => {
                 if (link.key === 'events') router.push('/events');
@@ -177,7 +196,7 @@ export default function TraineeHome() {
               }}
             >
               {link.icon}
-              <Text style={styles.portalLabel}>{link.label}</Text>
+              <Text style={[styles.portalLabel, { color: portalLabelColor }]}>{link.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -186,8 +205,8 @@ export default function TraineeHome() {
           <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
           <View style={{ flex: 1, marginLeft: 16 }}>
             <View style={styles.genreChip}><Text style={styles.genreText}>Philosophical Fiction</Text></View>
-            <Text style={styles.featuredBookTitle}>The Alchemist</Text>
-            <Text style={styles.featuredBookAuthor}>By Paulo Coelho</Text>
+            <Text style={[styles.featuredBookTitle, { color: bookTitleColor }]}>The Alchemist</Text>
+            <Text style={[styles.featuredBookAuthor, { color: bookAuthorColor }]}>By Paulo Coelho</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
               {[1,2,3,4,5].map(i => (
                 <MaterialIcons
@@ -198,11 +217,11 @@ export default function TraineeHome() {
                   style={{ marginRight: 2 }}
                 />
               ))}
-              <Text style={styles.ratingText}>4.9</Text>
+              <Text style={[styles.ratingText, { color: bookRatingColor }]}>4.9</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-              <Ionicons name="person" size={16} color="#888" style={{ marginRight: 4 }} />
-              <Text style={styles.recommender}>Nizar Naghi</Text>
+              <Ionicons name="person" size={16} color={secondaryTextColor} style={{ marginRight: 4 }} />
+              <Text style={[styles.recommender, { color: secondaryTextColor }]}>Nizar Naghi</Text>
             </View>
           </View>
         </TouchableOpacity>

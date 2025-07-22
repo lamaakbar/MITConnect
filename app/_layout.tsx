@@ -9,6 +9,7 @@ import { BookProvider } from '../components/BookContext';
 import { EventProvider } from '../components/EventContext';
 import { UserProvider } from '../components/UserContext';
 import { View, Text } from 'react-native';
+import { ThemeProvider as CustomThemeProvider } from '../components/ThemeContext';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -28,8 +29,9 @@ export default function RootLayout() {
     <UserProvider>
       <BookProvider>
         <EventProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <Stack initialRouteName="splash">
+          <CustomThemeProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <Stack initialRouteName="splash">
                 <Stack.Screen name="splash" options={{ headerShown: false }} />
                 <Stack.Screen name="get-started" options={{ headerShown: false }} />
                 <Stack.Screen name="role-selection" options={{ headerShown: false }} />
@@ -74,7 +76,8 @@ export default function RootLayout() {
                 <Stack.Screen name="event-feedback" options={{ headerShown: false }} />
               </Stack>
               <StatusBar style="auto" />
-          </ThemeProvider>
+            </ThemeProvider>
+          </CustomThemeProvider>
         </EventProvider>
       </BookProvider>
     </UserProvider>

@@ -6,14 +6,16 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import RNPickerSelect from 'react-native-picker-select';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { useTheme } from '../components/ThemeContext';
+import { useThemeColor } from '../hooks/useThemeColor';
 
 const DEPARTMENTS = [
   'IT Services',
   'IT Development',
   'Production',
   'Enterprise Project Delivery',
-  'Cyber Security',
   'IT Governance',
+  'IT Transformation',
 ];
 
 function formatDate(dateStr: string) {
@@ -308,8 +310,81 @@ const styles = StyleSheet.create({
   },
 });
 
+// iOS-inspired Plan Summary Table Component
+function PlanSummaryIOS() {
+  return (
+    <View style={iosStyles.planContainer}>
+      <Text style={iosStyles.sectionTitle}>Plan Summary</Text>
+      <View style={iosStyles.tableHeader}>
+        <Text style={iosStyles.headerText}>Week</Text>
+        <Text style={iosStyles.headerText}>From</Text>
+        <Text style={iosStyles.headerText}>To</Text>
+        <Text style={iosStyles.headerText}>Department</Text>
+        <Text style={iosStyles.headerText}>Hours</Text>
+      </View>
+      {[1, 2, 3, 4, 5].map((week) => (
+        <View key={week} style={iosStyles.tableRow}>
+          <Text style={iosStyles.rowText}>{week}</Text>
+          <Text style={iosStyles.rowText}>-</Text>
+          <Text style={iosStyles.rowText}>-</Text>
+          <Text style={iosStyles.rowText}>-</Text>
+          <Text style={iosStyles.rowText}>-</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const iosStyles = StyleSheet.create({
+  planContainer: {
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#0EA5E9',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  headerText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderColor: '#CBD5E1',
+  },
+  rowText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1E293B',
+    textAlign: 'center',
+  },
+});
+
 export default function TraineeHub() {
-  const [tab, setTab] = useState<'Registration' | 'Dashboard'>('Registration');
+  const [tab, setTab] = useState<'Departments' | 'Registration' | 'Dashboard'>('Departments');
   const [overallFrom, setOverallFrom] = useState('');
   const [overallTo, setOverallTo] = useState('');
   const [showOverallDatePicker, setShowOverallDatePicker] = useState<{field: 'from'|'to'|null} | null>(null);
@@ -326,6 +401,20 @@ export default function TraineeHub() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [dashboardPlan, setDashboardPlan] = useState<any[]>([]);
   const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [selectedProgram, setSelectedProgram] = useState('');
+  const [fullName, setFullName] = useState('');
+  const PROGRAM_OPTIONS = [
+    { label: 'COOP Training', value: 'COOP Training' },
+    { label: 'Technology', value: 'Technology' },
+  ];
+
+  const { isDarkMode, toggleTheme } = useTheme();
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#F2F2F7';
+  const iconColor = useThemeColor({}, 'icon');
 
   // Generate weekPlan based on overallFrom/To
   React.useEffect(() => {
@@ -433,23 +522,123 @@ export default function TraineeHub() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Trainee Hub</Text>
+        <TouchableOpacity onPress={toggleTheme}>
+          <Ionicons name={isDarkMode ? 'moon' : 'sunny'} size={24} color={iconColor} />
+        </TouchableOpacity>
       </View>
       <View style={styles.tabRow}>
-        {['Registration', 'Dashboard'].map(t => (
+        {['Departments', 'Registration', 'Dashboard'].map(t => (
           <TouchableOpacity
             key={t}
             style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
-            onPress={() => setTab(t as 'Registration' | 'Dashboard')}
+            onPress={() => setTab(t as 'Departments' | 'Registration' | 'Dashboard')}
           >
             <Text style={[styles.tabBtnText, tab === t && styles.tabBtnTextActive]}>{t}</Text>
           </TouchableOpacity>
         ))}
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
+        {tab === 'Departments' && (
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
+            {/* Welcome message and visuals from Welcome screen */}
+            <View style={{ alignItems: 'center', marginTop: 24, marginBottom: 16 }}>
+              {/* You can add your logo or illustration here if needed */}
+              <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#222', marginBottom: 8 }}>Trainee Hub</Text>
+              <Text style={{ color: '#888', fontSize: 15, marginBottom: 8 }}>Lets start your Journey!</Text>
+            </View>
+            {/* Department Cards - keep all text and headlines as in Welcome screen, but remove select/continue buttons */}
+            <View style={{ marginBottom: 24 }}>
+              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: '#fff' }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#222', marginBottom: 4 }}>IT Governance and Architecture</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>responsible for ensuring that IT strategies align with the overall business goals of the organization, it sets policies, frameworks, and standards to guide technology-related decisions.</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Suitable Majors</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Computer Science, Software Engineering, Information Technology</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Tools Used</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>ISM OpenPages, OneTrust, LeanIX, MEGA HOPEX</Text>
+              </View>
+              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: '#fff' }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#222', marginBottom: 4 }}>Enterprise Project Delivery</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>Enterprise Project Delivery is responsible for managing and delivering strategic, regulatory, and enhancement projects across the organization. EPD ensures that all projects are executed on time, within scope, and with high quality.</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Suitable Majors</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Tools Used</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Clarity PPM, Jira, Excel</Text>
+              </View>
+              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: '#fff' }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#222', marginBottom: 4 }}>Development and Testing</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>The Development department is in charge of building and maintaining software applications and systems. Developers work on coding, debugging, testing, and deploying solutions that meet business requirements.</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Suitable Majors</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Tools Used</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Visual Studio Code, Eclipse, Android Studio</Text>
+              </View>
+              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: '#fff' }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#222', marginBottom: 4 }}>Production</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>The Production department manages the live IT environment, ensuring applications and services are deployed effectively and run smoothly, securely, and with high availability to support business operations.</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Suitable Majors</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering, Data Science, Computer Science</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Tools Used</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>OBIEE, Cognos, VMware, Linux, SQL Developer</Text>
+              </View>
+              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: '#fff' }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#222', marginBottom: 4 }}>IT Services</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>Handles technical support for all users across the organization. Reviews software issues, installs apps, and applies updates. Ensures systems run efficiently as part of the core IT infrastructure.</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Suitable Majors</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Tools Used</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>SCCM, Trend Micro, next think</Text>
+              </View>
+              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: '#fff' }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#222', marginBottom: 4 }}>IT Transformation</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>Handles technical support for all users across the organization. Reviews software issues, installs apps, and applies updates. Ensures systems run efficiently as part of the core IT infrastructure.</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Suitable Majors</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering, Computer Science, Information Technology</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Tools Used</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Studio, Android, Netbeans</Text>
+              </View>
+              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: '#fff' }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#222', marginBottom: 4 }}>Cyber Security</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>This department focuses on protecting the bank’s digital infrastructure, ensuring secure systems, and defending against cyber threats.</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Tools Used</Text>
+                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Splunk, Wireshark, Burp Suite, Kali Linux, Nessus</Text>
+              </View>
+            </View>
+          </ScrollView>
+        )}
         {tab === 'Registration' && (
           !showSummary ? (
             <View style={{ margin: 18, backgroundColor: '#F8FAFC', borderRadius: 18, padding: 22, borderWidth: 1, borderColor: '#B2E6F7', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 }}>
               <Text style={{ textAlign: 'center', fontSize: 26, fontWeight: 'bold', color: '#3CB6E3', marginBottom: 24, letterSpacing: 0.5 }}>Trainee Registration</Text>
+              {/* Full Name Input */}
+              <Text style={{ fontSize: 15, fontWeight: '500', color: '#222', marginBottom: 8, marginLeft: 2 }}>Full Name</Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, backgroundColor: '#fff', marginBottom: 18, paddingHorizontal: 12, height: 40, fontSize: 16, color: '#22292f', fontWeight: '600' }}
+                placeholder="Enter your full name"
+                placeholderTextColor="#888"
+                value={fullName}
+                onChangeText={setFullName}
+              />
+              {/* Program Name Dropdown */}
+              <Text style={{ fontSize: 15, fontWeight: '500', color: '#222', marginBottom: 8, marginLeft: 2 }}>Program Name</Text>
+              <View style={{ position: 'relative', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, backgroundColor: '#fff', marginBottom: 18, paddingHorizontal: 12, paddingVertical: 2, justifyContent: 'center' }}>
+                <RNPickerSelect
+                  onValueChange={setSelectedProgram}
+                  value={selectedProgram}
+                  placeholder={{ label: 'Select a program...', value: '' }}
+                  items={PROGRAM_OPTIONS.map(opt => ({ ...opt, color: '#22292f' }))}
+                  style={{
+                    inputIOS: { height: 40, fontSize: 16, color: '#22292f', paddingHorizontal: 4, fontWeight: '600' },
+                    inputAndroid: { height: 40, fontSize: 16, color: '#22292f', paddingHorizontal: 4, fontWeight: '600' },
+                    placeholder: { color: '#888' },
+                  }}
+                  useNativeAndroidPickerStyle={false}
+                  Icon={() => (
+                    <View style={{ position: 'absolute', right: 8, top: 0, bottom: 0, height: 40, justifyContent: 'center', alignItems: 'center' }}>
+                      <Ionicons name="chevron-down" size={20} color="#888" />
+                    </View>
+                  )}
+                />
+              </View>
               {/* Overall From/To Date Pickers */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 }}>
                 <TouchableOpacity onPress={() => setShowOverallDatePicker({ field: 'from' })} style={{ flex: 1, marginRight: 8, borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 6, padding: 14 }}>
@@ -515,8 +704,8 @@ export default function TraineeHub() {
                                   <Picker.Item label="IT Development" value="IT Development" color="#222" />
                                   <Picker.Item label="Production" value="Production" color="#222" />
                                   <Picker.Item label="Enterprise Project Delivery" value="Enterprise Project Delivery" color="#222" />
-                                  <Picker.Item label="Cyber Security" value="Cyber Security" color="#222" />
                                   <Picker.Item label="IT Governance" value="IT Governance" color="#222" />
+                                  <Picker.Item label="IT Transformation" value="IT Transformation" color="#222" />
                                 </Picker>
                               </View>
                             </Modal>
@@ -534,7 +723,6 @@ export default function TraineeHub() {
                               useNativeAndroidPickerStyle={false}
                               Icon={() => <Ionicons name="chevron-down" size={20} color="#888" style={{ marginRight: 10 }} />}
                             />
-                            <Ionicons name="chevron-down" size={20} color="#888" style={{ position: 'absolute', right: 10 }} />
                           </View>
                         )}
                         <TextInput
@@ -564,109 +752,23 @@ export default function TraineeHub() {
                   </View>
                 );
               })}
-              {/* Plan Summary */}
-              <Text style={{ fontWeight: 'bold', marginTop: 28, marginBottom: 10, fontSize: 21, color: '#3CB6E3', textAlign: 'center', letterSpacing: 0.5 }}>Plan Summary</Text>
-              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginBottom: 18, backgroundColor: '#F8FAFC', paddingVertical: 8, maxWidth: 500, width: '95%', alignSelf: 'center' }}>
-                <View style={{ flexDirection: 'row', backgroundColor: '#EAF6FB', borderTopLeftRadius: 10, borderTopRightRadius: 10 }}>
-                  <Text
-                    style={{
-                      fontWeight: 'bold',
-                      color: '#3CB6E3',
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      textAlign: 'center',
-                      fontSize: 13,
-                      letterSpacing: 0.5
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    Week
-                  </Text>
-                  <Text
-                    style={{
-                      fontWeight: 'bold',
-                      color: '#3CB6E3',
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      textAlign: 'center',
-                      fontSize: 13,
-                      letterSpacing: 0.5
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    From
-                  </Text>
-                  <Text
-                    style={{
-                      fontWeight: 'bold',
-                      color: '#3CB6E3',
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      textAlign: 'center',
-                      fontSize: 13,
-                      letterSpacing: 0.5
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    To
-                  </Text>
-                  <Text
-                    style={{
-                      fontWeight: 'bold',
-                      color: '#3CB6E3',
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      textAlign: 'center',
-                      fontSize: 13,
-                      letterSpacing: 0.5
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    Department
-                  </Text>
-                  <Text
-                    style={{
-                      fontWeight: 'bold',
-                      color: '#3CB6E3',
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      textAlign: 'center',
-                      fontSize: 13,
-                      letterSpacing: 0.5
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    Hours
-                  </Text>
-                  <Text
-                    style={{
-                      fontWeight: 'bold',
-                      color: '#3CB6E3',
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      textAlign: 'center',
-                      fontSize: 13,
-                      letterSpacing: 0.5
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    Task
-                  </Text>
+              {/* Plan Summary Table - summary only, not editable */}
+              <View style={iosStyles.planContainer}>
+                <Text style={iosStyles.sectionTitle}>Plan Summary</Text>
+                <View style={iosStyles.tableHeader}>
+                  <Text style={iosStyles.headerText}>Week</Text>
+                  <Text style={iosStyles.headerText}>From</Text>
+                  <Text style={iosStyles.headerText}>To</Text>
+                  <Text style={iosStyles.headerText}>Department</Text>
+                  <Text style={iosStyles.headerText}>Hours</Text>
                 </View>
                 {weekPlan.map((w, idx) => (
-                  <View key={idx} style={{ flexDirection: 'row', borderTopWidth: idx === 0 ? 0 : 1, borderTopColor: '#EAF6FB', backgroundColor: idx % 2 === 0 ? '#fff' : '#F7FBFD', justifyContent: 'center' }}>
-                    <Text style={{ flex: 1, padding: 10, textAlign: 'center', color: '#222', fontWeight: 'bold', fontSize: 12 }}>{idx + 1}</Text>
-                    <Text style={{ flex: 1.2, padding: 10, textAlign: 'center', color: '#3CB6E3', fontWeight: '500', fontSize: 12 }}>{w.from ? formatDate(w.from) : '-'}</Text>
-                    <Text style={{ flex: 1.2, padding: 10, textAlign: 'center', color: '#3CB6E3', fontWeight: '500', fontSize: 12 }}>{w.to ? formatDate(w.to) : '-'}</Text>
-                    <Text style={{ flex: 1.2, padding: 10, textAlign: 'center', color: '#3CB6E3', fontWeight: 'bold', fontSize: 12 }}>{w.department || '-'}</Text>
-                    <Text style={{ flex: 0.8, padding: 10, textAlign: 'center', color: '#222', fontWeight: 'bold', fontSize: 12 }}>{w.hours || '-'}</Text>
-                    <Text style={{ flex: 2, padding: 10, color: '#555', fontSize: 12 }}>{w.task || '-'}</Text>
+                  <View key={idx} style={iosStyles.tableRow}>
+                    <Text style={iosStyles.rowText}>{idx + 1}</Text>
+                    <Text style={iosStyles.rowText}>{w.from ? formatDate(w.from) : '-'}</Text>
+                    <Text style={iosStyles.rowText}>{w.to ? formatDate(w.to) : '-'}</Text>
+                    <Text style={iosStyles.rowText}>{w.department || '-'}</Text>
+                    <Text style={iosStyles.rowText}>{w.hours || '-'}</Text>
                   </View>
                 ))}
               </View>
@@ -693,7 +795,7 @@ export default function TraineeHub() {
                 <Text style={styles.savePlanBtnText}>Submit</Text>
               </TouchableOpacity>
               {submitError ? <Text style={{ color: 'red', marginTop: 8 }}>{submitError}</Text> : null}
-              {submitSuccess ? <Text style={{ color: '#24B26B', marginTop: 10 }}>Registration saved!</Text> : null}
+              {/* Only show Plan confirmed after submit */}
             </View>
           ) : (
             <View style={{ margin: 18, backgroundColor: '#F8FAFC', borderRadius: 18, padding: 22, borderWidth: 1, borderColor: '#B2E6F7', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 }}>
@@ -701,96 +803,12 @@ export default function TraineeHub() {
               <Text style={styles.subtitle}>Review your training plan before confirming.</Text>
               <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginBottom: 18, backgroundColor: '#F8FAFC', paddingVertical: 8, maxWidth: 500, width: '95%', alignSelf: 'center' }}>
                 <View style={{ flexDirection: 'row', backgroundColor: '#EAF6FB', borderTopLeftRadius: 10, borderTopRightRadius: 10 }}>
-                  <Text
-                    style={{
-                      fontWeight: 'bold',
-                      color: '#3CB6E3',
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      textAlign: 'center',
-                      fontSize: 13,
-                      letterSpacing: 0.5
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    Week
-                  </Text>
-                  <Text
-                    style={{
-                      fontWeight: 'bold',
-                      color: '#3CB6E3',
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      textAlign: 'center',
-                      fontSize: 13,
-                      letterSpacing: 0.5
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    From
-                  </Text>
-                  <Text
-                    style={{
-                      fontWeight: 'bold',
-                      color: '#3CB6E3',
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      textAlign: 'center',
-                      fontSize: 13,
-                      letterSpacing: 0.5
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    To
-                  </Text>
-                  <Text
-                    style={{
-                      fontWeight: 'bold',
-                      color: '#3CB6E3',
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      textAlign: 'center',
-                      fontSize: 13,
-                      letterSpacing: 0.5
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    Department
-                  </Text>
-                  <Text
-                    style={{
-                      fontWeight: 'bold',
-                      color: '#3CB6E3',
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      textAlign: 'center',
-                      fontSize: 13,
-                      letterSpacing: 0.5
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    Hours
-                  </Text>
-                  <Text
-                    style={{
-                      fontWeight: 'bold',
-                      color: '#3CB6E3',
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      textAlign: 'center',
-                      fontSize: 13,
-                      letterSpacing: 0.5
-                    }}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                  >
-                    Task
-                  </Text>
+                  <Text style={{ flex: 1, fontWeight: 'bold', color: '#3CB6E3', paddingVertical: 8, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, letterSpacing: 0.5, flexWrap: 'wrap' }} numberOfLines={2}>Week</Text>
+                  <Text style={{ flex: 1.2, fontWeight: 'bold', color: '#3CB6E3', paddingVertical: 8, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, letterSpacing: 0.5, flexWrap: 'wrap' }} numberOfLines={2}>From</Text>
+                  <Text style={{ flex: 1.2, fontWeight: 'bold', color: '#3CB6E3', paddingVertical: 8, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, letterSpacing: 0.5, flexWrap: 'wrap' }} numberOfLines={2}>To</Text>
+                  <Text style={{ flex: 1.2, fontWeight: 'bold', color: '#3CB6E3', paddingVertical: 8, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, letterSpacing: 0.5, flexWrap: 'wrap' }} numberOfLines={2}>Department</Text>
+                  <Text style={{ flex: 0.8, fontWeight: 'bold', color: '#3CB6E3', paddingVertical: 8, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, letterSpacing: 0.5, flexWrap: 'wrap' }} numberOfLines={2}>Hours</Text>
+                  <Text style={{ flex: 2, fontWeight: 'bold', color: '#3CB6E3', paddingVertical: 8, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, letterSpacing: 0.5, flexWrap: 'wrap' }} numberOfLines={2}>Task</Text>
                 </View>
                 {weekPlan.map((w, idx) => (
                   <View key={idx} style={{ flexDirection: 'row', borderTopWidth: idx === 0 ? 0 : 1, borderTopColor: '#EAF6FB', backgroundColor: idx % 2 === 0 ? '#fff' : '#F7FBFD', justifyContent: 'center' }}>
@@ -819,154 +837,57 @@ export default function TraineeHub() {
             </View>
           )
         )}
-        {tab === 'Dashboard' && dashboardPlan.length > 0 && (
-          <View style={{ margin: 18, backgroundColor: '#fff', borderRadius: 18, padding: 18, borderWidth: 1, borderColor: '#B2E6F7', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 }}>
-            {/* Progress Bar */}
-            <View style={{ marginVertical: 20, alignItems: 'center' }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: '#3CB6E3', marginBottom: 8 }}>
-                Progress: {progress}% ({completedWeeks}/{dashboardPlan.length} weeks)
-              </Text>
-              <View style={{ width: 200, height: 12, backgroundColor: '#EAF6FB', borderRadius: 6, overflow: 'hidden' }}>
-                <View style={{
-                  width: `${progress}%`,
-                  height: '100%',
-                  backgroundColor: '#3CB6E3',
-                  borderRadius: 6
-                }} />
-              </View>
-            </View>
-            {/* Simple Circular Progress (Donut) */}
-            <View style={{ alignItems: 'center', marginBottom: 20 }}>
-              <View style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                borderWidth: 8,
-                borderColor: '#EAF6FB',
-                justifyContent: 'center',
-                alignItems: 'center',
-                position: 'relative'
-              }}>
-                <View style={{
-                  position: 'absolute',
-                  width: 80,
-                  height: 80,
-                  borderRadius: 40,
-                  borderWidth: 8,
-                  borderColor: '#3CB6E3',
-                  borderRightColor: 'transparent',
-                  borderBottomColor: 'transparent',
-                  transform: [{ rotate: `${(progress / 100) * 360}deg` }]
-                }} />
-                <Text style={{ fontWeight: 'bold', color: '#3CB6E3', fontSize: 18 }}>{progress}%</Text>
-              </View>
-            </View>
-            {/* Plan Table */}
-            <Text style={{ fontWeight: 'bold', marginBottom: 6, fontSize: 18, color: '#3CB6E3', textAlign: 'center', letterSpacing: 0.5 }}>Plan</Text>
-            <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 10, marginBottom: 12, backgroundColor: '#F8FAFC', maxWidth: 500, width: '95%', alignSelf: 'center' }}>
-              <View style={{ flexDirection: 'row', backgroundColor: '#EAF6FB', borderTopLeftRadius: 10, borderTopRightRadius: 10 }}>
-                <Text
-                  style={{
-                    fontWeight: 'bold',
-                    color: '#3CB6E3',
-                    paddingVertical: 10,
-                    paddingHorizontal: 16,
-                    textAlign: 'center',
-                    fontSize: 13,
-                    letterSpacing: 0.5
-                  }}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  Week
-                </Text>
-                <Text
-                  style={{
-                    fontWeight: 'bold',
-                    color: '#3CB6E3',
-                    paddingVertical: 10,
-                    paddingHorizontal: 16,
-                    textAlign: 'center',
-                    fontSize: 13,
-                    letterSpacing: 0.5
-                  }}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  From
-                </Text>
-                <Text
-                  style={{
-                    fontWeight: 'bold',
-                    color: '#3CB6E3',
-                    paddingVertical: 10,
-                    paddingHorizontal: 16,
-                    textAlign: 'center',
-                    fontSize: 13,
-                    letterSpacing: 0.5
-                  }}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  To
-                </Text>
-                <Text
-                  style={{
-                    fontWeight: 'bold',
-                    color: '#3CB6E3',
-                    paddingVertical: 10,
-                    paddingHorizontal: 16,
-                    textAlign: 'center',
-                    fontSize: 13,
-                    letterSpacing: 0.5
-                  }}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  Department
-                </Text>
-                <Text
-                  style={{
-                    fontWeight: 'bold',
-                    color: '#3CB6E3',
-                    paddingVertical: 10,
-                    paddingHorizontal: 16,
-                    textAlign: 'center',
-                    fontSize: 13,
-                    letterSpacing: 0.5
-                  }}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  Hours
-                </Text>
-                <Text
-                  style={{
-                    fontWeight: 'bold',
-                    color: '#3CB6E3',
-                    paddingVertical: 10,
-                    paddingHorizontal: 16,
-                    textAlign: 'center',
-                    fontSize: 13,
-                    letterSpacing: 0.5
-                  }}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  Task
-                </Text>
-              </View>
-              {dashboardPlan.map((w, idx) => (
-                <View key={idx} style={{ flexDirection: 'row', borderTopWidth: idx === 0 ? 0 : 1, borderTopColor: '#EAF6FB', backgroundColor: idx % 2 === 0 ? '#fff' : '#F7FBFD', alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ flex: 1, padding: 10, textAlign: 'center', color: '#222', fontWeight: 'bold', fontSize: 12 }}>{w.week}</Text>
-                  <Text style={{ flex: 1.2, padding: 10, textAlign: 'center', color: '#3CB6E3', fontWeight: '500', fontSize: 12 }}>{w.from ? formatDate(w.from) : '-'}</Text>
-                  <Text style={{ flex: 1.2, padding: 10, textAlign: 'center', color: '#3CB6E3', fontWeight: '500', fontSize: 12 }}>{w.to ? formatDate(w.to) : '-'}</Text>
-                  <Text style={{ flex: 1.2, padding: 10, textAlign: 'center', color: '#3CB6E3', fontWeight: 'bold', fontSize: 12 }}>{w.department || '-'}</Text>
-                  <Text style={{ flex: 0.8, padding: 10, textAlign: 'center', color: '#222', fontWeight: 'bold', fontSize: 12 }}>{w.hours || '-'}</Text>
-                  <Text style={{ flex: 2, padding: 10, color: '#555', fontSize: 12 }}>{w.task || '-'}</Text>
+        {tab === 'Dashboard' && (
+          <View style={{ paddingHorizontal: 8, paddingTop: 8 }}>
+            {(dashboardPlan.length > 0
+              ? [{
+                  name: 'My Plan',
+                  department: selectedProgram || '—',
+                  progress: dashboardPlan.length > 0 ? Math.round((dashboardPlan.filter(w => new Date(w.to) <= new Date()).length / dashboardPlan.length) * 100) : 0,
+                  weeks: dashboardPlan.map((w, idx) => ({
+                    status: w.hours && Number(w.hours) > 0 ? (new Date(w.to) <= new Date() ? 'done' : 'in-progress') : 'not-started',
+                    hours: w.hours || 0,
+                    tasks: w.task ? w.task.split(',').length : 0,
+                  }))
+                }]
+              : [])
+            .map((trainee, idx) => (
+              <View key={idx} style={{ backgroundColor: '#fff', borderRadius: 18, padding: 18, marginBottom: 18, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
+                  <View>
+                    <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#222' }}>{trainee.name}</Text>
+                    <Text style={{ color: '#888', fontSize: 13, marginTop: 2 }}>{trainee.department}</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ fontWeight: 'bold', fontSize: 20, color: '#222' }}>{trainee.progress}%</Text>
+                    <Text style={{ color: '#888', fontSize: 12, marginTop: 2 }}>Overall progress</Text>
+                  </View>
                 </View>
-              ))}
-            </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, marginBottom: 2 }}>
+                  {trainee.weeks.map((week: any, widx: number) => (
+                    <View key={widx} style={{ alignItems: 'center', flex: 1 }}>
+                      <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Week {widx + 1}</Text>
+                      <View style={{ marginBottom: 4 }}>
+                        {week.status === 'done' && (
+                          <Ionicons name="checkmark-circle" size={32} color="#4ECB71" />
+                        )}
+                        {week.status === 'in-progress' && (
+                          <Ionicons name="hourglass" size={32} color="#3CB6E3" />
+                        )}
+                        {week.status === 'not-started' && (
+                          <Ionicons name="ellipse-outline" size={32} color="#D3D3D3" />
+                        )}
+                      </View>
+                      <Text style={{ color: '#888', fontSize: 12, textAlign: 'center', lineHeight: 16 }}>{week.hours}h logged</Text>
+                      <Text style={{ color: '#888', fontSize: 12, textAlign: 'center', lineHeight: 16 }}>{week.tasks} tasks</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ))}
+            {dashboardPlan.length === 0 && (
+              <Text style={{ color: '#888', textAlign: 'center', marginTop: 32, fontSize: 16 }}>No plan submitted yet.</Text>
+            )}
           </View>
         )}
       </ScrollView>
