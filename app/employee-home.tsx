@@ -6,6 +6,8 @@ import { useRouter } from 'expo-router';
 import { useState, useMemo } from 'react';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
+import { useTheme } from '../components/ThemeContext';
+import { useThemeColor } from '../hooks/useThemeColor';
 
 
 const portalLinks = [
@@ -37,6 +39,17 @@ export default function EmployeeHome() {
   const [activeTab, setActiveTab] = useState('home');
   const { events, registered } = useEventContext();
   const { userRole, isInitialized } = useUserContext();
+  const { isDarkMode, toggleTheme } = useTheme();
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#E0E0E0';
+  const iconColor = useThemeColor({}, 'icon');
+
+  const portalLabelColor = isDarkMode ? '#fff' : textColor;
 
   // Debug logging
   console.log('EmployeeHome: Current userRole:', userRole, 'isInitialized:', isInitialized);
@@ -67,18 +80,21 @@ export default function EmployeeHome() {
   }, [events]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
+        <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
           <Image source={require('../assets/images/icon.png')} style={styles.logo} />
-          <Text style={styles.appName}><Text style={{ color: '#222' }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
+          <Text style={[styles.appName, { color: textColor }]}><Text style={{ color: textColor }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
           <View style={styles.headerIcons}>
-            <Ionicons name="globe-outline" size={22} color="#222" style={styles.headerIcon} />
-            <Ionicons name="notifications-outline" size={22} color="#222" style={styles.headerIcon} />
-            <Ionicons name="person-circle-outline" size={26} color="#222" />
+            <TouchableOpacity onPress={toggleTheme} style={styles.headerIcon}>
+              <Feather name={isDarkMode ? 'sun' : 'moon'} size={22} color={iconColor} />
+            </TouchableOpacity>
+            <Ionicons name="globe-outline" size={22} color={iconColor} style={styles.headerIcon} />
+            <Ionicons name="notifications-outline" size={22} color={iconColor} style={styles.headerIcon} />
+            <Ionicons name="person-circle-outline" size={26} color={iconColor} />
           </View>
         </View>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.sectionTitle}>Featured This Week</Text>
+          <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
           <FlatList
             data={featuredNews}
             keyExtractor={item => item.id}
@@ -106,7 +122,7 @@ export default function EmployeeHome() {
             )}
           />
               {/* Upcoming Events Section */}
-          <Text style={styles.sectionTitle}>Upcoming Events</Text>
+          <Text style={[styles.sectionTitle, { color: textColor }]}>Upcoming Events</Text>
           {upcomingEvents && upcomingEvents.length > 0 ? (
             <FlatList
               data={upcomingEvents}
@@ -119,10 +135,10 @@ export default function EmployeeHome() {
                   onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
                   activeOpacity={0.85}
                 >
-                  <View style={styles.eventCard}>
+                  <View style={[styles.eventCard, { backgroundColor: cardBackground }]}>
                     <View style={styles.eventCardHeader}>
                       <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
-                      <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
+                      <Ionicons name="ellipsis-horizontal" size={18} color={secondaryTextColor} />
                     </View>
                     <Text style={styles.eventTitle}>{item.title}</Text>
                     <Text style={styles.eventDesc}>{item.desc}</Text>
@@ -155,18 +171,18 @@ export default function EmployeeHome() {
               )}
             />
           ) : (
-            <View style={styles.noEventsContainer}>
+            <View style={[styles.noEventsContainer, { backgroundColor: cardBackground }]}>
               <Text style={styles.noEventsText}>No upcoming events at the moment</Text>
             </View>
           )}
 
           {/* Portal Access Section */}
-          <Text style={styles.sectionTitle}>Portal Access</Text>
+          <Text style={[styles.sectionTitle, { color: textColor }]}>Portal Access</Text>
           <View style={styles.portalRow}>
             {portalLinks.map(link => (
               <TouchableOpacity
                 key={link.key}
-                style={styles.portalIconBox}
+                style={[styles.portalIconBox, { backgroundColor: cardBackground }]}
                 activeOpacity={0.8}
                 onPress={() => {
                   if (link.key === 'events') router.push('/events');
@@ -176,15 +192,15 @@ export default function EmployeeHome() {
                 }}
               >
                 {link.icon}
-                <Text style={styles.portalLabel}>{link.label}</Text>
+                <Text style={[styles.portalLabel, { color: portalLabelColor }]}>{link.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
           {/* Book of the Month Section */}
-          <Text style={styles.sectionTitle}>Book of the Month</Text>
+          <Text style={[styles.sectionTitle, { color: textColor }]}>Book of the Month</Text>
           <TouchableOpacity
-            style={styles.featuredBookCard}
+            style={[styles.featuredBookCard, { backgroundColor: cardBackground }]}
             activeOpacity={0.85}
             onPress={() => router.push('/bookclub')}
           >
@@ -211,7 +227,7 @@ export default function EmployeeHome() {
                 <Text style={styles.ratingText}>4.9</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                <Ionicons name="person" size={16} color="#888" style={{ marginRight: 4 }} />
+                <Ionicons name="person" size={16} color={secondaryTextColor} style={{ marginRight: 4 }} />
                 <Text style={styles.recommender}>Nizar Naghi</Text>
               </View>
             </View>
