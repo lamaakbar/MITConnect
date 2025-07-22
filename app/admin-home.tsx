@@ -170,7 +170,7 @@ export default function AdminHome() {
         </TouchableOpacity>
 
         {/* Books Management Card */}
-        <TouchableOpacity onPress={() => router.push('/bookclub')} activeOpacity={0.8}>
+        <TouchableOpacity onPress={() => router.push('/books-management')} activeOpacity={0.8}>
           <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
             <View style={styles.cardRow}>
               <View style={[styles.iconBox, { backgroundColor: '#FCF3CF' }]}> 

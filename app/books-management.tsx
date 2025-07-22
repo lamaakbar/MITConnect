@@ -110,7 +110,7 @@ export default function AdminBooksScreen() {
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
               <TouchableOpacity
-                onPress={() => router.push('/bookclub')}
+                onPress={() => router.push({ pathname: '/books-management/[id]/details', params: { id: item.id } })}
                 activeOpacity={0.8}
               >
                 <View style={[styles.card, { backgroundColor: cardBackground, borderColor }]}>

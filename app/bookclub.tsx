@@ -207,7 +207,7 @@ export default function BookClubScreen() {
           <Text style={[styles.sectionTitle, { color: textColor }]}> <Feather name="clock" size={16} color="#3AC569" /> Recent Selections </Text>
           <TouchableOpacity
             style={[styles.goLibraryBtnSmall, { backgroundColor: isDarkMode ? '#23272b' : '#e6f0fe' }]}
-            onPress={() => router.push('/library')}
+            onPress={() => router.push('/books-management')}
             activeOpacity={0.7}
           >
             <Text style={[styles.goLibraryBtnTextSmall, { color: isDarkMode ? '#43C6AC' : '#2196f3' }]}>Go to MITC Library</Text>
