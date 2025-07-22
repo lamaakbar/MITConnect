@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useTheme } from '../components/ThemeContext';
 import AdminTabBar from '../components/AdminTabBar';
 import AdminHeader from '../components/AdminHeader';
 
@@ -35,8 +36,7 @@ const mockIdeas: Idea[] = [];
 
 export default function IdeasManagement() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
+  const { isDarkMode } = useTheme();
   
   const [tab, setTab] = useState<'pending' | 'submitted'>('pending');
   const [manageIdea, setManageIdea] = useState<Idea | null>(null);
@@ -340,14 +340,13 @@ export default function IdeasManagement() {
 
 // Stat Card Component
 function StatCard({ label, value, icon }: { label: string; value: number; icon: any }) {
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
-  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
-  const textColor = isDarkMode ? '#ECEDEE' : '#222';
+  const { isDarkMode } = useTheme();
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
   const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
   
   return (
-    <View style={[styles.statCard, { backgroundColor: cardBackground }]}>
+    <View style={[styles.statCard, { backgroundColor }]}>
       <Ionicons name={icon} size={24} color="#7D3C98" style={{ marginBottom: 4 }} />
       <Text style={[styles.statValue, { color: textColor }]}>{value}</Text>
       <Text style={[styles.statLabel, { color: secondaryTextColor }]}>{label}</Text>
@@ -365,10 +364,9 @@ function IdeaCard({ idea, onApprove, onReject, onCreatePoll, onManage, isPending
   isPending?: boolean;
   actionLoading?: string | null;
 }) {
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
-  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
-  const textColor = isDarkMode ? '#ECEDEE' : '#222';
+  const { isDarkMode } = useTheme();
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
   const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
   
   const isApproveLoading = actionLoading === idea.id + '-approve';
@@ -376,7 +374,7 @@ function IdeaCard({ idea, onApprove, onReject, onCreatePoll, onManage, isPending
   const isPollLoading = actionLoading === idea.id + '-poll';
   
   return (
-    <View style={[styles.ideaCard, { backgroundColor: cardBackground }]}>
+    <View style={[styles.ideaCard, { backgroundColor }]}>
       <View style={styles.ideaCardHeader}>
         <Text style={[styles.ideaCardTitle, { color: textColor }]}>{idea.title}</Text>
         {isPending && (

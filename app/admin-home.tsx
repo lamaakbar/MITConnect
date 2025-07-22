@@ -4,6 +4,7 @@ import { Feather, MaterialIcons, MaterialCommunityIcons, Ionicons, FontAwesome5 
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import AdminTabBar from '../components/AdminTabBar';
+import { useTheme } from '../components/ThemeContext';
 
 // Mock user data for admin
 const mockAdminUser = {
@@ -13,14 +14,8 @@ const mockAdminUser = {
 
 export default function AdminHome() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const [isDarkMode, setIsDarkMode] = useState(colorScheme === 'dark');
+  const { isDarkMode, toggleTheme } = useTheme();
   const [showAccountModal, setShowAccountModal] = useState(false);
-
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-    // In a real app, you would update the global theme here
-  };
 
   const getThemeColors = () => {
     return isDarkMode ? {
@@ -57,7 +52,7 @@ export default function AdminHome() {
           </Text>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={toggleDarkMode} style={styles.headerIcon}>
+          <TouchableOpacity onPress={toggleTheme} style={styles.headerIcon}>
             <Feather 
               name={isDarkMode ? "sun" : "moon"} 
               size={18} 

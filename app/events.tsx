@@ -5,7 +5,7 @@ import { useEventContext } from '../components/EventContext';
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import EventsTabBar from '../components/EventsTabBar';
 
-const EVENT_TABS = ['All', 'Upcoming', 'Past', 'My Events'];
+const EVENT_TABS = ['All', 'Upcoming', 'My Events', 'Bookmark'];
 
 export default function EventsScreen() {
   const router = useRouter();
@@ -52,7 +52,9 @@ export default function EventsScreen() {
     return true;
   }).filter(e => e.title.toLowerCase().includes(search.toLowerCase()));
 
-  // Bookmarked events for My Events tab
+  // Registered events for My Events tab
+  const registeredEvents = events.filter(e => registered.includes(e.id));
+  // Bookmarked events for Bookmark tab
   const bookmarkedEvents = events.filter(e => bookmarks.includes(e.id));
 
   // Dynamically select the nearest upcoming event as featured
@@ -110,7 +112,7 @@ export default function EventsScreen() {
           onChangeText={setSearch}
         />
       </View>
-      {/* Tabs and My Events Button */}
+      {/* Tabs for My Events and Bookmark */}
       <View style={styles.tabsContainer}>
         <View style={styles.tabsRow}>
           {EVENT_TABS.map(tab => (
@@ -124,10 +126,80 @@ export default function EventsScreen() {
           ))}
         </View>
       </View>
-      {/* Remove ScrollView and use View as container for tab content */}
       <View style={{ flex: 1 }}>
-        {/* My Events Tab */}
-        {activeTab === 'My Events' ? (
+        {activeTab === 'All' ? (
+          <FlatList
+            data={filteredEvents}
+            keyExtractor={item => item.id}
+            contentContainerStyle={{ padding: 16 }}
+            renderItem={({ item }) => (
+              <View style={styles.eventCard}>
+                <Image source={item.image} style={styles.eventImage} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.eventTitle}>{item.title}</Text>
+                  <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
+                </View>
+              </View>
+            )}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyState}>
+                <Ionicons name="calendar-outline" size={64} color="#ccc" />
+                <Text style={styles.emptyStateTitle}>No Events Available</Text>
+                <Text style={styles.emptyStateText}>
+                  There are no events scheduled at the moment. Check back later for exciting activities!
+                </Text>
+              </View>
+            )}
+          />
+        ) : activeTab === 'Upcoming' ? (
+          <FlatList
+            data={upcomingEvents}
+            keyExtractor={item => item.id}
+            contentContainerStyle={{ padding: 16 }}
+            renderItem={({ item }) => (
+              <View style={styles.eventCard}>
+                <Image source={item.image} style={styles.eventImage} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.eventTitle}>{item.title}</Text>
+                  <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
+                </View>
+              </View>
+            )}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyState}>
+                <Ionicons name="calendar-outline" size={64} color="#ccc" />
+                <Text style={styles.emptyStateTitle}>No Upcoming Events</Text>
+                <Text style={styles.emptyStateText}>
+                  There are no upcoming events at the moment.
+                </Text>
+              </View>
+            )}
+          />
+        ) : activeTab === 'My Events' ? (
+          <FlatList
+            data={registeredEvents}
+            keyExtractor={item => item.id}
+            contentContainerStyle={{ padding: 16 }}
+            renderItem={({ item }) => (
+              <View style={styles.eventCard}>
+                <Image source={item.image} style={styles.eventImage} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.eventTitle}>{item.title}</Text>
+                  <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
+                </View>
+              </View>
+            )}
+            ListEmptyComponent={() => (
+              <View style={styles.emptyState}>
+                <Ionicons name="calendar-outline" size={64} color="#ccc" />
+                <Text style={styles.emptyStateTitle}>No Registered Events</Text>
+                <Text style={styles.emptyStateText}>
+                  You haven't registered for any events yet.
+                </Text>
+              </View>
+            )}
+          />
+        ) : (
           <FlatList
             data={bookmarkedEvents}
             keyExtractor={item => item.id}
@@ -154,86 +226,6 @@ export default function EventsScreen() {
               </View>
             )}
           />
-        ) : (
-          <>
-            {/* Featured Event */}
-            {featured && (
-              <View style={styles.featuredCard}>
-                <Image source={featured.image} style={styles.featuredImage} />
-                <Text style={styles.featuredTitle}>{featured.title}</Text>
-                <Text style={styles.featuredDesc}>{featured.desc}</Text>
-                <Text style={styles.featuredMeta}>{featured.date} • {featured.time} • {featured.location}</Text>
-                <TouchableOpacity
-                  style={[styles.registerBtn, (registered.includes(featured.id) || userEventStatuses[featured.id]?.status === 'completed') && styles.registerBtnDisabled]}
-                  onPress={async () => {
-                    console.log('Button pressed for event:', featured.id);
-                    console.log('Current registered events:', registered);
-                    const success = await registerEvent(featured.id);
-                    if (success) {
-                      console.log('After registration, registered events:', [...registered, featured.id]);
-                      router.push('registration-success' as any);
-                    } else {
-                      console.log('Registration failed - user may have already completed this event');
-                    }
-                  }}
-                  disabled={registered.includes(featured.id) || userEventStatuses[featured.id]?.status === 'completed'}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.registerBtnText, (registered.includes(featured.id) || userEventStatuses[featured.id]?.status === 'completed') && styles.registerBtnTextDisabled]}>
-                    {userEventStatuses[featured.id]?.status === 'completed' ? 'Completed' : registered.includes(featured.id) ? 'Registered' : 'Register'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            {/* All Events */}
-            {filteredEvents.length > 0 && (
-              <>
-                <Text style={styles.sectionTitle}>All Events</Text>
-                <FlatList
-                  data={filteredEvents}
-                  keyExtractor={item => item.id}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingLeft: 16, paddingRight: 8 }}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={styles.eventCard}
-                      onPress={() => router.push({ pathname: 'event-details' as any, params: { id: item.id } })}
-                    >
-                      <Image source={item.image} style={styles.eventImage} />
-                      <TouchableOpacity
-                        style={styles.bookmarkIcon}
-                        onPress={() => bookmarks.includes(item.id) ? unbookmarkEvent(item.id) : bookmarkEvent(item.id)}
-                      >
-                        <Ionicons
-                          name={bookmarks.includes(item.id) ? 'bookmark' : 'bookmark-outline'}
-                          size={22}
-                          color={bookmarks.includes(item.id) ? '#43C6AC' : '#888'}
-                        />
-                      </TouchableOpacity>
-                      <Text style={styles.eventTitle}>{item.title}</Text>
-                      <Text style={styles.eventDate}>{item.date}</Text>
-                      {registered.includes(item.id) && (
-                        <View style={styles.registeredBadge}>
-                          <Text style={styles.registeredBadgeText}>Registered</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                />
-              </>
-            )}
-            {/* No events match search */}
-            {events.length > 0 && filteredEvents.length === 0 && search.length > 0 && (
-              <View style={styles.emptySearchState}>
-                <Ionicons name="search-outline" size={48} color="#ccc" />
-                <Text style={styles.emptyStateTitle}>No Events Found</Text>
-                <Text style={styles.emptyStateText}>
-                  No events match your search "{search}". Try different keywords.
-                </Text>
-              </View>
-            )}
-          </>
         )}
         <EventsTabBar />
       </View>

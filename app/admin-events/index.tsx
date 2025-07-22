@@ -22,6 +22,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useTheme } from '../../components/ThemeContext';
 import AdminTabBar from '../../components/AdminTabBar';
 import AdminHeader from '../../components/AdminHeader';
 
@@ -32,9 +33,7 @@ const FILTERS = ['All', 'Upcoming', 'Past'];
 
 const AdminEventListScreen: React.FC = () => {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
-  
+  const { isDarkMode } = useTheme();
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -205,6 +204,34 @@ const AdminEventListScreen: React.FC = () => {
      a.email.toLowerCase().includes(attendeesSearch.toLowerCase()))
   ) || [];
 
+  // Floating action button for adding event (FAB)
+  const AddEventFAB = (
+    <TouchableOpacity
+      onPress={() => setShowAddModal(true)}
+      style={{
+        position: 'absolute',
+        right: 20,
+        bottom: 84,
+        backgroundColor: '#3CB371',
+        borderRadius: 30,
+        width: 60,
+        height: 60,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 10,
+        zIndex: 100,
+      }}
+      accessibilityLabel="Add Event"
+      activeOpacity={0.85}
+    >
+      <Ionicons name="add" size={34} color="#fff" />
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor }}>
       {/* Unified Admin Header */}
@@ -259,16 +286,7 @@ const AdminEventListScreen: React.FC = () => {
           <View style={styles.emptyState}>
             <Ionicons name="calendar-outline" size={64} color="#ccc" />
             <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Events Created</Text>
-            <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
-              Start by creating your first event to manage activities and track attendees.
-            </Text>
-            <TouchableOpacity 
-              style={styles.emptyStateButton}
-              onPress={() => setShowAddModal(true)}
-            >
-              <Ionicons name="add" size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.emptyStateButtonText}>Create First Event</Text>
-            </TouchableOpacity>
+            <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>Start by creating your first event to manage activities and track attendees.</Text>
           </View>
         ) : (
           <>
@@ -327,6 +345,7 @@ const AdminEventListScreen: React.FC = () => {
 
       {/* Bottom Tab Bar */}
       <AdminTabBar activeTab="events" isDarkMode={isDarkMode} />
+      {AddEventFAB}
 
       {/* Add Event Modal */}
       <Modal
