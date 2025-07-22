@@ -8,6 +8,7 @@ import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
+import ProfileModal from '../components/ProfileModal';
 
 
 const portalLinks = [
@@ -40,6 +41,7 @@ export default function EmployeeHome() {
   const { events, registered } = useEventContext();
   const { userRole, isInitialized } = useUserContext();
   const { isDarkMode, toggleTheme } = useTheme();
+  const [profileVisible, setProfileVisible] = useState(false);
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -90,7 +92,9 @@ export default function EmployeeHome() {
             </TouchableOpacity>
             <Ionicons name="globe-outline" size={22} color={iconColor} style={styles.headerIcon} />
             <Ionicons name="notifications-outline" size={22} color={iconColor} style={styles.headerIcon} />
-            <Ionicons name="person-circle-outline" size={26} color={iconColor} />
+            <TouchableOpacity onPress={() => setProfileVisible(true)} style={styles.headerIcon}>
+              <Ionicons name="person-circle-outline" size={26} color={iconColor} />
+            </TouchableOpacity>
           </View>
         </View>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -233,6 +237,7 @@ export default function EmployeeHome() {
             </View>
           </TouchableOpacity>
         </ScrollView>
+        <ProfileModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
       </SafeAreaView>
   );
 };

@@ -234,35 +234,35 @@ export default function EventsScreen() {
                   </View>
                 ) : registeredEvents.map(item => (
                   <View key={item.id} style={[styles.eventCard, { marginBottom: 12 }]}> 
-                    <Image source={item.image} style={styles.eventImage} />
-                    <View style={{ flex: 1, marginLeft: 12 }}>
-                      <Text style={styles.eventTitle}>{item.title}</Text>
-                      <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
-                    </View>
-                  </View>
+                <Image source={item.image} style={styles.eventImage} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.eventTitle}>{item.title}</Text>
+                  <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
+                </View>
+              </View>
                 ))
               ) : myEventsTab === 'Bookmarked' ? (
                 bookmarkedEvents.length === 0 ? (
-                  <View style={styles.emptyState}>
+              <View style={styles.emptyState}>
                     <Ionicons name="bookmark-outline" size={48} color={secondaryTextColor} />
                     <Text style={styles.emptyStateTitle}>No Bookmarks Yet</Text>
                     <Text style={styles.emptyStateText}>You haven't bookmarked any events yet. Start exploring events and save the ones you're interested in!</Text>
-                  </View>
+              </View>
                 ) : bookmarkedEvents.map(item => (
                   <View key={item.id} style={[styles.eventCard, { marginBottom: 12 }]}> 
-                    <Image source={item.image} style={styles.eventImage} />
-                    <View style={{ flex: 1, marginLeft: 12 }}>
-                      <Text style={styles.eventTitle}>{item.title}</Text>
-                      <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
-                      <TouchableOpacity style={styles.removeBtn} onPress={() => unbookmarkEvent(item.id)}>
-                        <Text style={styles.removeBtnText}>Remove</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+                <Image source={item.image} style={styles.eventImage} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.eventTitle}>{item.title}</Text>
+                  <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
+                  <TouchableOpacity style={styles.removeBtn} onPress={() => unbookmarkEvent(item.id)}>
+                    <Text style={styles.removeBtnText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
                 ))
               ) : null}
             </ScrollView>
-          </View>
+              </View>
         ) : null}
         {/* Remove EventsTabBar from Events page */}
         {/* <EventsTabBar /> */}

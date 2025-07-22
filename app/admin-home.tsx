@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import AdminTabBar from '../components/AdminTabBar';
 import { useTheme } from '../components/ThemeContext';
+import ProfileModal from '../components/ProfileModal';
 
 // Mock user data for admin
 const mockAdminUser = {
@@ -15,7 +16,7 @@ const mockAdminUser = {
 export default function AdminHome() {
   const router = useRouter();
   const { isDarkMode, toggleTheme } = useTheme();
-  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [profileVisible, setProfileVisible] = useState(false);
 
   const getThemeColors = () => {
     return isDarkMode ? {
@@ -59,8 +60,8 @@ export default function AdminHome() {
               color={colors.icon} 
             />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowAccountModal(true)} style={styles.headerIcon}>
-            <Feather name="user" size={18} color={colors.icon} />
+          <TouchableOpacity onPress={() => setProfileVisible(true)} style={styles.headerIcon}>
+            <Ionicons name="person-circle-outline" size={26} color={colors.icon} />
           </TouchableOpacity>
         </View>
       </View>
@@ -193,34 +194,7 @@ export default function AdminHome() {
       <AdminTabBar activeTab="home" isDarkMode={isDarkMode} />
 
       {/* Account Modal */}
-      <Modal
-        visible={showAccountModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowAccountModal(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setShowAccountModal(false)}
-        >
-          <View style={[styles.accountModal, { backgroundColor: colors.cardBackground }]}>
-            <View style={styles.accountHeader}>
-              <View style={[styles.accountAvatar, { backgroundColor: '#3CB371' }]}>
-                <Feather name="user" size={24} color="#fff" />
-              </View>
-              <Text style={[styles.accountName, { color: colors.text }]}>{mockAdminUser.name}</Text>
-              <Text style={[styles.accountEmail, { color: colors.textSecondary }]}>{mockAdminUser.email}</Text>
-            </View>
-            <TouchableOpacity 
-              style={[styles.closeButton, { backgroundColor: colors.border }]}
-              onPress={() => setShowAccountModal(false)}
-            >
-              <Text style={[styles.closeButtonText, { color: colors.text }]}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <ProfileModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
     </View>
   );
 }

@@ -9,6 +9,8 @@ import { useUserContext } from '../components/UserContext';
 import RoleGuard from '../components/RoleGuard';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
+import { useAuth } from '../components/AuthContext';
+import ProfileModal from '../components/ProfileModal';
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
@@ -26,6 +28,8 @@ export default function TraineeHome() {
   const [activeTab, setActiveTab] = useState('home');
   const { events, registered } = useEventContext();
   const { userRole, isInitialized } = useUserContext();
+  const { user, logout } = useAuth();
+  const [profileVisible, setProfileVisible] = useState(false);
 
   // Trainee Hub modal state
   const [showHub, setShowHub] = useState(false);
@@ -87,7 +91,9 @@ export default function TraineeHome() {
           </TouchableOpacity>
           <Ionicons name="globe-outline" size={22} color={iconColor} style={styles.headerIcon} />
           <Ionicons name="notifications-outline" size={22} color={iconColor} style={styles.headerIcon} />
-          <Ionicons name="person-circle-outline" size={26} color={iconColor} />
+          <TouchableOpacity onPress={() => setProfileVisible(true)} style={styles.headerIcon}>
+            <Ionicons name="person-circle-outline" size={26} color={iconColor} />
+          </TouchableOpacity>
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -253,79 +259,7 @@ export default function TraineeHome() {
           */}
         </View>
       </RNScrollView>
-      <Modal visible={showHub} animationType="slide" transparent={true} onRequestClose={() => setShowHub(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.15)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 18, width: '92%', minHeight: 420, padding: 18, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#43C6AC' }}>Trainee Hub</Text>
-              <TouchableOpacity onPress={() => setShowHub(false)}><Ionicons name="close" size={28} color="#888" /></TouchableOpacity>
-            </View>
-            {/* Tabs */}
-            <View style={{ flexDirection: 'row', marginBottom: 16 }}>
-              {['Dashboard', 'Plan', 'Progress'].map(tab => (
-                <TouchableOpacity
-                  key={tab}
-                  style={{
-                    backgroundColor: hubTab === tab ? '#43C6AC' : '#F2F4F7',
-                    borderRadius: 12,
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    marginRight: 8,
-                  }}
-                  onPress={() => setHubTab(tab)}
-                >
-                  <Text style={{ color: hubTab === tab ? '#fff' : '#222', fontWeight: 'bold' }}>{tab}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            {/* Tab Content */}
-            {hubTab === 'Dashboard' && (
-              <View style={{ minHeight: 200, justifyContent: 'center', alignItems: 'center' }}>
-                {plan ? (
-                  <>
-                    <Text style={{ fontSize: 16, color: '#222', marginBottom: 12 }}>Your Plan:</Text>
-                    <Text style={{ fontSize: 15, color: '#43C6AC', fontWeight: 'bold', marginBottom: 18 }}>{plan}</Text>
-                  </>
-                ) : (
-                  <Text style={{ color: '#888', fontSize: 16 }}>No plan found. Please fill your plan in the Plan tab.</Text>
-                )}
-              </View>
-            )}
-            {hubTab === 'Plan' && (
-              <View style={{ minHeight: 200, justifyContent: 'center', alignItems: 'center' }}>
-                {plan ? (
-                  <Text style={{ color: '#43C6AC', fontSize: 16 }}>You already have a plan.</Text>
-                ) : (
-                  <>
-                    <Text style={{ fontSize: 16, color: '#222', marginBottom: 12 }}>Enter your plan:</Text>
-                    <TextInput
-                      style={{ borderWidth: 1, borderColor: '#43C6AC', borderRadius: 8, padding: 10, width: '100%', marginBottom: 12, fontSize: 15 }}
-                      placeholder="Describe your plan..."
-                      value={planInput}
-                      onChangeText={setPlanInput}
-                      multiline
-                      numberOfLines={3}
-                    />
-                    <TouchableOpacity
-                      style={{ backgroundColor: '#43C6AC', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 24 }}
-                      onPress={() => { setPlan(planInput); setPlanInput(''); setPlanSubmitted(true); setHubTab('Dashboard'); }}
-                      disabled={!planInput.trim()}
-                    >
-                      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Submit Plan</Text>
-                    </TouchableOpacity>
-                    {planSubmitted && <Text style={{ color: '#24B26B', marginTop: 10 }}>Plan submitted!</Text>}
-                  </>
-                )}
-              </View>
-            )}
-            {hubTab === 'Progress' && (
-              <View style={{ minHeight: 200, justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={{ fontSize: 16, color: '#222', marginBottom: 12 }}>Progress coming soon!</Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
+      <ProfileModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
     </SafeAreaView>
     </RoleGuard>
   );
