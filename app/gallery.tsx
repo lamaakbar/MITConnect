@@ -284,7 +284,7 @@ export default function GalleryScreen() {
         <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color={iconColor} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: headerTitleColor }]}>Albums</Text>
+        <Text style={[styles.headerTitle, { color: headerTitleColor }]}>Gallery</Text>
         <View style={styles.headerSpacer} />
       </View>
 

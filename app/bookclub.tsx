@@ -10,7 +10,8 @@ import {
   Modal, 
   KeyboardAvoidingView, 
   Platform,
-  FlatList
+  FlatList,
+  SafeAreaView
 } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -78,7 +79,7 @@ export default function BookClubScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#222" />
@@ -267,7 +268,7 @@ export default function BookClubScreen() {
           <Ionicons name="book-outline" size={28} color={activeTab === 'bookclub' ? '#43C6AC' : '#bbb'} />
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

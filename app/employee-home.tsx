@@ -185,7 +185,7 @@ export default function EmployeeHome() {
                 style={[styles.portalIconBox, { backgroundColor: cardBackground }]}
                 activeOpacity={0.8}
                 onPress={() => {
-                  if (link.key === 'events') router.push('/events');
+                  if (link.key === 'events') router.push('/events?noHeader=1');
                   else if (link.key === 'gallery') router.push('/gallery');
                   else if (link.key === 'inspire') router.push('/inspirer-corner');
                   else if (link.key === 'bookclub') router.push('/bookclub');
