@@ -17,6 +17,7 @@ import {
   Keyboard,
   ToastAndroid,
   ScrollView,
+  SafeAreaView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -199,21 +200,16 @@ const AdminEventListScreen: React.FC = () => {
 
   // Get current event's attendees
   const currentEvent = events.find(e => e.id === currentEventId);
-  const filteredAttendees = currentEvent?.attendees.filter(a => 
+  const filteredAttendees = currentEvent?.attendees.filter((a: any) => 
     (a.name.toLowerCase().includes(attendeesSearch.toLowerCase()) ||
      a.email.toLowerCase().includes(attendeesSearch.toLowerCase()))
   ) || [];
 
   return (
-    <View style={[styles.mainContainer, { backgroundColor }]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor }}>
       {/* Unified Admin Header */}
       <AdminHeader 
         title=""
-        rightComponent={
-          <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)}>
-            <Ionicons name="add" size={20} color="#fff" />
-          </TouchableOpacity>
-        }
       />
 
       {/* Search Bar */}
@@ -593,8 +589,8 @@ const AdminEventListScreen: React.FC = () => {
             </View>
             <ScrollView style={styles.attendeesList}>
               {filteredAttendees
-                .filter(a => a.status === attendeeStatus)
-                .map((attendee, index) => (
+                .filter((a: any) => a.status === attendeeStatus)
+                .map((attendee: any, index: any) => (
                   <View key={index} style={[styles.attendeeItem, { borderBottomColor: borderColor }]}>
                     <View style={styles.attendeeInfo}>
                       <Text style={[styles.attendeeName, { color: textColor }]}>{attendee.name}</Text>
@@ -612,7 +608,7 @@ const AdminEventListScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 

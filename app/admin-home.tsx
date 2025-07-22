@@ -67,9 +67,6 @@ export default function AdminHome() {
           <TouchableOpacity onPress={() => setShowAccountModal(true)} style={styles.headerIcon}>
             <Feather name="user" size={18} color={colors.icon} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIcon}>
-            <Feather name="menu" size={18} color={colors.icon} />
-          </TouchableOpacity>
         </View>
       </View>
 

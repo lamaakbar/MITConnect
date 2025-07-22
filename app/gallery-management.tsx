@@ -135,16 +135,6 @@ export default function GalleryManagement() {
       <SafeAreaView style={{ flex: 1, backgroundColor }}>
         <AdminHeader 
           title=""
-          rightComponent={
-            <TouchableOpacity
-              style={[styles.addBtn, { backgroundColor: isDarkMode ? '#3CB371' : '#222' }]}
-              onPress={() => setShowCreateModal(true)}
-              accessibilityLabel="Create new album"
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add" size={20} color="#fff" />
-            </TouchableOpacity>
-          }
         />
         <View style={[styles.mainContainer, { backgroundColor }]}>
           {/* Search Bar */}
