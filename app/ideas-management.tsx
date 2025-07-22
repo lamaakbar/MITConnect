@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Alert, ActivityIndicator, Platform, ToastAndroid } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Alert, ActivityIndicator, Platform, ToastAndroid, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -152,13 +152,11 @@ export default function IdeasManagement() {
   };
 
   return (
-    <View style={[styles.mainContainer, { backgroundColor }]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor }}>
       {/* Unified Admin Header */}
-      <AdminHeader title="Ideas Management" />
-
+      <AdminHeader title="" />
       {/* Toast */}
       {toast && <View style={styles.toast}><Text style={styles.toastText}>{toast}</Text></View>}
-
       {/* Scrollable Content */}
       <ScrollView 
         style={styles.scrollContainer}
@@ -173,7 +171,6 @@ export default function IdeasManagement() {
           <StatCard label="Approved" value={approved} icon="checkmark-circle" />
           <StatCard label="Total Votes" value={totalVotes} icon="heart" />
         </View>
-
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
           <TouchableOpacity 
@@ -193,16 +190,15 @@ export default function IdeasManagement() {
             </Text>
           </TouchableOpacity>
         </View>
-
         {/* Ideas List */}
         <View style={styles.ideasContainer}>
           {(tab === 'pending' ? pendingIdeas : submittedIdeas).length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="bulb-outline" size={64} color="#ccc" />
-              <Text style={[styles.emptyStateTitle, { color: textColor }]}>
+              <Text style={[styles.emptyStateTitle, { color: textColor }]}> 
                 {tab === 'pending' ? 'No Pending Ideas' : 'No Submitted Ideas'}
               </Text>
-              <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+              <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}> 
                 {tab === 'pending' 
                   ? "There are no pending ideas waiting for review."
                   : "There are no approved or in-progress ideas yet."
@@ -225,10 +221,8 @@ export default function IdeasManagement() {
           )}
         </View>
       </ScrollView>
-
       {/* Bottom Tab Bar */}
       <AdminTabBar activeTab="ideas" isDarkMode={isDarkMode} />
-
       {/* Create Poll Modal - Fullscreen, scrollable, with close icon */}
       <Modal visible={!!pollModalIdea} animationType="slide" transparent>
         <View style={styles.pollModalOverlay}>
@@ -340,7 +334,7 @@ export default function IdeasManagement() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -476,6 +470,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingHorizontal: 12,
     marginBottom: 16,
+    marginTop: 20, // add space above the stat cards
   },
   tabContainer: {
     flexDirection: 'row',

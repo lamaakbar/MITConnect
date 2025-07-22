@@ -54,115 +54,48 @@ export default function AdminTabBar({ activeTab, isDarkMode = false }: AdminTabB
     }
   };
 
+  // Replace the TABS array and tab rendering logic to only show Home, Events, and Books
+  const TABS = [
+    {
+      key: 'home',
+      label: 'Home',
+      icon: (color: string) => <Feather name="home" size={22} color={color} />, // keep existing icon for now
+      route: '/admin-home',
+    },
+    {
+      key: 'events',
+      label: 'Events',
+      icon: (color: string) => <Feather name="calendar" size={22} color={color} />, // keep existing icon for now
+      route: '/admin-events',
+    },
+    {
+      key: 'books',
+      label: 'Books',
+      icon: (color: string) => <MaterialIcons name="menu-book" size={22} color={color} />, // keep existing icon for now
+      route: '/books-management',
+    },
+  ];
+
+  const iconColor = colors.icon; // Use the default icon color for all tabs
+
   return (
     <View style={[styles.tabBar, { backgroundColor: colors.cardBackground }]}>
-      <TouchableOpacity 
-        style={styles.tabItem} 
-        onPress={() => handleTabPress('home')}
-        activeOpacity={0.7}
-      >
-        <Feather 
-          name="home" 
-          size={22} 
-          color={activeTab === 'home' ? colors.activeIcon : colors.icon} 
-        />
-        <Text style={[
-          styles.tabLabel, 
-          { color: activeTab === 'home' ? colors.activeIcon : colors.textSecondary }
-        ]}>
-          Home
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.tabItem} 
-        onPress={() => handleTabPress('events')}
-        activeOpacity={0.7}
-      >
-        <Feather 
-          name="calendar" 
-          size={22} 
-          color={activeTab === 'events' ? colors.activeIcon : colors.icon} 
-        />
-        <Text style={[
-          styles.tabLabel, 
-          { color: activeTab === 'events' ? colors.activeIcon : colors.textSecondary }
-        ]}>
-          Events
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.tabItem} 
-        onPress={() => handleTabPress('ideas')}
-        activeOpacity={0.7}
-      >
-        <Feather 
-          name="star" 
-          size={22} 
-          color={activeTab === 'ideas' ? colors.activeIcon : colors.icon} 
-        />
-        <Text style={[
-          styles.tabLabel, 
-          { color: activeTab === 'ideas' ? colors.activeIcon : colors.textSecondary }
-        ]}>
-          Ideas
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.tabItem} 
-        onPress={() => handleTabPress('trainees')}
-        activeOpacity={0.7}
-      >
-        <Feather 
-          name="users" 
-          size={22} 
-          color={activeTab === 'trainees' ? colors.activeIcon : colors.icon} 
-        />
-        <Text style={[
-          styles.tabLabel, 
-          { color: activeTab === 'trainees' ? colors.activeIcon : colors.textSecondary }
-        ]}>
-          Trainees
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.tabItem} 
-        onPress={() => handleTabPress('gallery')}
-        activeOpacity={0.7}
-      >
-        <Feather 
-          name="image" 
-          size={22} 
-          color={activeTab === 'gallery' ? colors.activeIcon : colors.icon} 
-        />
-        <Text style={[
-          styles.tabLabel, 
-          { color: activeTab === 'gallery' ? colors.activeIcon : colors.textSecondary }
-        ]}>
-          Gallery
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.tabItem} 
-        onPress={() => handleTabPress('books')}
-        activeOpacity={0.7}
-      >
-        <MaterialIcons 
-          name="menu-book" 
-          size={22} 
-          color={activeTab === 'books' ? colors.activeIcon : colors.icon} 
-        />
-        <Text style={[
-          styles.tabLabel, 
-          { color: activeTab === 'books' ? colors.activeIcon : colors.textSecondary }
-        ]}>
-          Books
-        </Text>
-      </TouchableOpacity>
+      {TABS.map((tab) => (
+        <TouchableOpacity 
+          key={tab.key}
+          style={styles.tabItem} 
+          onPress={() => handleTabPress(tab.key)}
+          activeOpacity={0.7}
+        >
+          {tab.icon(iconColor)}
+          <Text style={[
+            styles.tabLabel, 
+            { color: colors.textSecondary } // Use the same color for all labels
+          ]}>
+            {tab.label}
+          </Text>
+        </TouchableOpacity>
+      ))}
     </View>
   );
 }

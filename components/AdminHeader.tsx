@@ -24,9 +24,9 @@ export default function AdminHeader({
   rightComponent,
   showShadow = true,
   showLogo = true,
-  showDarkModeToggle = true,
-  showAccountButton = true,
-  showMenuButton = true,
+  showDarkModeToggle = false,
+  showAccountButton = false,
+  showMenuButton = false,
 }: AdminHeaderProps) {
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -40,11 +40,7 @@ export default function AdminHeader({
   const iconColor = isDarkMode ? '#9BA1A6' : '#222';
 
   const handleBackPress = () => {
-    if (backDestination) {
-      router.push(backDestination as any);
-    } else {
-      router.back();
-    }
+    router.push('/admin-home');
   };
 
   const toggleDarkMode = () => {
@@ -90,51 +86,22 @@ export default function AdminHeader({
             <Ionicons name="arrow-back" size={20} color={textColor} />
           </TouchableOpacity>
         )}
-        
         {showLogo && (
           <View style={styles.logoSection}>
-            <View style={[styles.logoCircle, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F8F5' }]}>
+            <View style={[styles.logoCircle, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F8F5' }]}> 
               <Feather name="users" size={18} color="#004080" />
             </View>
-            <Text style={[styles.logoText, { color: textColor }]}>
-              MIT<Text style={{ color: '#3CB371' }}>Connect</Text>
-            </Text>
+            <Text style={[styles.logoText, { color: textColor }]}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
           </View>
         )}
       </View>
-
-      {/* Center Section - Title */}
-      <Text style={[styles.headerTitle, { color: textColor }]}>{title}</Text>
-
-      {/* Right Section */}
+      {/* Center Section - Title (absolutely centered) */}
+      <View pointerEvents="none" style={styles.headerTitleWrapper}>
+        <Text style={[styles.headerTitle, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
+      </View>
+      {/* Right Section for rightComponent */}
       <View style={styles.headerRight}>
-        {rightComponent ? (
-          rightComponent
-        ) : (
-          <>
-            {showDarkModeToggle && (
-              <TouchableOpacity onPress={toggleDarkMode} style={styles.headerIcon}>
-                <Feather 
-                  name={isDarkMode ? "sun" : "moon"} 
-                  size={18} 
-                  color={iconColor} 
-                />
-              </TouchableOpacity>
-            )}
-            
-            {showAccountButton && (
-              <TouchableOpacity onPress={openAccount} style={styles.headerIcon}>
-                <Feather name="user" size={18} color={iconColor} />
-              </TouchableOpacity>
-            )}
-            
-            {showMenuButton && (
-              <TouchableOpacity onPress={openMenu} style={styles.headerIcon}>
-                <Feather name="menu" size={18} color={iconColor} />
-              </TouchableOpacity>
-            )}
-          </>
-        )}
+        {rightComponent}
       </View>
     </View>
   );
@@ -190,11 +157,24 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 0.5,
   },
+  headerTitleWrapper: {
+    position: 'absolute',
+    left: 60,
+    right: 60,
+    top: Platform.OS === 'ios' ? 20 : 28,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+    height: 56,
+    pointerEvents: 'none',
+  },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    flex: 2,
+    fontSize: 16, // reduced from 20
+    fontWeight: '600', // reduced from 'bold'
     textAlign: 'center',
     letterSpacing: 0.5,
+    maxWidth: '100%',
+    marginTop: 18, // add margin to separate from logo
   },
 }); 

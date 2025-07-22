@@ -132,10 +132,9 @@ export default function GalleryManagement() {
   // Albums Grid View
   if (!showCreate && !selectedAlbumId) {
     return (
-      <View style={[styles.mainContainer, { backgroundColor }]}>
-        {/* Unified Admin Header */}
+      <SafeAreaView style={{ flex: 1, backgroundColor }}>
         <AdminHeader 
-          title="Gallery Management"
+          title=""
           rightComponent={
             <TouchableOpacity
               style={[styles.addBtn, { backgroundColor: isDarkMode ? '#3CB371' : '#222' }]}
@@ -147,179 +146,179 @@ export default function GalleryManagement() {
             </TouchableOpacity>
           }
         />
-
-        {/* Search Bar */}
-        <View style={[styles.searchBarContainer, { backgroundColor: searchBackground }]}>
-          <Ionicons name="search" size={20} color={secondaryTextColor} style={{ marginLeft: 10, marginRight: 4 }} />
-          <TextInput
-            style={[styles.searchBar, { color: textColor }]}
-            placeholder="Search Albums"
-            placeholderTextColor={secondaryTextColor}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            clearButtonMode="while-editing"
-          />
-        </View>
-
-        {/* Scrollable Content */}
-        <ScrollView 
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          bounces={true}
-        >
-          {albums.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="images-outline" size={64} color="#ccc" />
-              <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Albums Created</Text>
-              <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
-                Start by creating your first album to organize and share photos with your team.
-              </Text>
-              <TouchableOpacity 
-                style={styles.emptyStateButton}
-                onPress={() => setShowCreateModal(true)}
-              >
-                <Ionicons name="add" size={20} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.emptyStateButtonText}>Create First Album</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.albumGrid}>
-              {filteredAlbums.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[styles.albumCard, { backgroundColor: cardBackground, borderColor }]}
-                  onPress={() => setSelectedAlbumId(item.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.albumCoverBox}>
-                    {item.photos[0] ? (
-                      <Image source={{ uri: item.photos[0].uri }} style={styles.albumCoverImg} />
-                    ) : (
-                      <View style={[styles.albumCoverPlaceholder, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]} />
-                    )}
-                    <View style={[styles.albumOverlay, { 
-                      backgroundColor: isDarkMode ? 'rgba(0,0,0,0.8)' : 'rgba(34,34,34,0.9)',
-                      borderBottomLeftRadius: 24,
-                      borderBottomRightRadius: 24,
-                    }]}>
-                      <Text style={[styles.albumTitle, { color: '#fff' }]}>{item.title}</Text>
-                      <Text style={[styles.albumCount, { color: '#fff' }]}>{item.photos.length} {item.photos.length === 1 ? 'photo' : 'photos'}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-              {filteredAlbums.length === 0 && searchQuery.length > 0 && (
-                <View style={styles.emptySearchState}>
-                  <Ionicons name="search-outline" size={48} color="#ccc" />
-                  <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Albums Found</Text>
-                  <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
-                    No albums match your search "{searchQuery}". Try different keywords.
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
-        </ScrollView>
-
-        {/* Bottom Tab Bar */}
-        <AdminTabBar activeTab="gallery" isDarkMode={isDarkMode} />
-
-        {/* Create Album Modal */}
-        <Modal
-          visible={showCreateModal}
-          animationType="slide"
-          transparent
-          onRequestClose={() => setShowCreateModal(false)}
-        >
-          <View style={[styles.modalOverlay, { backgroundColor: overlayBackground }]}>
-            <View style={[styles.modalContent, { backgroundColor: modalBackground }]}>
-              <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: textColor }]}>Create New Album</Text>
-                <TouchableOpacity 
-                  style={[styles.modalCloseBtn, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F2F2F2' }]}
-                  onPress={() => setShowCreateModal(false)}
-                >
-                  <Ionicons name="close" size={20} color={textColor} />
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.modalScroll}>
-                <TextInput
-                  style={[styles.modalInput, { backgroundColor: searchBackground, color: textColor, borderColor }]}
-                  placeholder="Album Title"
-                  placeholderTextColor={secondaryTextColor}
-                  value={newTitle}
-                  onChangeText={setNewTitle}
-                />
-                
-                <TouchableOpacity 
-                  style={[styles.addPhotosBtn, { backgroundColor: searchBackground, borderColor }]}
-                  onPress={async () => {
-                    const photos = await pickImagesFromLibrary();
-                    setNewPhotos([...newPhotos, ...photos]);
-                  }}
-                >
-                  <Ionicons name="add" size={20} color={secondaryTextColor} />
-                  <Text style={[styles.addPhotosText, { color: textColor }]}>Add Photos</Text>
-                </TouchableOpacity>
-              </View>
-              
-              {newPhotos.length > 0 && (
-                <View style={styles.selectedPhotosContainer}>
-                  <Text style={[styles.selectedPhotosTitle, { color: textColor }]}>Selected Photos ({newPhotos.length})</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {newPhotos.map((photo, index) => (
-                      <View key={index} style={styles.selectedPhotoItem}>
-                        <Image source={{ uri: photo.uri }} style={styles.selectedPhoto} />
-                        <TouchableOpacity 
-                          style={styles.removePhotoBtn}
-                          onPress={() => setNewPhotos(newPhotos.filter((_, i) => i !== index))}
-                        >
-                          <Ionicons name="close" size={16} color="#fff" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-              
-              <View style={styles.modalButtons}>
-                <TouchableOpacity 
-                  style={[styles.cancelBtn, { backgroundColor: searchBackground, borderColor }]} 
-                  onPress={() => {
-                    setShowCreateModal(false);
-                    setNewTitle('');
-                    setNewPhotos([]);
-                  }}
-                >
-                  <Text style={[styles.cancelBtnText, { color: textColor }]}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.createBtn, { 
-                    backgroundColor: newTitle.trim() && newPhotos.length > 0 ? '#3CB371' : (isDarkMode ? '#2A2A2A' : '#E5E5EA'),
-                    opacity: newTitle.trim() && newPhotos.length > 0 ? 1 : 0.6
-                  }]} 
-                  onPress={handleCreateAlbum}
-                  disabled={!newTitle.trim() || newPhotos.length === 0}
-                >
-                  <Text style={[styles.createBtnText, { 
-                    color: newTitle.trim() && newPhotos.length > 0 ? '#fff' : (isDarkMode ? '#666' : '#999')
-                  }]}>Create Album</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+        <View style={[styles.mainContainer, { backgroundColor }]}>
+          {/* Search Bar */}
+          <View style={[styles.searchBarContainer, { backgroundColor: searchBackground }]}>
+            <Ionicons name="search" size={20} color={secondaryTextColor} style={{ marginLeft: 10, marginRight: 4 }} />
+            <TextInput
+              style={[styles.searchBar, { color: textColor }]}
+              placeholder="Search Albums"
+              placeholderTextColor={secondaryTextColor}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              clearButtonMode="while-editing"
+            />
           </View>
-        </Modal>
-      </View>
+
+          {/* Scrollable Content */}
+          <ScrollView 
+            style={styles.scrollContainer}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            bounces={true}
+          >
+            {albums.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="images-outline" size={64} color="#ccc" />
+                <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Albums Created</Text>
+                <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+                  Start by creating your first album to organize and share photos with your team.
+                </Text>
+                <TouchableOpacity 
+                  style={styles.emptyStateButton}
+                  onPress={() => setShowCreateModal(true)}
+                >
+                  <Ionicons name="add" size={20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.emptyStateButtonText}>Create First Album</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.albumGrid}>
+                {filteredAlbums.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[styles.albumCard, { backgroundColor: cardBackground, borderColor }]}
+                    onPress={() => setSelectedAlbumId(item.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.albumCoverBox}>
+                      {item.photos[0] ? (
+                        <Image source={{ uri: item.photos[0].uri }} style={styles.albumCoverImg} />
+                      ) : (
+                        <View style={[styles.albumCoverPlaceholder, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]} />
+                      )}
+                      <View style={[styles.albumOverlay, { 
+                        backgroundColor: isDarkMode ? 'rgba(0,0,0,0.8)' : 'rgba(34,34,34,0.9)',
+                        borderBottomLeftRadius: 24,
+                        borderBottomRightRadius: 24,
+                      }]}>
+                        <Text style={[styles.albumTitle, { color: '#fff' }]}>{item.title}</Text>
+                        <Text style={[styles.albumCount, { color: '#fff' }]}>{item.photos.length} {item.photos.length === 1 ? 'photo' : 'photos'}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+                {filteredAlbums.length === 0 && searchQuery.length > 0 && (
+                  <View style={styles.emptySearchState}>
+                    <Ionicons name="search-outline" size={48} color="#ccc" />
+                    <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Albums Found</Text>
+                    <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+                      No albums match your search "{searchQuery}". Try different keywords.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Bottom Tab Bar */}
+          <AdminTabBar activeTab="gallery" isDarkMode={isDarkMode} />
+
+          {/* Create Album Modal */}
+          <Modal
+            visible={showCreateModal}
+            animationType="slide"
+            transparent
+            onRequestClose={() => setShowCreateModal(false)}
+          >
+            <View style={[styles.modalOverlay, { backgroundColor: overlayBackground }]}>
+              <View style={[styles.modalContent, { backgroundColor: modalBackground }]}>
+                <View style={styles.modalHeader}>
+                  <Text style={[styles.modalTitle, { color: textColor }]}>Create New Album</Text>
+                  <TouchableOpacity 
+                    style={[styles.modalCloseBtn, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F2F2F2' }]}
+                    onPress={() => setShowCreateModal(false)}
+                  >
+                    <Ionicons name="close" size={20} color={textColor} />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.modalScroll}>
+                  <TextInput
+                    style={[styles.modalInput, { backgroundColor: searchBackground, color: textColor, borderColor }]}
+                    placeholder="Album Title"
+                    placeholderTextColor={secondaryTextColor}
+                    value={newTitle}
+                    onChangeText={setNewTitle}
+                  />
+                  
+                  <TouchableOpacity 
+                    style={[styles.addPhotosBtn, { backgroundColor: searchBackground, borderColor }]}
+                    onPress={async () => {
+                      const photos = await pickImagesFromLibrary();
+                      setNewPhotos([...newPhotos, ...photos]);
+                    }}
+                  >
+                    <Ionicons name="add" size={20} color={secondaryTextColor} />
+                    <Text style={[styles.addPhotosText, { color: textColor }]}>Add Photos</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {newPhotos.length > 0 && (
+                  <View style={styles.selectedPhotosContainer}>
+                    <Text style={[styles.selectedPhotosTitle, { color: textColor }]}>Selected Photos ({newPhotos.length})</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      {newPhotos.map((photo, index) => (
+                        <View key={index} style={styles.selectedPhotoItem}>
+                          <Image source={{ uri: photo.uri }} style={styles.selectedPhoto} />
+                          <TouchableOpacity 
+                            style={styles.removePhotoBtn}
+                            onPress={() => setNewPhotos(newPhotos.filter((_, i) => i !== index))}
+                          >
+                            <Ionicons name="close" size={16} color="#fff" />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+                
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity 
+                    style={[styles.cancelBtn, { backgroundColor: searchBackground, borderColor }]} 
+                    onPress={() => {
+                      setShowCreateModal(false);
+                      setNewTitle('');
+                      setNewPhotos([]);
+                    }}
+                  >
+                    <Text style={[styles.cancelBtnText, { color: textColor }]}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.createBtn, { 
+                      backgroundColor: newTitle.trim() && newPhotos.length > 0 ? '#3CB371' : (isDarkMode ? '#2A2A2A' : '#E5E5EA'),
+                      opacity: newTitle.trim() && newPhotos.length > 0 ? 1 : 0.6
+                    }]} 
+                    onPress={handleCreateAlbum}
+                    disabled={!newTitle.trim() || newPhotos.length === 0}
+                  >
+                    <Text style={[styles.createBtnText, { 
+                      color: newTitle.trim() && newPhotos.length > 0 ? '#fff' : (isDarkMode ? '#666' : '#999')
+                    }]}>Create Album</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        </View>
+      </SafeAreaView>
     );
   }
 
   // Create Album View
   if (showCreate) {
     return (
-      <View style={styles.mainContainer}>
-        {/* Unified Admin Header */}
+      <SafeAreaView style={{ flex: 1, backgroundColor }}>
         <AdminHeader title="New Album" />
         {/* Form */}
         <ScrollView 
@@ -369,7 +368,7 @@ export default function GalleryManagement() {
           </View>
         </ScrollView>
         <AdminTabBar activeTab="gallery" />
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -421,9 +420,9 @@ export default function GalleryManagement() {
     const currentAlbum = albums.find(a => a.id === selectedAlbumId);
     if (selectedAlbumId && currentAlbum) {
       return (
-        <View style={styles.mainContainer}>
+        <SafeAreaView style={{ flex: 1, backgroundColor }}>
           <AdminHeader 
-            title={currentAlbum.title}
+            title=""
             rightComponent={
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <TouchableOpacity
@@ -528,7 +527,7 @@ export default function GalleryManagement() {
               </View>
             </KeyboardAvoidingView>
           </Modal>
-        </View>
+        </SafeAreaView>
       );
     }
   }

@@ -98,7 +98,7 @@ export default function AddBookScreen() {
 
   return (
     <ScrollView contentContainerStyle={[styles.scrollContainer, { backgroundColor }]} keyboardShouldPersistTaps="handled">
-      <AdminHeader title="Add New Book" />
+      <AdminHeader title="" />
       <Text style={[styles.subHeader, { color: secondaryTextColor }]}>Add a new book to the MITConnect Library</Text>
       {error ? <Text style={[styles.errorText, { color: '#E74C3C' }]}>{error}</Text> : null}
       {/* Book Information Card */}

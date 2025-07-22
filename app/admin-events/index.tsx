@@ -208,7 +208,7 @@ const AdminEventListScreen: React.FC = () => {
     <View style={[styles.mainContainer, { backgroundColor }]}>
       {/* Unified Admin Header */}
       <AdminHeader 
-        title="Events Management"
+        title=""
         rightComponent={
           <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)}>
             <Ionicons name="add" size={20} color="#fff" />
