@@ -185,7 +185,7 @@ export default function TraineeHome() {
           />
           </>
         )}
-        <Text style={[styles.sectionTitle, { color: textColor }]}>Portal Access</Text>
+        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Portal Access</Text>
         <View style={styles.portalRow}>
           {portalLinks.map(link => (
             <TouchableOpacity
@@ -206,13 +206,13 @@ export default function TraineeHome() {
             </TouchableOpacity>
           ))}
         </View>
-        <Text style={styles.sectionTitle}>Book of the Month</Text>
-        <TouchableOpacity style={styles.featuredBookCard} onPress={() => router.push('/book-details')}>
+        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Book of the Month</Text>
+        <TouchableOpacity style={[styles.featuredBookCard, { backgroundColor: isDarkMode ? '#23272b' : '#fff' }]} onPress={() => router.push('/bookclub')}>
           <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
           <View style={{ flex: 1, marginLeft: 16 }}>
-            <View style={styles.genreChip}><Text style={styles.genreText}>Philosophical Fiction</Text></View>
-            <Text style={[styles.featuredBookTitle, { color: bookTitleColor }]}>The Alchemist</Text>
-            <Text style={[styles.featuredBookAuthor, { color: bookAuthorColor }]}>By Paulo Coelho</Text>
+            <View style={[styles.genreChip, { backgroundColor: isDarkMode ? '#7cae92' : '#A3C9A8' }]}><Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>Philosophical Fiction</Text></View>
+            <Text style={[styles.featuredBookTitle, { color: isDarkMode ? '#fff' : '#222' }]}>The Alchemist</Text>
+            <Text style={[styles.featuredBookAuthor, { color: isDarkMode ? '#fff' : '#888' }]}>By Paulo Coelho</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
               {[1,2,3,4,5].map(i => (
                 <MaterialIcons
@@ -223,11 +223,11 @@ export default function TraineeHome() {
                   style={{ marginRight: 2 }}
                 />
               ))}
-              <Text style={[styles.ratingText, { color: bookRatingColor }]}>4.9</Text>
+              <Text style={[styles.ratingText, { color: isDarkMode ? '#fff' : '#222' }]}>4.9</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-              <Ionicons name="person" size={16} color={secondaryTextColor} style={{ marginRight: 4 }} />
-              <Text style={[styles.recommender, { color: secondaryTextColor }]}>Nizar Naghi</Text>
+              <Ionicons name="person" size={16} color={isDarkMode ? '#9BA1A6' : '#888'} style={{ marginRight: 4 }} />
+              <Text style={[styles.recommender, { color: isDarkMode ? '#9BA1A6' : '#888' }]}>Nizar Naghi</Text>
             </View>
           </View>
         </TouchableOpacity>

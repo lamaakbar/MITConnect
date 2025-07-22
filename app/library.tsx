@@ -3,18 +3,27 @@ import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, SafeAreaView
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useBooks } from '../components/BookContext';
+import { useTheme } from '../components/ThemeContext';
+import { useThemeColor } from '../hooks/useThemeColor';
 
 export default function LibraryScreen() {
   const router = useRouter();
   const { books } = useBooks();
+  const { isDarkMode } = useTheme();
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#eee';
+  const iconColor = useThemeColor({}, 'icon');
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
+      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#222" />
+          <Ionicons name="arrow-back" size={24} color={iconColor} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>MITConnect Library</Text>
+        <Text style={[styles.headerTitle, { color: textColor }]}>MITConnect Library</Text>
         <View style={{ width: 24 }} />
       </View>
       
@@ -23,27 +32,27 @@ export default function LibraryScreen() {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.bookList}
         renderItem={({ item }) => (
-          <View style={styles.bookCard}>
+          <View style={[styles.bookCard, { backgroundColor: cardBackground }]}>
             <Image source={{ uri: item.cover }} style={styles.bookCover} />
             <View style={styles.bookInfo}>
-              <Text style={styles.bookTitle}>{item.title}</Text>
-              <Text style={styles.bookAuthor}>By {item.author}</Text>
+              <Text style={[styles.bookTitle, { color: textColor }]}>{item.title}</Text>
+              <Text style={[styles.bookAuthor, { color: secondaryTextColor }]}>{`By ${item.author}`}</Text>
               <View style={[styles.genreChip, { backgroundColor: item.genreColor }]}>
-                <Text style={styles.genreText}>{item.genre}</Text>
+                <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{item.genre}</Text>
               </View>
             </View>
             <TouchableOpacity 
               style={styles.moreDetailsBtn}
-              onPress={() => router.push('/bookclub')}
+              onPress={() => router.push({ pathname: '/library/[id]/details', params: { id: item.id } })}
             >
-              <Text style={styles.moreDetailsText}>More Details</Text>
+              <Text style={[styles.moreDetailsText, { color: isDarkMode ? '#43C6AC' : '#2196f3' }]}>More Details</Text>
             </TouchableOpacity>
           </View>
         )}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Ionicons name="library-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No books available</Text>
+            <Ionicons name="library-outline" size={64} color={secondaryTextColor} />
+            <Text style={[styles.emptyText, { color: secondaryTextColor }]}>No books available</Text>
           </View>
         }
       />

@@ -79,31 +79,31 @@ export default function BookClubScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#222" />
+          <Ionicons name="arrow-back" size={24} color={iconColor} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Book Club</Text>
+        <Text style={[styles.headerTitle, { color: textColor }]}>Book Club</Text>
         <TouchableOpacity onPress={toggleTheme} style={styles.themeToggleBtn}>
-          <Ionicons name={isDarkMode ? 'moon' : 'sunny'} size={24} color={iconColor} />
+          <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={24} color={iconColor} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Featured Book Section */}
-        <Text style={styles.sectionTitle}>
+        <Text style={[styles.sectionTitle, { color: textColor }]}>
           <Ionicons name="star" size={20} color="#1abc9c" /> Featured Book This Week
         </Text>
-        <View style={styles.featuredCard}>
+        <View style={[styles.featuredCard, { backgroundColor: cardBackground }]}> {/* Themed card */}
           <View style={{ flexDirection: 'row' }}>
             <Image source={{ uri: FEATURED_BOOK.cover }} style={styles.featuredCover} />
             <View style={{ flex: 1, marginLeft: 16 }}>
-              <View style={styles.genreChip}>
-                <Text style={styles.genreText}>{FEATURED_BOOK.genre}</Text>
+              <View style={[styles.genreChip, { backgroundColor: isDarkMode ? '#7cae92' : '#A3C9A8' }]}>
+                <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{FEATURED_BOOK.genre}</Text>
               </View>
-              <Text style={styles.featuredTitle}>{FEATURED_BOOK.title}</Text>
-              <Text style={styles.featuredAuthor}>By {FEATURED_BOOK.author}</Text>
+              <Text style={[styles.featuredTitle, { color: isDarkMode ? '#fff' : textColor }]}>{FEATURED_BOOK.title}</Text>
+              <Text style={[styles.featuredAuthor, { color: isDarkMode ? '#fff' : '#888' }]}>By {FEATURED_BOOK.author}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                 {[1,2,3,4,5].map(i => (
                   <MaterialIcons
@@ -114,45 +114,40 @@ export default function BookClubScreen() {
                     style={{ marginRight: 2 }}
                   />
                 ))}
-                <Text style={styles.ratingText}>{FEATURED_BOOK.rating}</Text>
+                <Text style={[styles.ratingText, { color: isDarkMode ? '#fff' : textColor }]}>{FEATURED_BOOK.rating}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                <Ionicons name="person" size={16} color="#888" style={{ marginRight: 4 }} />
-                <Text style={styles.recommender}>{FEATURED_BOOK.recommender}</Text>
+                <Ionicons name="person" size={16} color={isDarkMode ? '#9BA1A6' : '#888'} style={{ marginRight: 4 }} />
+                <Text style={[styles.recommender, { color: isDarkMode ? '#fff' : '#888' }]}>{FEATURED_BOOK.recommender}</Text>
               </View>
             </View>
           </View>
-          
           {/* About This Book */}
-          <View style={styles.aboutBox}>
-            <Text style={styles.aboutLabel}>About This Book</Text>
-            <Text style={styles.aboutText}>{FEATURED_BOOK.description}</Text>
+          <View style={[styles.aboutBox, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed about box */}
+            <Text style={[styles.aboutLabel, { color: textColor }]}>About This Book</Text>
+            <Text style={[styles.aboutText, { color: isDarkMode ? '#ccc' : '#444' }]}>{FEATURED_BOOK.description}</Text>
           </View>
-          
           {/* Stats Row */}
           <View style={styles.statsRow}>
-            <View style={styles.statCardNewSmall}>
+            <View style={[styles.statCardNewSmall, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed stat card */}
               <Ionicons name="person-outline" size={30} color="#1abc9c" style={{ marginBottom: 4 }} />
-              <Text style={styles.statNameBold}>Nizar Naghi</Text>
-              <Text style={styles.statLabelNewSmall}>Recommended by</Text>
+              <Text style={[styles.statNameBold, { color: textColor }]}>Nizar Naghi</Text>
+              <Text style={[styles.statLabelNewSmall, { color: isDarkMode ? '#aaa' : '#555' }]}>Recommended by</Text>
             </View>
-            <View style={styles.statCardNewSmall}>
+            <View style={[styles.statCardNewSmall, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed stat card */}
               <Ionicons name="book-outline" size={30} color="#2979ff" style={{ marginBottom: 4 }} />
-              <Text style={styles.statNumberSmall}>44</Text>
-              <Text style={styles.statLabelNewSmall}>Book</Text>
+              <Text style={[styles.statNumberSmall, { color: textColor }]}>44</Text>
+              <Text style={[styles.statLabelNewSmall, { color: isDarkMode ? '#aaa' : '#555' }]}>Book</Text>
             </View>
-            <View style={styles.statCardNewSmall}>
+            <View style={[styles.statCardNewSmall, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed stat card */}
               <Ionicons name="star-outline" size={30} color="#FFA726" style={{ marginBottom: 4 }} />
-              <Text style={styles.statNumberSmall}>4.9</Text>
-              <Text style={styles.statLabelNewSmall}>Rating</Text>
+              <Text style={[styles.statNumberSmall, { color: textColor }]}>4.9</Text>
+              <Text style={[styles.statLabelNewSmall, { color: isDarkMode ? '#aaa' : '#555' }]}>Rating</Text>
             </View>
           </View>
-          
           {/* Rate This Book */}
-          <View style={styles.rateBox}>
-            <Text style={styles.rateLabel}>
-              <MaterialIcons name="star-border" size={18} color="#F4B400" /> Rate This Book
-            </Text>
+          <View style={[styles.rateBox, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed rate box */}
+            <Text style={[styles.rateLabel, { color: textColor }]}> <MaterialIcons name="star-border" size={18} color="#F4B400" /> Rate This Book </Text>
             <View style={{ flexDirection: 'row', marginTop: 6 }}>
               {[1,2,3,4,5].map(i => (
                 <TouchableOpacity key={i} onPress={() => setUserRating(i)}>
@@ -166,14 +161,14 @@ export default function BookClubScreen() {
               ))}
             </View>
           </View>
-
           {/* Main Comment Section */}
           <View style={styles.commentSection}>
-            <Text style={styles.commentTitle}>Comments</Text>
+            <Text style={[styles.commentTitle, { color: textColor }]}>Comments</Text>
             <View style={styles.commentInputRow}>
               <TextInput
-                style={styles.commentInputArea}
+                style={[styles.commentInputArea, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9', color: textColor, borderColor: borderColor }]}
                 placeholder="Write a comment..."
+                placeholderTextColor={isDarkMode ? '#888' : '#aaa'}
                 value={mainCommentInput}
                 onChangeText={setMainCommentInput}
                 multiline
@@ -182,7 +177,7 @@ export default function BookClubScreen() {
               />
             </View>
             <TouchableOpacity
-              style={styles.commentPostBtn}
+              style={[styles.commentPostBtn, { backgroundColor: isDarkMode ? '#23272b' : '#e6f0fe' }]}
               onPress={() => {
                 if (mainCommentInput.trim()) {
                   setMainComments([mainCommentInput.trim(), ...mainComments]);
@@ -191,70 +186,65 @@ export default function BookClubScreen() {
               }}
               activeOpacity={0.8}
             >
-              <Text style={styles.commentPostBtnText}>Post Comment</Text>
+              <Text style={[styles.commentPostBtnText, { color: isDarkMode ? '#43C6AC' : '#2196f3' }]}>Post Comment</Text>
             </TouchableOpacity>
-            <Text style={styles.commentSubtitle}>Recent Comments</Text>
+            <Text style={[styles.commentSubtitle, { color: textColor }]}>Recent Comments</Text>
             <View style={styles.commentList}>
               {mainComments.length === 0 ? (
-                <Text style={styles.noComments}>No comments yet. Be the first to comment!</Text>
+                <Text style={[styles.noComments, { color: isDarkMode ? '#aaa' : '#888' }]}>No comments yet. Be the first to comment!</Text>
               ) : (
                 mainComments.map((c, idx) => (
-                  <View key={idx} style={styles.commentBubble}>
-                    <Text style={styles.commentText}>{c}</Text>
+                  <View key={idx} style={[styles.commentBubble, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed bubble */}
+                    <Text style={[styles.commentText, { color: textColor }]}>{c}</Text>
                   </View>
                 ))
               )}
             </View>
           </View>
         </View>
-
         {/* Recent Selections */}
         <View style={styles.recentHeaderRow}>
-          <Text style={styles.sectionTitle}>
-            <Feather name="clock" size={16} color="#3AC569" /> Recent Selections
-          </Text>
+          <Text style={[styles.sectionTitle, { color: textColor }]}> <Feather name="clock" size={16} color="#3AC569" /> Recent Selections </Text>
           <TouchableOpacity
-            style={styles.goLibraryBtnSmall}
-            onPress={() => router.push('/books-management')}
+            style={[styles.goLibraryBtnSmall, { backgroundColor: isDarkMode ? '#23272b' : '#e6f0fe' }]}
+            onPress={() => router.push('/library')}
             activeOpacity={0.7}
           >
-            <Text style={styles.goLibraryBtnTextSmall}>Go to MITC Library</Text>
+            <Text style={[styles.goLibraryBtnTextSmall, { color: isDarkMode ? '#43C6AC' : '#2196f3' }]}>Go to MITC Library</Text>
           </TouchableOpacity>
         </View>
-        
         <FlatList
           data={recentBooks}
           keyExtractor={item => item.id}
           scrollEnabled={false}
           renderItem={({ item }) => (
-            <View style={styles.recentCard}>
+            <View style={[styles.recentCard, { backgroundColor: cardBackground }]}> {/* Themed card */}
               <Image source={{ uri: item.cover }} style={styles.recentCover} />
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.recentTitle}>{item.title}</Text>
-                <Text style={styles.recentAuthor}>By {item.author}</Text>
-                <View style={[styles.genreChip, { alignSelf: 'flex-start', marginTop: 4, backgroundColor: item.genreColor }]}> 
-                  <Text style={styles.genreText}>{item.genre}</Text>
+                <Text style={[styles.recentTitle, { color: textColor }]}>{item.title}</Text>
+                <Text style={[styles.recentAuthor, { color: isDarkMode ? '#fff' : '#888' }]}>By {item.author}</Text>
+                <View style={[styles.genreChip, { alignSelf: 'flex-start', marginTop: 4, backgroundColor: item.genreColor }]}>
+                  <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{item.genre}</Text>
                 </View>
               </View>
               <TouchableOpacity
                 style={{ alignSelf: 'center' }}
-                onPress={() => router.push('/book-details')}
+                onPress={() => router.push({ pathname: '/library/[id]/details', params: { id: item.id } })}
                 activeOpacity={0.7}
               >
-                <Text style={styles.moreDetails}>More Details</Text>
+                <Text style={[styles.moreDetails, { color: isDarkMode ? '#43C6AC' : '#2196f3' }]}>More Details</Text>
               </TouchableOpacity>
             </View>
           )}
           ListEmptyComponent={
-            <Text style={{ color: '#888', textAlign: 'center', marginTop: 16 }}>
+            <Text style={{ color: isDarkMode ? '#aaa' : '#888', textAlign: 'center', marginTop: 16 }}>
               No recent selections.
             </Text>
           }
         />
       </ScrollView>
-
       {/* Bottom Navigation Bar */}
-      <View style={styles.bottomNav}>
+      <View style={[styles.bottomNav, { backgroundColor: cardBackground, borderTopColor: borderColor }]}> {/* Themed nav */}
         <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('home'); router.push('/trainee-home'); }}>
           <Ionicons name="home" size={28} color={activeTab === 'home' ? '#43C6AC' : '#bbb'} />
         </TouchableOpacity>

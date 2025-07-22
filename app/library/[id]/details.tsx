@@ -3,22 +3,31 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, TextInput,
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useBooks } from '../../../components/BookContext';
+import { useTheme } from '../../../components/ThemeContext';
+import { useThemeColor } from '../../../hooks/useThemeColor';
 
 export default function LibraryBookDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { books } = useBooks();
+  const { isDarkMode } = useTheme();
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#eee';
+  const iconColor = useThemeColor({}, 'icon');
   const book = books.find(b => b.id === id);
   const [comments, setComments] = useState<string[]>([]);
   const [commentInput, setCommentInput] = useState('');
 
   if (!book) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor }]}> {/* Themed background */}
         <View style={styles.container}>
-          <Text style={styles.errorText}>Book not found.</Text>
+          <Text style={[styles.errorText, { color: '#E74C3C' }]}>Book not found.</Text>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#222" />
+            <Ionicons name="arrow-back" size={24} color={iconColor} />
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -32,64 +41,61 @@ export default function LibraryBookDetailsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 32 }}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}> {/* Themed background */}
+      <ScrollView style={[styles.container, { backgroundColor }]} contentContainerStyle={{ paddingBottom: 32 }}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}> {/* Themed header */}
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#222" />
+            <Ionicons name="arrow-back" size={24} color={iconColor} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Book Details</Text>
+          <Text style={[styles.headerTitle, { color: textColor }]}>Book Details</Text>
           <View style={{ width: 24 }} />
         </View>
-
         {/* Book Details Card */}
-        <View style={styles.bookCard}>
+        <View style={[styles.bookCard, { backgroundColor: cardBackground }]}> {/* Themed card */}
           <View style={{ flexDirection: 'row' }}>
             <Image source={{ uri: book.cover }} style={styles.bookCover} />
             <View style={{ flex: 1, marginLeft: 16 }}>
               <View style={[styles.genreChip, { backgroundColor: book.genreColor }]}> 
-                <Text style={styles.genreText}>{book.genre}</Text>
+                <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{book.genre}</Text>
               </View>
-              <Text style={styles.bookTitle}>{book.title}</Text>
-              <Text style={styles.bookAuthor}>By {book.author}</Text>
+              <Text style={[styles.bookTitle, { color: textColor }]}>{book.title}</Text>
+              <Text style={[styles.bookAuthor, { color: secondaryTextColor }]}>{`By ${book.author}`}</Text>
             </View>
           </View>
-
           {/* About This Book */}
           {book.description && (
-            <View style={styles.aboutBox}>
-              <Text style={styles.aboutLabel}>About This Book</Text>
-              <Text style={styles.aboutText}>{book.description}</Text>
+            <View style={[styles.aboutBox, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed about box */}
+              <Text style={[styles.aboutLabel, { color: textColor }]}>About This Book</Text>
+              <Text style={[styles.aboutText, { color: isDarkMode ? '#ccc' : '#444' }]}>{book.description}</Text>
             </View>
           )}
-
           {/* Stats Row */}
           <View style={styles.statsRow}>
-            <View style={styles.statCard}>
+            <View style={[styles.statCard, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed stat card */}
               <Ionicons name="person-outline" size={30} color="#1abc9c" style={{ marginBottom: 4 }} />
-              <Text style={styles.statNameBold}>Nizar Naghi</Text>
-              <Text style={styles.statLabel}>Recommended by</Text>
+              <Text style={[styles.statNameBold, { color: textColor }]}>Nizar Naghi</Text>
+              <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Recommended by</Text>
             </View>
-            <View style={styles.statCard}>
+            <View style={[styles.statCard, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed stat card */}
               <Ionicons name="book-outline" size={30} color="#2979ff" style={{ marginBottom: 4 }} />
-              <Text style={styles.statNumber}>44</Text>
-              <Text style={styles.statLabel}>Book</Text>
+              <Text style={[styles.statNumber, { color: textColor }]}>44</Text>
+              <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Book</Text>
             </View>
-            <View style={styles.statCard}>
+            <View style={[styles.statCard, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed stat card */}
               <Ionicons name="star-outline" size={30} color="#FFA726" style={{ marginBottom: 4 }} />
-              <Text style={styles.statNumber}>4.9</Text>
-              <Text style={styles.statLabel}>Rating</Text>
+              <Text style={[styles.statNumber, { color: textColor }]}>4.9</Text>
+              <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Rating</Text>
             </View>
           </View>
-
           {/* Comments Section */}
           <View style={styles.commentSection}>
-            <Text style={styles.commentTitle}>Comments</Text>
+            <Text style={[styles.commentTitle, { color: textColor }]}>Comments</Text>
             <View style={styles.commentInputRow}>
               <TextInput
-                style={styles.commentInputArea}
+                style={[styles.commentInputArea, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9', color: textColor, borderColor: borderColor }]}
                 placeholder="Write a comment..."
+                placeholderTextColor={isDarkMode ? '#888' : '#aaa'}
                 value={commentInput}
                 onChangeText={setCommentInput}
                 multiline
@@ -98,20 +104,20 @@ export default function LibraryBookDetailsScreen() {
               />
             </View>
             <TouchableOpacity
-              style={styles.commentPostBtn}
+              style={[styles.commentPostBtn, { backgroundColor: isDarkMode ? '#23272b' : '#e6f0fe' }]}
               onPress={handleAddComment}
               activeOpacity={0.8}
             >
-              <Text style={styles.commentPostBtnText}>Post Comment</Text>
+              <Text style={[styles.commentPostBtnText, { color: isDarkMode ? '#43C6AC' : '#2196f3' }]}>Post Comment</Text>
             </TouchableOpacity>
-            <Text style={styles.commentSubtitle}>Recent Comments</Text>
+            <Text style={[styles.commentSubtitle, { color: textColor }]}>Recent Comments</Text>
             <View style={styles.commentList}>
               {comments.length === 0 ? (
-                <Text style={styles.noComments}>No comments yet. Be the first to comment!</Text>
+                <Text style={[styles.noComments, { color: secondaryTextColor }]}>No comments yet. Be the first to comment!</Text>
               ) : (
                 comments.map((c, idx) => (
-                  <View key={idx} style={styles.commentBubble}>
-                    <Text style={styles.commentText}>{c}</Text>
+                  <View key={idx} style={[styles.commentBubble, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed bubble */}
+                    <Text style={[styles.commentText, { color: textColor }]}>{c}</Text>
                   </View>
                 ))
               )}
