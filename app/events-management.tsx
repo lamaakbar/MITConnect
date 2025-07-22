@@ -1,10 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useTheme } from '../components/ThemeContext';
 import AdminTabBar from '../components/AdminTabBar';
 import AdminHeader from '../components/AdminHeader';
+import { Colors } from '@/constants/Colors';
+import { ThemedView } from '../components/ThemedView';
+import { ThemedText } from '../components/ThemedText';
 
 const mockEvents = [
   {
@@ -43,21 +46,99 @@ const mockEvents = [
 ];
 
 export default function EventsManagement() {
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
-  
+  const { isDarkMode } = useTheme();
+  const [selectedTab, setSelectedTab] = useState('All');
+  const [showAddModal, setShowAddModal] = useState(false); // For future add event modal
+  const FILTERS = ['All', 'Upcoming', 'Past'];
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
-  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
-  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
-  const borderColor = isDarkMode ? '#2A2A2A' : '#E0E0E0';
+  const cardBackground = isDarkMode ? '#23272b' : '#fff';
+  const secondaryTextColor = useThemeColor({}, 'text');
+  const borderColor = useThemeColor({}, 'background');
+  const iconBg = isDarkMode ? Colors.dark.icon : Colors.light.icon;
+  const iconColor = isDarkMode ? Colors.dark.tint : Colors.light.tint;
+  // Inline theme-aware colors for search bar and tabs
+  const tabBg = isDarkMode ? '#23272b' : '#F2F4F7';
+  const tabActiveBg = '#3CB371';
+  const tabText = isDarkMode ? '#ECEDEE' : '#222';
+  const tabInactiveText = isDarkMode ? '#9BA1A6' : '#222';
+  const searchBg = isDarkMode ? '#23272b' : '#fff';
+  const searchPlaceholder = isDarkMode ? '#9BA1A6' : '#888';
+
+  const filteredEvents = mockEvents.filter(event => {
+    if (selectedTab === 'All') return true;
+    // Add your logic for 'Upcoming' and 'Past' here, e.g. by event.date
+    // For now, just return false for demonstration
+    return false;
+  });
+
+  // Floating action button for adding event (FAB)
+  const AddEventFAB = (
+    <TouchableOpacity
+      onPress={() => setShowAddModal(true)}
+      style={{
+        position: 'absolute',
+        right: 20,
+        bottom: 84,
+        backgroundColor: '#3CB371',
+        borderRadius: 30,
+        width: 60,
+        height: 60,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 10,
+        zIndex: 100,
+      }}
+      accessibilityLabel="Add Event"
+      activeOpacity={0.85}
+    >
+      <Ionicons name="add" size={34} color="#fff" />
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor }}>
       <AdminHeader title="" />
-      {/* Main content */}
-      <View style={[styles.container, { backgroundColor, flex: 1 }]}>
+      <View style={[styles.container, { backgroundColor, flex: 1 }]}> 
+        {/* Search Bar - all styles inline */}
+        <ThemedView style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 12, margin: 16, paddingHorizontal: 12, height: 44 }}>
+          <Ionicons name="search" size={20} color={searchPlaceholder} style={{ marginRight: 8 }} />
+          <ThemedText style={{ color: searchPlaceholder, fontSize: 16 }}>Search events</ThemedText>
+        </ThemedView>
+        {/* Filter Tabs - all styles inline */}
+        <ThemedView style={{ flexDirection: 'row', marginHorizontal: 16, marginBottom: 16 }}>
+          {FILTERS.map((filter) => (
+            <ThemedView
+              key={filter}
+              style={{
+                flex: 1,
+                backgroundColor: selectedTab === filter ? tabActiveBg : tabBg,
+                borderRadius: 12,
+                marginRight: filter !== 'Past' ? 8 : 0,
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: 44,
+              }}
+            >
+              <TouchableOpacity
+                style={{ flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}
+                onPress={() => setSelectedTab(filter)}
+                activeOpacity={0.8}
+              >
+                <ThemedText style={{
+                  color: selectedTab === filter ? '#fff' : tabInactiveText,
+                  fontWeight: 'bold',
+                  fontSize: 16,
+                }}>{filter}</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+          ))}
+        </ThemedView>
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 100 }}
@@ -65,43 +146,38 @@ export default function EventsManagement() {
           bounces={true}
         >
           {/* Events List */}
-          {mockEvents.map((event, index) => (
-            <TouchableOpacity 
-              key={event.id} 
-              style={[styles.eventCard, { backgroundColor: cardBackground, borderColor }]}
-              activeOpacity={0.7}
-            >
-              <View style={styles.eventHeader}>
-                <View style={[styles.eventIconContainer, { backgroundColor: isDarkMode ? 'rgba(60, 179, 113, 0.2)' : 'rgba(60, 179, 113, 0.1)' }]}>
-                  <Ionicons name="calendar-outline" size={24} color={isDarkMode ? '#3CB371' : '#004080'} />
-                </View>
-                <View style={styles.eventInfo}>
-                  <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
-                  <Text style={[styles.attendeeCount, { color: secondaryTextColor }]}>
-                    {event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={secondaryTextColor} />
-              </View>
-              
-              <View style={styles.attendeesSection}>
-                <Text style={[styles.attendeesTitle, { color: textColor }]}>Attendees:</Text>
-                {event.attendees.length === 0 ? (
-                  <Text style={[styles.noAttendees, { color: secondaryTextColor }]}>No attendees yet.</Text>
-                ) : (
-                  <View style={styles.attendeesList}>
-                    {event.attendees.map((name, idx) => (
-                      <View key={idx} style={styles.attendeeItem}>
-                        <View style={[styles.attendeeAvatar, { backgroundColor: isDarkMode ? '#3CB371' : '#004080' }]}>
-                          <Text style={styles.attendeeInitial}>{name.charAt(0)}</Text>
-                        </View>
-                        <Text style={[styles.attendeeName, { color: textColor }]}>{name}</Text>
-                      </View>
-                    ))}
+          {filteredEvents.map((event, index) => (
+            <ThemedView key={event.id} style={[styles.eventCard, { backgroundColor: cardBackground, borderColor }]}> 
+              <TouchableOpacity activeOpacity={0.7}>
+                <View style={styles.eventHeader}>
+                  <View style={[styles.eventIconContainer, { backgroundColor: iconBg }]}> 
+                    <Ionicons name="calendar-outline" size={24} color={iconColor} />
                   </View>
-                )}
-              </View>
-            </TouchableOpacity>
+                  <View style={styles.eventInfo}>
+                    <ThemedText style={[styles.eventTitle]}>{event.title}</ThemedText>
+                    <ThemedText style={[styles.attendeeCount]}> {event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}</ThemedText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={secondaryTextColor} />
+                </View>
+                <View style={styles.attendeesSection}>
+                  <ThemedText style={[styles.attendeesTitle]}>Attendees:</ThemedText>
+                  {event.attendees.length === 0 ? (
+                    <ThemedText style={[styles.noAttendees]}>No attendees yet.</ThemedText>
+                  ) : (
+                    <View style={styles.attendeesList}>
+                      {event.attendees.map((name, idx) => (
+                        <View key={idx} style={styles.attendeeItem}>
+                          <View style={[styles.attendeeAvatar, { backgroundColor: iconBg }]}> 
+                            <ThemedText style={styles.attendeeInitial}>{name.charAt(0)}</ThemedText>
+                          </View>
+                          <ThemedText style={[styles.attendeeName]}>{name}</ThemedText>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            </ThemedView>
           ))}
           {mockEvents.length === 0 && (
             <View style={styles.emptyState}>
@@ -110,8 +186,10 @@ export default function EventsManagement() {
             </View>
           )}
         </ScrollView>
-        <AdminTabBar activeTab="events" isDarkMode={isDarkMode} />
+        <AdminTabBar activeTab="events" />
+        {AddEventFAB}
       </View>
+      {/* Future: Add Event Modal can go here, controlled by showAddModal */}
     </SafeAreaView>
   );
 }

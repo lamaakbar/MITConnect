@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal,
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useTheme } from '../../components/ThemeContext';
 import AdminTabBar from '../../components/AdminTabBar';
 import AdminHeader from '../../components/AdminHeader';
 
@@ -25,8 +26,7 @@ const REGISTRATIONS: any[] = [];
 const OVERVIEW_TRAINEES: any[] = [];
 
 export default function TraineeDashboard() {
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
+  const { isDarkMode } = useTheme();
   
   const [selectedTab, setSelectedTab] = useState('Dashboard');
   const [search, setSearch] = useState('');
