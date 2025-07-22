@@ -418,6 +418,19 @@ export default function TraineeHub() {
   const borderColor = isDarkMode ? '#2A2A2A' : '#F2F2F7';
   const iconColor = useThemeColor({}, 'icon');
 
+  // Custom dark mode palette
+  const darkBg = '#181C20';
+  const darkCard = '#23272b';
+  const darkBorder = '#2D333B';
+  const darkText = '#F3F6FA';
+  const darkSecondary = '#AEB6C1';
+  const darkTab = '#20232A';
+  const darkTabActive = '#3CB6E3';
+  const darkTabInactive = '#23272b';
+  const darkInput = '#23272b';
+  const darkInputBorder = '#2D333B';
+  const darkHighlight = '#43C6AC';
+
   // Generate weekPlan based on overallFrom/To
   React.useEffect(() => {
     if (overallFrom && overallTo) {
@@ -521,136 +534,145 @@ export default function TraineeHub() {
   const progress = dashboardPlan.length > 0 ? Math.round((completedWeeks / dashboardPlan.length) * 100) : 0;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: isDarkMode ? darkCard : cardBackground }}>
+      <View style={[styles.header, { backgroundColor: isDarkMode ? darkCard : cardBackground, borderBottomColor: isDarkMode ? darkBorder : borderColor }] }>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
           <Ionicons name="arrow-back" size={24} color={iconColor} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Trainee Hub</Text>
-        <TouchableOpacity onPress={toggleTheme} style={{ marginLeft: 8 }}>
-          <Ionicons name={isDarkMode ? 'moon' : 'sunny'} size={22} color={iconColor} />
-        </TouchableOpacity>
+        <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
+          MIT<Text style={{ color: darkHighlight }}>Connect</Text>
+        </Text>
+        <View style={{ width: 32 }} />
       </View>
-      <View style={styles.tabRow}>
+      <View style={[styles.tabRow, { backgroundColor: isDarkMode ? darkTab : '#F2F2F7' }] }>
         {['Departments', 'Registration', 'Dashboard'].map(t => (
           <TouchableOpacity
             key={t}
-            style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
+            style={[styles.tabBtn, {
+              backgroundColor: isDarkMode
+                ? (tab === t ? darkTabActive : darkTabInactive)
+                : (tab === t ? '#B2E6F7' : undefined)
+            }]}
             onPress={() => setTab(t as 'Departments' | 'Registration' | 'Dashboard')}
           >
-            <Text style={[styles.tabBtnText, tab === t && styles.tabBtnTextActive]}>{t}</Text>
+            <Text style={{
+              color: isDarkMode
+                ? (tab === t ? darkText : darkSecondary)
+                : (tab === t ? '#3CB6E3' : '#222'),
+              fontWeight: '600',
+              fontSize: 15,
+            }}>{t}</Text>
           </TouchableOpacity>
         ))}
       </View>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView style={{ flex: 1, backgroundColor: isDarkMode ? darkBg : backgroundColor }} contentContainerStyle={{ paddingBottom: 32 }}>
         {tab === 'Departments' && (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
             {/* Welcome message and visuals from Welcome screen */}
             <View style={{ alignItems: 'center', marginTop: 24, marginBottom: 16 }}>
               {/* You can add your logo or illustration here if needed */}
-              <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#222', marginBottom: 8 }}>Trainee Hub</Text>
-              <Text style={{ color: '#888', fontSize: 15, marginBottom: 8 }}>Lets start your Journey!</Text>
+              <Text style={{ fontWeight: 'bold', fontSize: 22, marginBottom: 18, textAlign: 'center', color: isDarkMode ? darkHighlight : '#43C6AC' }}>Trainee Hub</Text>
+              <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 15, marginBottom: 8 }}>Lets start your Journey!</Text>
             </View>
             {/* Department Cards - keep all text and headlines as in Welcome screen, but remove select/continue buttons */}
             <View style={{ marginBottom: 24 }}>
-              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: '#fff' }}>
-                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#222', marginBottom: 4 }}>IT Governance and Architecture</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>responsible for ensuring that IT strategies align with the overall business goals of the organization, it sets policies, frameworks, and standards to guide technology-related decisions.</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Suitable Majors</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Computer Science, Software Engineering, Information Technology</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Tools Used</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>ISM OpenPages, OneTrust, LeanIX, MEGA HOPEX</Text>
+              <View style={{ borderWidth: 1, borderColor: isDarkMode ? darkBorder : '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: isDarkMode ? darkCard : cardBackground }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: isDarkMode ? darkText : '#222', marginBottom: 4 }}>IT Governance and Architecture</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 8 }}>responsible for ensuring that IT strategies align with the overall business goals of the organization, it sets policies, frameworks, and standards to guide technology-related decisions.</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: isDarkMode ? darkText : '#222', marginBottom: 2 }}>Suitable Majors</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 2 }}>Computer Science, Software Engineering, Information Technology</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: isDarkMode ? darkText : '#222', marginBottom: 2 }}>Tools Used</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 2 }}>ISM OpenPages, OneTrust, LeanIX, MEGA HOPEX</Text>
               </View>
-              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: '#fff' }}>
-                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#222', marginBottom: 4 }}>Enterprise Project Delivery</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>Enterprise Project Delivery is responsible for managing and delivering strategic, regulatory, and enhancement projects across the organization. EPD ensures that all projects are executed on time, within scope, and with high quality.</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Suitable Majors</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Tools Used</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Clarity PPM, Jira, Excel</Text>
+              <View style={{ borderWidth: 1, borderColor: isDarkMode ? darkBorder : '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: isDarkMode ? darkCard : cardBackground }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: isDarkMode ? darkText : '#222', marginBottom: 4 }}>Enterprise Project Delivery</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 8 }}>Enterprise Project Delivery is responsible for managing and delivering strategic, regulatory, and enhancement projects across the organization. EPD ensures that all projects are executed on time, within scope, and with high quality.</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: isDarkMode ? darkText : '#222', marginBottom: 2 }}>Suitable Majors</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: isDarkMode ? darkText : '#222', marginBottom: 2 }}>Tools Used</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 2 }}>Clarity PPM, Jira, Excel</Text>
               </View>
-              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: '#fff' }}>
-                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#222', marginBottom: 4 }}>Development and Testing</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>The Development department is in charge of building and maintaining software applications and systems. Developers work on coding, debugging, testing, and deploying solutions that meet business requirements.</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Suitable Majors</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Tools Used</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Visual Studio Code, Eclipse, Android Studio</Text>
+              <View style={{ borderWidth: 1, borderColor: isDarkMode ? darkBorder : '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: isDarkMode ? darkCard : cardBackground }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: isDarkMode ? darkText : '#222', marginBottom: 4 }}>Development and Testing</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 8 }}>The Development department is in charge of building and maintaining software applications and systems. Developers work on coding, debugging, testing, and deploying solutions that meet business requirements.</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: isDarkMode ? darkText : '#222', marginBottom: 2 }}>Suitable Majors</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering, Computer Science, Information Technology</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: isDarkMode ? darkText : '#222', marginBottom: 2 }}>Tools Used</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 2 }}>Visual Studio Code, Eclipse, Android Studio</Text>
               </View>
-              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: '#fff' }}>
-                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#222', marginBottom: 4 }}>Production</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>The Production department manages the live IT environment, ensuring applications and services are deployed effectively and run smoothly, securely, and with high availability to support business operations.</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Suitable Majors</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering, Data Science, Computer Science</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Tools Used</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>OBIEE, Cognos, VMware, Linux, SQL Developer</Text>
+              <View style={{ borderWidth: 1, borderColor: isDarkMode ? darkBorder : '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: isDarkMode ? darkCard : cardBackground }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: isDarkMode ? darkText : '#222', marginBottom: 4 }}>Production</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 8 }}>The Production department manages the live IT environment, ensuring applications and services are deployed effectively and run smoothly, securely, and with high availability to support business operations.</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: isDarkMode ? darkText : '#222', marginBottom: 2 }}>Suitable Majors</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering, Data Science, Computer Science</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: isDarkMode ? darkText : '#222', marginBottom: 2 }}>Tools Used</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 2 }}>OBIEE, Cognos, VMware, Linux, SQL Developer</Text>
               </View>
-              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: '#fff' }}>
-                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#222', marginBottom: 4 }}>IT Services</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>Handles technical support for all users across the organization. Reviews software issues, installs apps, and applies updates. Ensures systems run efficiently as part of the core IT infrastructure.</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Suitable Majors</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Tools Used</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>SCCM, Trend Micro, next think</Text>
+              <View style={{ borderWidth: 1, borderColor: isDarkMode ? darkBorder : '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: isDarkMode ? darkCard : cardBackground }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: isDarkMode ? darkText : '#222', marginBottom: 4 }}>IT Services</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 8 }}>Handles technical support for all users across the organization. Reviews software issues, installs apps, and applies updates. Ensures systems run efficiently as part of the core IT infrastructure.</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: isDarkMode ? darkText : '#222', marginBottom: 2 }}>Suitable Majors</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering, Computer Science, Information Technology</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: isDarkMode ? darkText : '#222', marginBottom: 2 }}>Tools Used</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 2 }}>SCCM, Trend Micro, next think</Text>
               </View>
-              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: '#fff' }}>
-                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#222', marginBottom: 4 }}>IT Transformation</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>Handles technical support for all users across the organization. Reviews software issues, installs apps, and applies updates. Ensures systems run efficiently as part of the core IT infrastructure.</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Suitable Majors</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering, Computer Science, Information Technology</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Tools Used</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Studio, Android, Netbeans</Text>
+              <View style={{ borderWidth: 1, borderColor: isDarkMode ? darkBorder : '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: isDarkMode ? darkCard : cardBackground }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: isDarkMode ? darkText : '#222', marginBottom: 4 }}>IT Transformation</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 8 }}>Handles technical support for all users across the organization. Reviews software issues, installs apps, and applies updates. Ensures systems run efficiently as part of the core IT infrastructure.</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: isDarkMode ? darkText : '#222', marginBottom: 2 }}>Suitable Majors</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 2 }}>Software Engineering, Computer Science, Information Technology</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: isDarkMode ? darkText : '#222', marginBottom: 2 }}>Tools Used</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 2 }}>Studio, Android, Netbeans</Text>
               </View>
-              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: '#fff' }}>
-                <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#222', marginBottom: 4 }}>Cyber Security</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>This department focuses on protecting the bank’s digital infrastructure, ensuring secure systems, and defending against cyber threats.</Text>
-                <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Tools Used</Text>
-                <Text style={{ color: '#888', fontSize: 13, marginBottom: 2 }}>Splunk, Wireshark, Burp Suite, Kali Linux, Nessus</Text>
+              <View style={{ borderWidth: 1, borderColor: isDarkMode ? darkBorder : '#B2E6F7', borderRadius: 12, marginHorizontal: 18, marginBottom: 18, padding: 16, backgroundColor: isDarkMode ? darkCard : cardBackground }}>
+                <Text style={{ fontWeight: 'bold', fontSize: 16, color: isDarkMode ? darkText : '#222', marginBottom: 4 }}>Cyber Security</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 8 }}>This department focuses on protecting the bank’s digital infrastructure, ensuring secure systems, and defending against cyber threats.</Text>
+                <Text style={{ fontWeight: 'bold', fontSize: 13, color: isDarkMode ? darkText : '#222', marginBottom: 2 }}>Tools Used</Text>
+                <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 13, marginBottom: 2 }}>Splunk, Wireshark, Burp Suite, Kali Linux, Nessus</Text>
               </View>
             </View>
           </ScrollView>
         )}
         {tab === 'Registration' && (
           !showSummary ? (
-            <View style={{ margin: 18, backgroundColor: '#F8FAFC', borderRadius: 18, padding: 22, borderWidth: 1, borderColor: '#B2E6F7', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 }}>
-              <Text style={{ textAlign: 'center', fontSize: 26, fontWeight: 'bold', color: '#3CB6E3', marginBottom: 24, letterSpacing: 0.5 }}>Trainee Registration</Text>
+            <View style={{ margin: 18, backgroundColor: isDarkMode ? darkCard : cardBackground, borderRadius: 18, padding: 22, borderWidth: 1, borderColor: isDarkMode ? darkBorder : borderColor, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 }}>
+              <Text style={{ textAlign: 'center', fontSize: 26, fontWeight: 'bold', color: isDarkMode ? darkHighlight : '#3CB6E3', marginBottom: 24, letterSpacing: 0.5 }}>Trainee Registration</Text>
               {/* Full Name Input */}
-              <Text style={{ fontSize: 15, fontWeight: '500', color: '#222', marginBottom: 8, marginLeft: 2 }}>Full Name</Text>
+              <Text style={{ fontSize: 15, fontWeight: '500', color: isDarkMode ? darkText : textColor, marginBottom: 8, marginLeft: 2 }}>Full Name</Text>
               <TextInput
-                style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, backgroundColor: '#fff', marginBottom: 18, paddingHorizontal: 12, height: 40, fontSize: 16, color: '#22292f', fontWeight: '600' }}
-                placeholder="Enter your full name"
-                placeholderTextColor="#888"
+                style={{ borderWidth: 1, borderColor: isDarkMode ? darkBorder : borderColor, borderRadius: 10, backgroundColor: isDarkMode ? darkCard : cardBackground, marginBottom: 18, paddingHorizontal: 12, height: 40, fontSize: 16, color: isDarkMode ? darkText : textColor, fontWeight: '600' }}
+                placeholderTextColor={isDarkMode ? darkSecondary : secondaryTextColor}
                 value={fullName}
                 onChangeText={setFullName}
               />
               {/* Program Name Dropdown */}
-              <Text style={{ fontSize: 15, fontWeight: '500', color: '#222', marginBottom: 8, marginLeft: 2 }}>Program Name</Text>
-              <View style={{ position: 'relative', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, backgroundColor: '#fff', marginBottom: 18, paddingHorizontal: 12, paddingVertical: 2, justifyContent: 'center' }}>
+              <Text style={{ fontSize: 15, fontWeight: '500', color: isDarkMode ? darkText : textColor, marginBottom: 8, marginLeft: 2 }}>Program Name</Text>
+              <View style={{ position: 'relative', borderWidth: 1, borderColor: isDarkMode ? darkBorder : borderColor, borderRadius: 10, backgroundColor: isDarkMode ? darkCard : cardBackground, marginBottom: 18, paddingHorizontal: 12, paddingVertical: 2, justifyContent: 'center' }}>
                 <RNPickerSelect
                   onValueChange={setSelectedProgram}
                   value={selectedProgram}
-                  placeholder={{ label: 'Select a program...', value: '' }}
-                  items={PROGRAM_OPTIONS.map(opt => ({ ...opt, color: '#22292f' }))}
+                  placeholder={{ label: 'Select a program...', value: '', color: isDarkMode ? darkSecondary : secondaryTextColor }}
+                  items={PROGRAM_OPTIONS.map(opt => ({ ...opt, color: isDarkMode ? darkText : textColor }))}
                   style={{
-                    inputIOS: { height: 40, fontSize: 16, color: '#22292f', paddingHorizontal: 4, fontWeight: '600' },
-                    inputAndroid: { height: 40, fontSize: 16, color: '#22292f', paddingHorizontal: 4, fontWeight: '600' },
-                    placeholder: { color: '#888' },
+                    inputIOS: { height: 40, fontSize: 16, color: isDarkMode ? darkText : textColor, paddingHorizontal: 4, fontWeight: '600', backgroundColor: isDarkMode ? darkCard : cardBackground },
+                    inputAndroid: { height: 40, fontSize: 16, color: isDarkMode ? darkText : textColor, paddingHorizontal: 4, fontWeight: '600', backgroundColor: isDarkMode ? darkCard : cardBackground },
+                    placeholder: { color: isDarkMode ? darkSecondary : secondaryTextColor },
                   }}
                   useNativeAndroidPickerStyle={false}
                   Icon={() => (
                     <View style={{ position: 'absolute', right: 8, top: 0, bottom: 0, height: 40, justifyContent: 'center', alignItems: 'center' }}>
-                      <Ionicons name="chevron-down" size={20} color="#888" />
+                      <Ionicons name="chevron-down" size={20} color={isDarkMode ? darkSecondary : secondaryTextColor} />
                     </View>
                   )}
                 />
               </View>
               {/* Overall From/To Date Pickers */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 }}>
-                <TouchableOpacity onPress={() => setShowOverallDatePicker({ field: 'from' })} style={{ flex: 1, marginRight: 8, borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 6, padding: 14 }}>
-                  <Text style={{ color: overallFrom ? '#222' : '#888', fontSize: 17 }}>{overallFrom ? `From: ${formatDate(overallFrom)}` : 'From date'}</Text>
+                <TouchableOpacity onPress={() => setShowOverallDatePicker({ field: 'from' })} style={{ flex: 1, marginRight: 8, borderWidth: 1, borderColor: isDarkMode ? darkBorder : '#B2E6F7', borderRadius: 6, padding: 14, backgroundColor: isDarkMode ? darkCard : undefined }}>
+                  <Text style={{ color: overallFrom ? (isDarkMode ? darkText : '#222') : (isDarkMode ? darkSecondary : '#888'), fontSize: 17 }}>{overallFrom ? `From: ${formatDate(overallFrom)}` : 'From date'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setShowOverallDatePicker({ field: 'to' })} style={{ flex: 1, marginLeft: 8, borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 6, padding: 14 }}>
-                  <Text style={{ color: overallTo ? '#222' : '#888', fontSize: 17 }}>{overallTo ? `To: ${formatDate(overallTo)}` : 'To date'}</Text>
+                <TouchableOpacity onPress={() => setShowOverallDatePicker({ field: 'to' })} style={{ flex: 1, marginLeft: 8, borderWidth: 1, borderColor: isDarkMode ? darkBorder : '#B2E6F7', borderRadius: 6, padding: 14, backgroundColor: isDarkMode ? darkCard : undefined }}>
+                  <Text style={{ color: overallTo ? (isDarkMode ? darkText : '#222') : (isDarkMode ? darkSecondary : '#888'), fontSize: 17 }}>{overallTo ? `To: ${formatDate(overallTo)}` : 'To date'}</Text>
                 </TouchableOpacity>
               </View>
               {showOverallDatePicker && (
@@ -670,7 +692,7 @@ export default function TraineeHub() {
               {overallFrom && overallTo && weekPlan.map((w, idx) => {
                 const expanded = expandedWeeks.includes(idx);
                 return (
-                  <View key={idx} style={{ marginBottom: 16, borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 10, backgroundColor: expanded ? '#F7FBFD' : '#fff', shadowColor: '#3CB6E3', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 1 }}>
+                  <View key={idx} style={{ marginBottom: 16, borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 10, backgroundColor: expanded ? '#F7FBFD' : cardBackground, shadowColor: '#3CB6E3', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 1 }}>
                     <TouchableOpacity onPress={() => toggleWeek(idx)} style={{ flexDirection: 'row', alignItems: 'center', padding: 18, borderBottomWidth: expanded ? 1 : 0, borderBottomColor: '#EAF6F7', backgroundColor: '#EAF6FB', borderTopLeftRadius: 10, borderTopRightRadius: 10, marginBottom: expanded ? 0 : 8 }}>
                       <Text style={{ fontWeight: 'bold', fontSize: 22, color: '#3CB6E3', flex: 1, letterSpacing: 0.5 }}>
                         Week {idx + 1}  <Text style={{ fontWeight: 'normal', fontSize: 16, color: '#888' }}>({formatDate(w.from)} - {formatDate(w.to)})</Text>
@@ -758,22 +780,32 @@ export default function TraineeHub() {
                 );
               })}
               {/* Plan Summary Table - summary only, not editable */}
-              <View style={iosStyles.planContainer}>
-                <Text style={iosStyles.sectionTitle}>Plan Summary</Text>
-                <View style={iosStyles.tableHeader}>
-                  <Text style={iosStyles.headerText}>Week</Text>
-                  <Text style={iosStyles.headerText}>From</Text>
-                  <Text style={iosStyles.headerText}>To</Text>
-                  <Text style={iosStyles.headerText}>Department</Text>
-                  <Text style={iosStyles.headerText}>Hours</Text>
+              <View style={{
+                marginTop: 20,
+                padding: 16,
+                borderRadius: 12,
+                backgroundColor: cardBackground,
+                shadowColor: '#000',
+                shadowOpacity: 0.05,
+                shadowRadius: 10,
+                borderWidth: 1,
+                borderColor: borderColor,
+              }}>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: isDarkMode ? '#43C6AC' : '#0EA5E9', marginBottom: 12, textAlign: 'center' }}>Plan Summary</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 8, borderBottomWidth: 1, borderColor: borderColor }}>
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '500', color: textColor, textAlign: 'center' }}>Week</Text>
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '500', color: textColor, textAlign: 'center' }}>From</Text>
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '500', color: textColor, textAlign: 'center' }}>To</Text>
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '500', color: textColor, textAlign: 'center' }}>Department</Text>
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '500', color: textColor, textAlign: 'center' }}>Hours</Text>
                 </View>
                 {weekPlan.map((w, idx) => (
-                  <View key={idx} style={iosStyles.tableRow}>
-                    <Text style={iosStyles.rowText}>{idx + 1}</Text>
-                    <Text style={iosStyles.rowText}>{w.from ? formatDate(w.from) : '-'}</Text>
-                    <Text style={iosStyles.rowText}>{w.to ? formatDate(w.to) : '-'}</Text>
-                    <Text style={iosStyles.rowText}>{w.department || '-'}</Text>
-                    <Text style={iosStyles.rowText}>{w.hours || '-'}</Text>
+                  <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 0.5, borderColor: borderColor, backgroundColor: isDarkMode ? (idx % 2 === 0 ? '#23272b' : cardBackground) : (idx % 2 === 0 ? '#fff' : '#F7FBFD') }}>
+                    <Text style={{ flex: 1, fontSize: 14, color: textColor, textAlign: 'center' }}>{idx + 1}</Text>
+                    <Text style={{ flex: 1, fontSize: 14, color: textColor, textAlign: 'center' }}>{w.from ? formatDate(w.from) : '-'}</Text>
+                    <Text style={{ flex: 1, fontSize: 14, color: textColor, textAlign: 'center' }}>{w.to ? formatDate(w.to) : '-'}</Text>
+                    <Text style={{ flex: 1, fontSize: 14, color: textColor, textAlign: 'center' }}>{w.department || '-'}</Text>
+                    <Text style={{ flex: 1, fontSize: 14, color: textColor, textAlign: 'center' }}>{w.hours || '-'}</Text>
                   </View>
                 ))}
               </View>
@@ -857,7 +889,7 @@ export default function TraineeHub() {
                 }]
               : [])
             .map((trainee, idx) => (
-              <View key={idx} style={{ backgroundColor: '#fff', borderRadius: 18, padding: 18, marginBottom: 18, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}>
+              <View key={idx} style={{ backgroundColor: cardBackground, borderRadius: 18, padding: 18, marginBottom: 18, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
                   <View>
                     <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#222' }}>{trainee.name}</Text>

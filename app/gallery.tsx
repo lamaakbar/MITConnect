@@ -17,6 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
+import { useUserContext } from '../components/UserContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Try to import required modules
 let MediaLibrary: any = null;
@@ -88,6 +90,14 @@ export default function GalleryScreen() {
   const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
   const borderColor = isDarkMode ? '#2A2A2A' : '#E5E5EA';
   const iconColor = useThemeColor({}, 'icon');
+  const { userRole } = useUserContext();
+  const insets = useSafeAreaInsets();
+  const darkBg = '#181C20';
+  const darkCard = '#23272b';
+  const darkBorder = '#2D333B';
+  const darkText = '#F3F6FA';
+  const darkSecondary = '#AEB6C1';
+  const darkHighlight = '#43C6AC';
 
   const album = albums.find(a => a.id === selectedAlbum);
   
@@ -216,17 +226,40 @@ export default function GalleryScreen() {
 
   if (selectedAlbum && album) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor }]}>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={cardBackground} />
-        
+      <View style={[styles.container, { backgroundColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkBg : backgroundColor }]}> 
+        {(userRole === 'employee' || userRole === 'trainee') && (
+          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+        )}
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
-          <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color={iconColor} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: headerTitleColor }]}>{album.title}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        {(userRole === 'employee' || userRole === 'trainee') ? (
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 18,
+            paddingTop: insets.top + 10,
+            paddingBottom: 6,
+            backgroundColor: isDarkMode ? darkCard : cardBackground,
+            borderBottomWidth: 1,
+            borderBottomColor: isDarkMode ? darkBorder : borderColor,
+          }}>
+            <TouchableOpacity onPress={handleBackPress} style={{ padding: 4, marginRight: 8 }}>
+              <Ionicons name="arrow-back" size={24} color={iconColor} />
+            </TouchableOpacity>
+            <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
+              MIT<Text style={{ color: darkHighlight }}>Connect</Text>
+            </Text>
+            <View style={{ width: 32 }} />
+          </View>
+        ) : (
+          <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}> 
+            <TouchableOpacity onPress={handleBackPress} style={styles.backButton}> 
+              <Ionicons name="chevron-back" size={24} color={iconColor} /> 
+            </TouchableOpacity> 
+            <Text style={[styles.headerTitle, { color: headerTitleColor }]}>{album.title}</Text> 
+            <View style={styles.headerSpacer} /> 
+          </View>
+        )}
 
         {/* Photos Grid */}
         <FlatList
@@ -271,22 +304,45 @@ export default function GalleryScreen() {
             </TouchableOpacity>
           </View>
         </Modal>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={cardBackground} />
-      
+    <View style={[styles.container, { backgroundColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkBg : backgroundColor }]}> 
+      {(userRole === 'employee' || userRole === 'trainee') && (
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      )}
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
-        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color={iconColor} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: headerTitleColor }]}>Gallery</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      {(userRole === 'employee' || userRole === 'trainee') ? (
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 18,
+          paddingTop: insets.top + 10,
+          paddingBottom: 6,
+          backgroundColor: isDarkMode ? darkCard : cardBackground,
+          borderBottomWidth: 1,
+          borderBottomColor: isDarkMode ? darkBorder : borderColor,
+        }}>
+          <TouchableOpacity onPress={handleBackPress} style={{ padding: 4, marginRight: 8 }}>
+            <Ionicons name="arrow-back" size={24} color={iconColor} />
+          </TouchableOpacity>
+          <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
+            MIT<Text style={{ color: darkHighlight }}>Connect</Text>
+          </Text>
+          <View style={{ width: 32 }} />
+        </View>
+      ) : (
+        <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}> 
+          <TouchableOpacity onPress={handleBackPress} style={styles.backButton}> 
+            <Ionicons name="chevron-back" size={24} color={iconColor} /> 
+          </TouchableOpacity> 
+          <Text style={[styles.headerTitle, { color: headerTitleColor }]}>Gallery</Text> 
+          <View style={styles.headerSpacer} /> 
+        </View>
+      )}
 
       {/* Search Bar */}
       <View style={[styles.searchContainer, { backgroundColor: searchBarBackground }]}>
@@ -324,7 +380,7 @@ export default function GalleryScreen() {
       />
 
       
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -11,6 +11,8 @@ import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
 import { useAuth } from '../components/AuthContext';
 import ProfileModal from '../components/ProfileModal';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
@@ -30,6 +32,7 @@ export default function TraineeHome() {
   const { userRole, isInitialized } = useUserContext();
   const { user, logout } = useAuth();
   const [profileVisible, setProfileVisible] = useState(false);
+  const insets = useSafeAreaInsets();
 
   // Trainee Hub modal state
   const [showHub, setShowHub] = useState(false);
@@ -81,186 +84,182 @@ export default function TraineeHome() {
 
   return (
     <RoleGuard allowedRoles={['trainee']}>
-      <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
-      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
-        <Image source={require('../assets/images/mitconnect-logo.png')} style={{ width: 40, height: 40, marginRight: 8, resizeMode: 'contain' }} />
-        <Text style={[styles.appName, { color: textColor }]}><Text style={{ color: textColor }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity onPress={toggleTheme} style={styles.headerIcon}>
-            <Feather name={isDarkMode ? 'sun' : 'moon'} size={22} color={iconColor} />
-          </TouchableOpacity>
-          <Ionicons name="globe-outline" size={22} color={iconColor} style={styles.headerIcon} />
-          <Ionicons name="notifications-outline" size={22} color={iconColor} style={styles.headerIcon} />
-          <TouchableOpacity onPress={() => setProfileVisible(true)} style={styles.headerIcon}>
-            <Ionicons name="person-circle-outline" size={26} color={iconColor} />
-          </TouchableOpacity>
+      <View style={[styles.safeArea, { backgroundColor }]}>
+        <StatusBar style={isDarkMode ? 'light' : 'dark'} translucent backgroundColor="transparent" />
+        <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: insets.top }]}> 
+          <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} /> 
+          <Text style={[styles.appName, { color: textColor }]}><Text style={{ color: textColor }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text> 
+          <View style={styles.headerIcons}> 
+            <TouchableOpacity onPress={toggleTheme} style={styles.headerIcon}> 
+              <Feather name={isDarkMode ? 'sun' : 'moon'} size={22} color={iconColor} /> 
+            </TouchableOpacity> 
+            <TouchableOpacity onPress={() => setProfileVisible(true)} style={styles.headerIcon}> 
+              <Ionicons name="person-circle-outline" size={26} color={iconColor} /> 
+            </TouchableOpacity> 
+          </View> 
         </View>
-      </View>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {featuredNews.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="star-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyStateTitle}>No Featured Content</Text>
-            <Text style={styles.emptyStateText}>
-              There are no featured highlights this week. Check back later for exciting updates!
-            </Text>
-          </View>
-        ) : (
-          <>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
-            <FlatList
-              data={featuredNews}
-              keyExtractor={item => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingLeft: 18, paddingBottom: 8 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() => router.push({ pathname: '/feature-details' })}
-                >
-                  <LinearGradient
-                    colors={['#A259FF', '#3BB2B8']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.featuredGradientCard}
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {featuredNews.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="star-outline" size={64} color="#ccc" />
+              <Text style={styles.emptyStateTitle}>No Featured Content</Text>
+              <Text style={styles.emptyStateText}>
+                There are no featured highlights this week. Check back later for exciting updates!
+              </Text>
+            </View>
+          ) : (
+            <>
+              <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
+              <FlatList
+                data={featuredNews}
+                keyExtractor={item => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingLeft: 18, paddingBottom: 8 }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => router.push({ pathname: '/feature-details' })}
                   >
-                    <Image source={item.image} style={styles.featuredImage} />
-                    <Text style={styles.featuredMonoText}>{item.text}</Text>
-                    <View style={styles.featuredProgressBarBg}>
-                      <View style={[styles.featuredProgressBar, { width: `${item.progress * 100}%` }]} />
+                    <LinearGradient
+                      colors={['#A259FF', '#3BB2B8']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.featuredGradientCard}
+                    >
+                      <Image source={item.image} style={styles.featuredImage} />
+                      <Text style={styles.featuredMonoText}>{item.text}</Text>
+                      <View style={styles.featuredProgressBarBg}>
+                        <View style={[styles.featuredProgressBar, { width: `${item.progress * 100}%` }]} />
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
+              />
+            </>
+          )}
+          
+          {upcomingEvents.length === 0 ? (
+            <View style={[styles.emptyState, { backgroundColor: cardBackground }]}>
+              <Ionicons name="calendar-outline" size={64} color={secondaryTextColor} />
+              <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Upcoming Events</Text>
+              <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+                There are no upcoming events scheduled. Check back later for exciting activities!
+              </Text>
+            </View>
+          ) : (
+            <>
+              <Text style={[styles.sectionTitle, { color: textColor }]}>Upcoming Events</Text>
+              <FlatList
+                data={upcomingEvents}
+                keyExtractor={item => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
+                  <View style={[styles.eventCard, { backgroundColor: cardBackground }]}>
+                    <View style={styles.eventCardHeader}>
+                      <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
+                      <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
                     </View>
-                  </LinearGradient>
+                    <Text style={styles.eventTitle}>{item.title}</Text>
+                    <Text style={styles.eventDesc}>{item.desc}</Text>
+                    {registered.includes(item.id) && (
+                      <View style={styles.registeredBadge}><Text style={styles.registeredBadgeText}>Registered</Text></View>
+                    )}
+                    <TouchableOpacity style={styles.eventBtn}><Text style={styles.eventBtnText}>Register Now!</Text></TouchableOpacity>
+                    <View style={styles.eventCardFooter}>
+                      <View style={styles.eventFooterItem}>
+                        <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
+                        <Text style={styles.eventFooterText}>{item.date}</Text>
+                      </View>
+                      {item.time ? (
+                        <View style={styles.eventFooterItem}>
+                          <Ionicons name="time-outline" size={16} color="#7B61FF" />
+                          <Text style={styles.eventFooterText}>{item.time}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
                 </TouchableOpacity>
               )}
             />
-          </>
-        )}
-        
-        {upcomingEvents.length === 0 ? (
-          <View style={[styles.emptyState, { backgroundColor: cardBackground }]}>
-            <Ionicons name="calendar-outline" size={64} color={secondaryTextColor} />
-            <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Upcoming Events</Text>
-            <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
-              There are no upcoming events scheduled. Check back later for exciting activities!
-            </Text>
-          </View>
-        ) : (
-          <>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>Upcoming Events</Text>
-            <FlatList
-              data={upcomingEvents}
-              keyExtractor={item => item.id}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
-                <View style={[styles.eventCard, { backgroundColor: cardBackground }]}>
-                  <View style={styles.eventCardHeader}>
-                    <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
-                    <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
-                  </View>
-                  <Text style={styles.eventTitle}>{item.title}</Text>
-                  <Text style={styles.eventDesc}>{item.desc}</Text>
-                  {registered.includes(item.id) && (
-                    <View style={styles.registeredBadge}><Text style={styles.registeredBadgeText}>Registered</Text></View>
-                  )}
-                  <TouchableOpacity style={styles.eventBtn}><Text style={styles.eventBtnText}>Register Now!</Text></TouchableOpacity>
-                  <View style={styles.eventCardFooter}>
-                    <View style={styles.eventFooterItem}>
-                      <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
-                      <Text style={styles.eventFooterText}>{item.date}</Text>
-                    </View>
-                    {item.time ? (
-                      <View style={styles.eventFooterItem}>
-                        <Ionicons name="time-outline" size={16} color="#7B61FF" />
-                        <Text style={styles.eventFooterText}>{item.time}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
+            </>
+          )}
+          <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Portal Access</Text>
+          <View style={styles.portalRow}>
+            {portalLinks.map(link => (
+              <TouchableOpacity
+                key={link.key}
+                style={[styles.portalIconBox, { backgroundColor: cardBackground }]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  if (link.key === 'events') router.push('/events?noHeader=1');
+                  else if (link.key === 'hub') router.push('/trainee-hub');
+                  else if (link.key === 'gallery') router.push('/gallery');
+                  else if (link.key === 'inspire') router.push('/inspirer-corner');
+                  else if (link.key === 'bookclub') router.push('/bookclub');
+                  else if (link.key === 'checklist') router.push('/trainee-checklist');
+                }}
+              >
+                {link.icon}
+                <Text style={[styles.portalLabel, { color: portalLabelColor }]}>{link.label}</Text>
               </TouchableOpacity>
-            )}
-          />
-          </>
-        )}
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Portal Access</Text>
-        <View style={styles.portalRow}>
-          {portalLinks.map(link => (
-            <TouchableOpacity
-              key={link.key}
-              style={[styles.portalIconBox, { backgroundColor: cardBackground }]}
-              activeOpacity={0.8}
-              onPress={() => {
-                if (link.key === 'events') router.push('/events?noHeader=1');
-                else if (link.key === 'hub') router.push('/trainee-hub');
-                else if (link.key === 'gallery') router.push('/gallery');
-                else if (link.key === 'inspire') router.push('/inspirer-corner');
-                else if (link.key === 'bookclub') router.push('/bookclub');
-                else if (link.key === 'checklist') router.push('/trainee-checklist');
-              }}
-            >
-              {link.icon}
-              <Text style={[styles.portalLabel, { color: portalLabelColor }]}>{link.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Book of the Month</Text>
-        <TouchableOpacity style={[styles.featuredBookCard, { backgroundColor: isDarkMode ? '#23272b' : '#fff' }]} onPress={() => router.push('/bookclub')}>
-          <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
-          <View style={{ flex: 1, marginLeft: 16 }}>
-            <View style={[styles.genreChip, { backgroundColor: isDarkMode ? '#7cae92' : '#A3C9A8' }]}><Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>Philosophical Fiction</Text></View>
-            <Text style={[styles.featuredBookTitle, { color: isDarkMode ? '#fff' : '#222' }]}>The Alchemist</Text>
-            <Text style={[styles.featuredBookAuthor, { color: isDarkMode ? '#fff' : '#888' }]}>By Paulo Coelho</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              {[1,2,3,4,5].map(i => (
-                <MaterialIcons
-                  key={i}
-                  name={i <= 5 ? 'star' : 'star-border'}
-                  size={20}
-                  color="#F4B400"
-                  style={{ marginRight: 2 }}
-                />
-              ))}
-              <Text style={[styles.ratingText, { color: isDarkMode ? '#fff' : '#222' }]}>4.9</Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-              <Ionicons name="person" size={16} color={isDarkMode ? '#9BA1A6' : '#888'} style={{ marginRight: 4 }} />
-              <Text style={[styles.recommender, { color: isDarkMode ? '#9BA1A6' : '#888' }]}>Nizar Naghi</Text>
-            </View>
+            ))}
           </View>
-        </TouchableOpacity>
-      </ScrollView>
-      <RNScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bottomNavScroll}>
-        <View style={styles.bottomNav}>
-          <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('home'); router.push('/trainee-home'); }}>
-            <Ionicons name="home" size={26} color={activeTab === 'home' ? '#43C6AC' : '#bbb'} />
+          <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Book of the Month</Text>
+          <TouchableOpacity style={[styles.featuredBookCard, { backgroundColor: isDarkMode ? '#23272b' : '#fff' }]} onPress={() => router.push('/bookclub')}>
+            <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
+            <View style={{ flex: 1, marginLeft: 16 }}>
+              <View style={[styles.genreChip, { backgroundColor: isDarkMode ? '#7cae92' : '#A3C9A8' }]}><Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>Philosophical Fiction</Text></View>
+              <Text style={[styles.featuredBookTitle, { color: isDarkMode ? '#fff' : '#222' }]}>The Alchemist</Text>
+              <Text style={[styles.featuredBookAuthor, { color: isDarkMode ? '#fff' : '#888' }]}>By Paulo Coelho</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                {[1,2,3,4,5].map(i => (
+                  <MaterialIcons
+                    key={i}
+                    name={i <= 5 ? 'star' : 'star-border'}
+                    size={20}
+                    color="#F4B400"
+                    style={{ marginRight: 2 }}
+                  />
+                ))}
+                <Text style={[styles.ratingText, { color: isDarkMode ? '#fff' : '#222' }]}>4.9</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                <Ionicons name="person" size={16} color={isDarkMode ? '#9BA1A6' : '#888'} style={{ marginRight: 4 }} />
+                <Text style={[styles.recommender, { color: isDarkMode ? '#9BA1A6' : '#888' }]}>Nizar Naghi</Text>
+              </View>
+            </View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('hub'); router.push('/trainee-hub'); }}>
-            <MaterialIcons name="dashboard" size={26} color={activeTab === 'hub' ? '#43C6AC' : '#bbb'} />
+        </ScrollView>
+        <View style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backgroundColor: userRole === 'trainee' && isDarkMode ? '#23272b' : '#fff',
+          borderTopWidth: 1,
+          borderTopColor: userRole === 'trainee' && isDarkMode ? '#2D333B' : '#F2F2F7',
+          paddingVertical: 16, // Slightly bigger
+          minWidth: 400,
+          paddingHorizontal: 12,
+        }}>
+          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { setActiveTab('home'); router.push('/trainee-home'); }}>
+            <Ionicons name="home" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'home' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'home' ? '#43C6AC' : '#bbb')} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('gallery'); router.push('/gallery'); }}>
-            <Ionicons name="image-outline" size={26} color={activeTab === 'gallery' ? '#43C6AC' : '#bbb'} />
+          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { setActiveTab('hub'); router.push('/trainee-hub'); }}>
+            <MaterialIcons name="dashboard" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'hub' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'hub' ? '#43C6AC' : '#bbb')} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('bookclub'); router.push('/bookclub'); }}>
-            <Ionicons name="book-outline" size={26} color={activeTab === 'bookclub' ? '#43C6AC' : '#bbb'} />
+          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { setActiveTab('bookclub'); router.push('/bookclub'); }}>
+            <Ionicons name="book-outline" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'bookclub' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'bookclub' ? '#43C6AC' : '#bbb')} />
           </TouchableOpacity>
-          {/*
-          <TouchableOpacity
-            style={styles.navBtn}
-            onPress={() => {
-              setActiveTab('profile');
-              router.push({ pathname: '/profile' });
-            }}
-          >
-            <Ionicons name="person-circle-outline" size={26} color={activeTab === 'profile' ? '#43C6AC' : '#bbb'} />
+          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { setActiveTab('checklist'); router.push('/trainee-checklist'); }}>
+            <Ionicons name="checkmark-done-circle-outline" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'checklist' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'checklist' ? '#43C6AC' : '#bbb')} />
           </TouchableOpacity>
-          */}
         </View>
-      </RNScrollView>
-      <ProfileModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
-    </SafeAreaView>
+        <ProfileModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
+      </View>
     </RoleGuard>
   );
 }

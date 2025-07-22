@@ -5,6 +5,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useBooks } from '../../../components/BookContext';
 import { useTheme } from '../../../components/ThemeContext';
 import { useThemeColor } from '../../../hooks/useThemeColor';
+import { useUserContext } from '../../../components/UserContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 export default function LibraryBookDetailsScreen() {
   const router = useRouter();
@@ -20,6 +23,14 @@ export default function LibraryBookDetailsScreen() {
   const book = books.find(b => b.id === id);
   const [comments, setComments] = useState<string[]>([]);
   const [commentInput, setCommentInput] = useState('');
+  const { userRole } = useUserContext();
+  const insets = useSafeAreaInsets();
+  const darkBg = '#181C20';
+  const darkCard = '#23272b';
+  const darkBorder = '#2D333B';
+  const darkText = '#F3F6FA';
+  const darkSecondary = '#AEB6C1';
+  const darkHighlight = '#43C6AC';
 
   if (!book) {
     return (
@@ -41,16 +52,41 @@ export default function LibraryBookDetailsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}> {/* Themed background */}
+    <View style={[styles.safeArea, { backgroundColor: isDarkMode ? darkBg : backgroundColor }]}> {/* Themed background */}
       <ScrollView style={[styles.container, { backgroundColor }]} contentContainerStyle={{ paddingBottom: 32 }}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}> {/* Themed header */}
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={iconColor} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: textColor }]}>Book Details</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        {userRole === 'employee' || userRole === 'trainee' ? (
+          <>
+            <StatusBar style={isDarkMode ? 'light' : 'dark'} translucent backgroundColor="transparent" />
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 18,
+              paddingTop: insets.top + 10,
+              paddingBottom: 6,
+              backgroundColor: isDarkMode ? darkCard : cardBackground,
+              borderBottomWidth: 1,
+              borderBottomColor: isDarkMode ? darkBorder : borderColor,
+            }}>
+              <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+                <Ionicons name="arrow-back" size={24} color={iconColor} />
+              </TouchableOpacity>
+              <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
+                MIT<Text style={{ color: darkHighlight }}>Connect</Text>
+              </Text>
+              <View style={{ width: 32 }} />
+            </View>
+          </>
+        ) : (
+          <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}> {/* Themed header */}
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+              <Ionicons name="arrow-back" size={24} color={iconColor} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: textColor }]}>Book Details</Text>
+            <View style={{ width: 24 }} />
+          </View>
+        )}
         {/* Book Details Card */}
         <View style={[styles.bookCard, { backgroundColor: cardBackground }]}> {/* Themed card */}
           <View style={{ flexDirection: 'row' }}>
@@ -125,7 +161,7 @@ export default function LibraryBookDetailsScreen() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

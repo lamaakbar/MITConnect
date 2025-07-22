@@ -18,7 +18,9 @@ import { useRouter } from 'expo-router';
 import { useBooks } from '../components/BookContext';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
-
+import { useUserContext } from '../components/UserContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'react-native';
 // Mock featured book data
 const FEATURED_BOOK = {
   id: '1',
@@ -67,6 +69,14 @@ export default function BookClubScreen() {
   const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
   const borderColor = isDarkMode ? '#2A2A2A' : '#eee';
   const iconColor = useThemeColor({}, 'icon');
+  const { userRole } = useUserContext();
+  const insets = useSafeAreaInsets();
+  const darkBg = '#181C20';
+  const darkCard = '#23272b';
+  const darkBorder = '#2D333B';
+  const darkText = '#F3F6FA';
+  const darkSecondary = '#AEB6C1';
+  const darkHighlight = '#43C6AC';
 
   const openBookModal = (book: any) => {
     setSelectedBook(book);
@@ -79,16 +89,41 @@ export default function BookClubScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}> {/* Use themed background */}
-      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}> {/* Themed header */}
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={iconColor} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: textColor }]}>Book Club</Text>
-        <TouchableOpacity onPress={toggleTheme} style={styles.themeToggleBtn}>
-          <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={24} color={iconColor} />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.container, { backgroundColor: isDarkMode ? darkBg : backgroundColor }]}> {/* Use themed background */}
+      {(userRole === 'employee' || userRole === 'trainee') && (
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      )}
+      {userRole === 'employee' || userRole === 'trainee' ? (
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 18,
+          paddingTop: insets.top + 10,
+          paddingBottom: 6,
+          backgroundColor: isDarkMode ? darkCard : cardBackground,
+          borderBottomWidth: 1,
+          borderBottomColor: isDarkMode ? darkBorder : borderColor,
+        }}>
+          <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+            <Ionicons name="arrow-back" size={24} color={iconColor} />
+          </TouchableOpacity>
+          <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
+            MIT<Text style={{ color: darkHighlight }}>Connect</Text>
+          </Text>
+          <View style={{ width: 32 }} />
+        </View>
+      ) : (
+        <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}> {/* Themed header */}
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color={iconColor} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: textColor }]}>Book Club</Text>
+          <TouchableOpacity onPress={toggleTheme} style={styles.themeToggleBtn}>
+            <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={24} color={iconColor} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Featured Book Section */}
@@ -207,7 +242,10 @@ export default function BookClubScreen() {
           <Text style={[styles.sectionTitle, { color: textColor }]}> <Feather name="clock" size={16} color="#3AC569" /> Recent Selections </Text>
           <TouchableOpacity
             style={[styles.goLibraryBtnSmall, { backgroundColor: isDarkMode ? '#23272b' : '#e6f0fe' }]}
-            onPress={() => router.push('/books-management')}
+            onPress={() => {
+              if (userRole === 'admin') router.push('/books-management');
+              else router.push('/library');
+            }}
             activeOpacity={0.7}
           >
             <Text style={[styles.goLibraryBtnTextSmall, { color: isDarkMode ? '#43C6AC' : '#2196f3' }]}>Go to MITC Library</Text>
@@ -243,22 +281,7 @@ export default function BookClubScreen() {
           }
         />
       </ScrollView>
-      {/* Bottom Navigation Bar */}
-      <View style={[styles.bottomNav, { backgroundColor: cardBackground, borderTopColor: borderColor }]}> {/* Themed nav */}
-        <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('home'); router.push('/trainee-home'); }}>
-          <Ionicons name="home" size={28} color={activeTab === 'home' ? '#43C6AC' : '#bbb'} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('calendar'); router.push('/events'); }}>
-          <Ionicons name="calendar-outline" size={28} color={activeTab === 'calendar' ? '#43C6AC' : '#bbb'} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('gallery'); router.push('/gallery'); }}>
-          <Ionicons name="image-outline" size={28} color={activeTab === 'gallery' ? '#43C6AC' : '#bbb'} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navBtn} onPress={() => { setActiveTab('bookclub'); router.push('/bookclub'); }}>
-          <Ionicons name="book-outline" size={28} color={activeTab === 'bookclub' ? '#43C6AC' : '#bbb'} />
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

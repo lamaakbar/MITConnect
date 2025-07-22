@@ -5,6 +5,9 @@ import { useRouter } from 'expo-router';
 import { useBooks } from '../components/BookContext';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
+import { useUserContext } from '../components/UserContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 export default function LibraryScreen() {
   const router = useRouter();
@@ -16,16 +19,42 @@ export default function LibraryScreen() {
   const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
   const borderColor = isDarkMode ? '#2A2A2A' : '#eee';
   const iconColor = useThemeColor({}, 'icon');
+  const { userRole } = useUserContext();
+  const insets = useSafeAreaInsets();
+
+  const darkBg = '#181C20';
+  const darkCard = '#23272b';
+  const darkBorder = '#2D333B';
+  const darkText = '#F3F6FA';
+  const darkSecondary = '#AEB6C1';
+  const darkHighlight = '#43C6AC';
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
-      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={iconColor} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: textColor }]}>MITConnect Library</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <View style={[styles.safeArea, { backgroundColor: isDarkMode ? darkBg : backgroundColor }]}> {/* Themed background */}
+      {userRole === 'employee' || userRole === 'trainee' ? (
+        <>
+          <StatusBar style={isDarkMode ? 'light' : 'dark'} translucent backgroundColor="transparent" />
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 18,
+            paddingTop: insets.top + 10,
+            paddingBottom: 6,
+            backgroundColor: isDarkMode ? darkCard : cardBackground,
+            borderBottomWidth: 1,
+            borderBottomColor: isDarkMode ? darkBorder : borderColor,
+          }}>
+            <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+              <Ionicons name="arrow-back" size={24} color={iconColor} />
+            </TouchableOpacity>
+            <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
+              MIT<Text style={{ color: darkHighlight }}>Connect</Text>
+            </Text>
+            <View style={{ width: 32 }} />
+          </View>
+        </>
+      ) : null}
       
       <FlatList
         data={books}
@@ -56,7 +85,7 @@ export default function LibraryScreen() {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

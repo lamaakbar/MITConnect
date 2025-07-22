@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platform, Animated, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
+import { useUserContext } from '../components/UserContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CHECKLIST_ITEMS = [
   'Contract',
@@ -131,52 +133,85 @@ export default function TraineeChecklist() {
   const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
   const borderColor = isDarkMode ? '#2A2A2A' : '#F2F2F7';
   const iconColor = useThemeColor({}, 'icon');
+  const { userRole } = useUserContext();
+  const insets = useSafeAreaInsets();
+  const darkBg = '#181C20';
+  const darkCard = '#23272b';
+  const darkBorder = '#2D333B';
+  const darkText = '#F3F6FA';
+  const darkSecondary = '#AEB6C1';
+  const darkHighlight = '#43C6AC';
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header Section */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={24} color="#1C1C1E" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Trainee Checklist</Text>
-        <TouchableOpacity 
-          style={styles.themeToggleButton}
-          onPress={toggleTheme}
-        >
-          <Ionicons 
-            name={isDarkMode ? "moon" : "sunny"} 
-            size={24} 
-            color={iconColor} 
-          />
-        </TouchableOpacity>
-      </View>
+    <View style={{ flex: 1, backgroundColor: userRole === 'trainee' && isDarkMode ? darkBg : backgroundColor }}>
+      {userRole === 'trainee' && (
+        <>
+          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+          <View style={{
+            paddingTop: insets.top,
+            backgroundColor: isDarkMode ? darkCard : cardBackground,
+            borderBottomColor: isDarkMode ? darkBorder : borderColor,
+            borderBottomWidth: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 12,
+            paddingBottom: 12,
+          }}>
+            <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+              <Ionicons name="arrow-back" size={24} color={iconColor} />
+            </TouchableOpacity>
+            <Text style={{
+              fontSize: 22,
+              fontWeight: '700',
+              letterSpacing: 0.5,
+              flex: 1,
+              textAlign: 'center',
+              color: isDarkMode ? darkText : textColor
+            }}>
+              MIT<Text style={{ color: darkHighlight }}>Connect</Text>
+            </Text>
+            <View style={{ width: 32 }} />
+          </View>
+        </>
+      )}
 
       {/* Progress Section */}
-      <View style={styles.progressSection}>
+      <View style={{
+        backgroundColor: userRole === 'trainee' && isDarkMode ? darkCard : '#fff',
+        marginHorizontal: 16,
+        marginTop: 16,
+        borderRadius: 16,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 6,
+        elevation: 2,
+      }}>
         <View style={styles.progressHeader}>
-          <Text style={styles.progressTitle}>Progress</Text>
-          <Text style={styles.progressCount}>{completed}/{CHECKLIST_ITEMS.length}</Text>
+          <Text style={{ fontSize: 18, fontWeight: '600', color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E' }}>Progress</Text>
+          <Text style={{ fontSize: 16, fontWeight: '600', color: userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759' }}>{completed}/{CHECKLIST_ITEMS.length}</Text>
         </View>
         
-        <View style={styles.progressBarContainer}>
-          <LinearGradient
-            colors={['#F2F2F7', '#E5E5EA']}
-            style={styles.progressBarBackground}
-          >
-            <Animated.View 
-              style={[
-                styles.progressBarFill,
-                { width: `${progress * 100}%` }
-              ]}
+        <View style={{ marginBottom: 8 }}>
+          <View style={{
+            height: 8,
+            borderRadius: 4,
+            overflow: 'hidden',
+            backgroundColor: userRole === 'trainee' && isDarkMode ? darkBorder : '#F2F2F7',
+          }}>
+            <Animated.View
+              style={{
+                height: '100%',
+                backgroundColor: userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759',
+                borderRadius: 4,
+                width: `${progress * 100}%`,
+              }}
             />
-          </LinearGradient>
+          </View>
         </View>
         
-        <Text style={styles.progressPercentage}>
+        <Text style={{ fontSize: 14, color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93', textAlign: 'center', fontWeight: '500' }}>
           {Math.round(progress * 100)}% Complete
         </Text>
       </View>
@@ -185,11 +220,140 @@ export default function TraineeChecklist() {
       <FlatList
         data={CHECKLIST_ITEMS}
         keyExtractor={(item, index) => `checklist-${index}`}
-        renderItem={renderChecklistItem}
-        contentContainerStyle={styles.listContainer}
+        renderItem={({ item, index }) => {
+          const isCompleted = checked[index];
+          const isAvailable = canCheckItem(index);
+          const isLocked = !isAvailable && !isCompleted;
+          return (
+            <Animated.View style={{ transform: [{ scale: scaleAnimations[index] }] }}>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: userRole === 'trainee' && isDarkMode
+                    ? isCompleted
+                      ? '#22332b'
+                      : isLocked
+                        ? '#23272b'
+                        : darkCard
+                    : isCompleted
+                      ? '#F0FFF4'
+                      : isLocked
+                        ? '#F8F8F8'
+                        : '#fff',
+                  borderRadius: 16,
+                  marginBottom: 12,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.06,
+                  shadowRadius: 8,
+                  elevation: 3,
+                  borderWidth: 1,
+                  borderColor: userRole === 'trainee' && isDarkMode
+                    ? isCompleted
+                      ? darkHighlight
+                      : isLocked
+                        ? darkBorder
+                        : darkBorder
+                    : isCompleted
+                      ? '#34C759'
+                      : isLocked
+                        ? '#E5E5EA'
+                        : '#F2F2F7',
+                  opacity: isLocked ? 0.7 : 1,
+                }}
+                onPress={() => toggleCheck(index)}
+                activeOpacity={isLocked ? 1 : 0.7}
+                disabled={isLocked}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', padding: 20 }}>
+                  <View style={{ marginRight: 16 }}>
+                    <View style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      borderWidth: 2,
+                      borderColor: userRole === 'trainee' && isDarkMode
+                        ? isCompleted
+                          ? darkHighlight
+                          : isLocked
+                            ? darkBorder
+                            : darkBorder
+                        : isCompleted
+                          ? '#34C759'
+                          : isLocked
+                            ? '#C7C7CC'
+                            : '#C7C7CC',
+                      backgroundColor: userRole === 'trainee' && isDarkMode
+                        ? isCompleted
+                          ? darkHighlight
+                          : isLocked
+                            ? darkBorder
+                            : darkCard
+                        : isCompleted
+                          ? '#34C759'
+                          : isLocked
+                            ? '#E5E5EA'
+                            : '#F2F2F7',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      {isCompleted && (
+                        <Ionicons name="checkmark-sharp" size={16} color="#fff" style={{ fontWeight: 'bold' }} />
+                      )}
+                      {isLocked && (
+                        <Ionicons name="lock-closed" size={16} color={userRole === 'trainee' && isDarkMode ? darkSecondary : '#C7C7CC'} />
+                      )}
+                    </View>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{
+                      fontSize: 18,
+                      fontWeight: '600',
+                      color: userRole === 'trainee' && isDarkMode
+                        ? isCompleted
+                          ? darkHighlight
+                          : isLocked
+                            ? darkSecondary
+                            : darkText
+                        : isCompleted
+                          ? '#34C759'
+                          : isLocked
+                            ? '#8E8E93'
+                            : '#1C1C1E',
+                      marginBottom: 4,
+                      textDecorationLine: isCompleted ? 'line-through' : 'none',
+                    }}>{item}</Text>
+                    <Text style={{
+                      fontSize: 14,
+                      color: userRole === 'trainee' && isDarkMode
+                        ? isLocked
+                          ? darkSecondary
+                          : darkSecondary
+                        : isLocked
+                          ? '#C7C7CC'
+                          : '#8E8E93',
+                      fontWeight: '400',
+                    }}>{isCompleted ? 'Completed' : isLocked ? 'Complete previous step first' : 'Pending'}</Text>
+                  </View>
+                  <View style={{ marginLeft: 12 }}>
+                    <Ionicons
+                      name={isCompleted ? "checkmark-circle" : isLocked ? "lock-closed" : "ellipse-outline"}
+                      size={24}
+                      color={isCompleted
+                        ? (userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759')
+                        : isLocked
+                          ? (userRole === 'trainee' && isDarkMode ? darkSecondary : '#C7C7CC')
+                          : (userRole === 'trainee' && isDarkMode ? darkSecondary : '#C7C7CC')}
+                    />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
+          );
+        }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

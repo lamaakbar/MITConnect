@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, Image, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, Image, SafeAreaView, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useLocalSearchParams } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
@@ -7,6 +7,8 @@ import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import EventsTabBar from '../components/EventsTabBar';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
+import { useUserContext } from '../components/UserContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const EVENT_TABS = ['All', 'Upcoming', 'My Events'];
 
@@ -25,6 +27,14 @@ export default function EventsScreen() {
   const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
   const borderColor = isDarkMode ? '#2A2A2A' : '#f0f0f0';
   const iconColor = useThemeColor({}, 'icon');
+  const { userRole } = useUserContext();
+  const insets = useSafeAreaInsets();
+  const darkBg = '#181C20';
+  const darkCard = '#23272b';
+  const darkBorder = '#2D333B';
+  const darkText = '#F3F6FA';
+  const darkSecondary = '#AEB6C1';
+  const darkHighlight = '#43C6AC';
 
   // Load user event statuses
   useEffect(() => {
@@ -98,45 +108,94 @@ export default function EventsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor }}>
-      {/* Header with SafeAreaView and headline */}
-      <SafeAreaView style={{ backgroundColor: cardBackground }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: borderColor, position: 'relative' }}>
-          <TouchableOpacity onPress={() => router.back()} style={{ position: 'absolute', left: 16, zIndex: 1 }}>
-            <Ionicons name="arrow-back" size={24} color={iconColor} />
-          </TouchableOpacity>
-          <Text style={{ fontSize: 22, fontWeight: 'bold', color: textColor, textAlign: 'center' }}>Events</Text>
-        </View>
-      </SafeAreaView>
+    <View style={{ flex: 1, backgroundColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkCard : cardBackground }}>
+      {(userRole === 'employee' || userRole === 'trainee') && (
+        <>
+          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+          <View style={{
+            paddingTop: insets.top,
+            backgroundColor: isDarkMode ? darkCard : cardBackground,
+            borderBottomColor: isDarkMode ? darkBorder : borderColor,
+            borderBottomWidth: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 12,
+            paddingBottom: 12,
+          }}>
+            <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+              <Ionicons name="arrow-back" size={24} color={iconColor} />
+            </TouchableOpacity>
+            <Text style={{
+              fontSize: 22,
+              fontWeight: '700',
+              letterSpacing: 0.5,
+              flex: 1,
+              textAlign: 'center',
+              color: isDarkMode ? darkText : textColor
+            }}>
+              MIT<Text style={{ color: darkHighlight }}>Connect</Text>
+            </Text>
+            <View style={{ width: 32 }} />
+          </View>
+        </>
+      )}
       {/* Search Bar */}
-      <View style={[styles.searchBar, { marginTop: 12, flexDirection: 'row', alignItems: 'center' }]}> 
-        <Ionicons name="search" size={20} color={secondaryTextColor} style={{ marginRight: 8 }} />
+      <View style={{
+        marginTop: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkCard : '#F2F2F7',
+        borderRadius: 12,
+        marginHorizontal: 16,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderWidth: 1,
+        borderColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkBorder : '#E0E0E0',
+      }}>
+        <Ionicons name="search" size={20} color={(userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkSecondary : secondaryTextColor} style={{ marginRight: 8 }} />
         <TextInput
-          style={{ flex: 1, fontSize: 16, color: textColor }}
+          style={{ flex: 1, fontSize: 16, color: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkText : textColor }}
           placeholder="Search events..."
+          placeholderTextColor={(userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkSecondary : secondaryTextColor}
           value={search}
           onChangeText={setSearch}
         />
       </View>
       {/* Tabs for My Events and Bookmark */}
-      <View style={[styles.tabsContainer, { marginTop: 8 }]}>
+      <View style={{
+        marginTop: 8,
+        backgroundColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? '#23272b' : '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? '#2D333B' : '#f0f0f0',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+      }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row' }}>
-          <View style={styles.tabsRow}>
-            {EVENT_TABS.map(tab => (
-              <TouchableOpacity
-                key={tab}
-                style={[styles.tab, activeTab === tab && styles.tabActive]}
-                onPress={() => setActiveTab(tab)}
-              >
-                <Text style={[
-                  styles.tabText,
-                  activeTab === tab && styles.tabTextActive,
-                  { color: secondaryTextColor },
-                ]}>
-                  {tab}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-start' }}>
+            {EVENT_TABS.map(tab => {
+              const isActive = activeTab === tab;
+              return (
+                <TouchableOpacity
+                  key={tab}
+                  style={{
+                    paddingVertical: 8,
+                    paddingHorizontal: 18,
+                    borderRadius: 20,
+                    backgroundColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode && isActive ? '#23272b' : 'transparent',
+                    marginRight: 8,
+                  }}
+                  onPress={() => setActiveTab(tab)}
+                >
+                  <Text style={{
+                    fontSize: 15,
+                    fontWeight: 'bold',
+                    color: (userRole === 'employee' || userRole === 'trainee') && isDarkMode
+                      ? (isActive ? '#F3F6FA' : '#AEB6C1')
+                      : (isActive ? '#43C6AC' : secondaryTextColor),
+                  }}>{tab}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </ScrollView>
       </View>
@@ -264,10 +323,8 @@ export default function EventsScreen() {
             </ScrollView>
               </View>
         ) : null}
-        {/* Remove EventsTabBar from Events page */}
-        {/* <EventsTabBar /> */}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -9,6 +9,8 @@ import { useUserContext } from '../components/UserContext';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
 import ProfileModal from '../components/ProfileModal';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 
 const portalLinks = [
@@ -42,6 +44,7 @@ export default function EmployeeHome() {
   const { userRole, isInitialized } = useUserContext();
   const { isDarkMode, toggleTheme } = useTheme();
   const [profileVisible, setProfileVisible] = useState(false);
+  const insets = useSafeAreaInsets();
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -82,21 +85,20 @@ export default function EmployeeHome() {
   }, [events]);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
-        <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
-          <Image source={require('../assets/images/mitconnect-logo.png')} style={{ width: 40, height: 40, marginRight: 8, resizeMode: 'contain' }} />
-          <Text style={[styles.appName, { color: textColor }]}><Text style={{ color: textColor }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
-          <View style={styles.headerIcons}>
-            <TouchableOpacity onPress={toggleTheme} style={styles.headerIcon}>
-              <Feather name={isDarkMode ? 'sun' : 'moon'} size={22} color={iconColor} />
-            </TouchableOpacity>
-            <Ionicons name="globe-outline" size={22} color={iconColor} style={styles.headerIcon} />
-            <Ionicons name="notifications-outline" size={22} color={iconColor} style={styles.headerIcon} />
-            <TouchableOpacity onPress={() => setProfileVisible(true)} style={styles.headerIcon}>
-              <Ionicons name="person-circle-outline" size={26} color={iconColor} />
-            </TouchableOpacity>
-          </View>
-        </View>
+    <View style={[styles.safeArea, { backgroundColor }]}> 
+      <StatusBar style={isDarkMode ? 'light' : 'dark'} translucent backgroundColor="transparent" />
+      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: insets.top }]}> 
+        <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} /> 
+        <Text style={[styles.appName, { color: textColor }]}><Text style={{ color: textColor }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text> 
+        <View style={styles.headerIcons}> 
+          <TouchableOpacity onPress={toggleTheme} style={styles.headerIcon}> 
+            <Feather name={isDarkMode ? 'sun' : 'moon'} size={22} color={iconColor} /> 
+          </TouchableOpacity> 
+          <TouchableOpacity onPress={() => setProfileVisible(true)} style={styles.headerIcon}> 
+            <Ionicons name="person-circle-outline" size={26} color={iconColor} /> 
+          </TouchableOpacity> 
+        </View> 
+      </View>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
           <FlatList
@@ -238,7 +240,7 @@ export default function EmployeeHome() {
           </TouchableOpacity>
         </ScrollView>
         <ProfileModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
-      </SafeAreaView>
+      </View>
   );
 };
 
