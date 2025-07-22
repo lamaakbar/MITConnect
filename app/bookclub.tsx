@@ -79,8 +79,8 @@ export default function BookClubScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}> {/* Use themed background */}
+      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}> {/* Themed header */}
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={iconColor} />
         </TouchableOpacity>
