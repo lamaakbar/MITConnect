@@ -339,7 +339,7 @@ export default function TraineeDashboard() {
                   </View>
                 </View>
                 <View style={styles.progressWeeksRow}>
-                  {trainee.weeks.map((week, widx) => (
+                  {trainee.weeks.map((week: any, widx: number) => (
                     <View key={widx} style={styles.progressWeekBox}>
                       <View style={styles.progressWeekIconBox}>
                         {week.status === 'done' && (
