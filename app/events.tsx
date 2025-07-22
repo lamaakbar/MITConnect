@@ -114,17 +114,19 @@ export default function EventsScreen() {
       </View>
       {/* Tabs for My Events and Bookmark */}
       <View style={styles.tabsContainer}>
-        <View style={styles.tabsRow}>
-          {EVENT_TABS.map(tab => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tab, activeTab === tab && styles.tabActive]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row' }}>
+          <View style={styles.tabsRow}>
+            {EVENT_TABS.map(tab => (
+              <TouchableOpacity
+                key={tab}
+                style={[styles.tab, activeTab === tab && styles.tabActive]}
+                onPress={() => setActiveTab(tab)}
+              >
+                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
       </View>
       <View style={{ flex: 1 }}>
         {activeTab === 'All' ? (
@@ -227,7 +229,8 @@ export default function EventsScreen() {
             )}
           />
         )}
-        <EventsTabBar />
+        {/* Remove EventsTabBar from Events page */}
+        {/* <EventsTabBar /> */}
       </View>
     </View>
   );

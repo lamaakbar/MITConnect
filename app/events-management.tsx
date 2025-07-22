@@ -111,7 +111,7 @@ export default function EventsManagement() {
           <ThemedText style={{ color: searchPlaceholder, fontSize: 16 }}>Search events</ThemedText>
         </ThemedView>
         {/* Filter Tabs - all styles inline */}
-        <ThemedView style={{ flexDirection: 'row', marginHorizontal: 16, marginBottom: 16 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row', marginHorizontal: 16, marginBottom: 16 }}>
           {FILTERS.map((filter) => (
             <ThemedView
               key={filter}
@@ -123,6 +123,7 @@ export default function EventsManagement() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 height: 44,
+                minWidth: 100,
               }}
             >
               <TouchableOpacity
@@ -138,7 +139,7 @@ export default function EventsManagement() {
               </TouchableOpacity>
             </ThemedView>
           ))}
-        </ThemedView>
+        </ScrollView>
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 100 }}
