@@ -8,6 +8,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
+import { useRouter } from 'expo-router';
 
 const DEPARTMENTS = [
   'IT Services',
@@ -384,6 +385,7 @@ const iosStyles = StyleSheet.create({
 });
 
 export default function TraineeHub() {
+  const router = useRouter();
   const [tab, setTab] = useState<'Departments' | 'Registration' | 'Dashboard'>('Departments');
   const [overallFrom, setOverallFrom] = useState('');
   const [overallTo, setOverallTo] = useState('');
@@ -521,9 +523,12 @@ export default function TraineeHub() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 8 }}>
+          <Ionicons name="arrow-back" size={24} color={iconColor} />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Trainee Hub</Text>
-        <TouchableOpacity onPress={toggleTheme}>
-          <Ionicons name={isDarkMode ? 'moon' : 'sunny'} size={24} color={iconColor} />
+        <TouchableOpacity onPress={toggleTheme} style={{ marginLeft: 8 }}>
+          <Ionicons name={isDarkMode ? 'moon' : 'sunny'} size={22} color={iconColor} />
         </TouchableOpacity>
       </View>
       <View style={styles.tabRow}>

@@ -1,20 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, Image, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
 import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
 import EventsTabBar from '../components/EventsTabBar';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
 
-const EVENT_TABS = ['All', 'Upcoming', 'My Events', 'Bookmark'];
+const EVENT_TABS = ['All', 'Upcoming', 'My Events'];
 
 export default function EventsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { events, bookmarks, bookmarkEvent, unbookmarkEvent, registered, registerEvent, getUserEventStatus } = useEventContext();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('All');
   const [userEventStatuses, setUserEventStatuses] = useState<{[key: string]: any}>({});
+  const [myEventsTab, setMyEventsTab] = useState<'Registered' | 'Bookmarked'>('Registered');
   const { isDarkMode, toggleTheme } = useTheme();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -95,27 +98,18 @@ export default function EventsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor }}>
-      {/* App Header */}
-      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Image source={require('../assets/images/icon.png')} style={{ width: 32, height: 32, marginRight: 8 }} />
-          <Text style={[styles.headerTitle, { color: textColor }]}>MIT<Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={toggleTheme} style={styles.headerIcon}>
-            <Feather name={isDarkMode ? 'sun' : 'moon'} size={20} color={iconColor} />
+    <SafeAreaView style={{ flex: 1, backgroundColor }}>
+      {/* Header with SafeAreaView and headline */}
+      <SafeAreaView style={{ backgroundColor: cardBackground }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: borderColor, position: 'relative' }}>
+          <TouchableOpacity onPress={() => router.back()} style={{ position: 'absolute', left: 16, zIndex: 1 }}>
+            <Ionicons name="arrow-back" size={24} color={iconColor} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/my-events' as any)} style={styles.headerIcon}>
-            <Feather name="calendar" size={20} color={iconColor} />
-          </TouchableOpacity>
-          <Feather name="globe" size={20} color={iconColor} style={styles.headerIcon} />
-          <Feather name="bell" size={20} color={iconColor} style={styles.headerIcon} />
-          <Feather name="user" size={20} color={iconColor} style={styles.headerIcon} />
+          <Text style={{ fontSize: 22, fontWeight: 'bold', color: textColor, textAlign: 'center' }}>Events</Text>
         </View>
-      </View>
+      </SafeAreaView>
       {/* Search Bar */}
-      <View style={styles.searchBar}>
+      <View style={[styles.searchBar, { marginTop: 12, flexDirection: 'row', alignItems: 'center' }]}> 
         <Ionicons name="search" size={20} color={secondaryTextColor} style={{ marginRight: 8 }} />
         <TextInput
           style={{ flex: 1, fontSize: 16, color: textColor }}
@@ -125,7 +119,7 @@ export default function EventsScreen() {
         />
       </View>
       {/* Tabs for My Events and Bookmark */}
-      <View style={styles.tabsContainer}>
+      <View style={[styles.tabsContainer, { marginTop: 8 }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row' }}>
           <View style={styles.tabsRow}>
             {EVENT_TABS.map(tab => (
@@ -196,61 +190,84 @@ export default function EventsScreen() {
             )}
           />
         ) : activeTab === 'My Events' ? (
-          <FlatList
-            data={registeredEvents}
-            keyExtractor={item => item.id}
-            contentContainerStyle={{ padding: 16 }}
-            renderItem={({ item }) => (
-              <View style={styles.eventCard}>
-                <Image source={item.image} style={styles.eventImage} />
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.eventTitle}>{item.title}</Text>
-                  <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
-                </View>
-              </View>
-            )}
-            ListEmptyComponent={() => (
-              <View style={styles.emptyState}>
-                <Ionicons name="calendar-outline" size={64} color="#ccc" />
-                <Text style={styles.emptyStateTitle}>No Registered Events</Text>
-                <Text style={styles.emptyStateText}>
-                  You haven't registered for any events yet.
-                </Text>
-              </View>
-            )}
-          />
-        ) : (
-          <FlatList
-            data={bookmarkedEvents}
-            keyExtractor={item => item.id}
-            contentContainerStyle={{ padding: 16 }}
-            renderItem={({ item }) => (
-              <View style={styles.eventCard}>
-                <Image source={item.image} style={styles.eventImage} />
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.eventTitle}>{item.title}</Text>
-                  <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
-                  <TouchableOpacity style={styles.removeBtn} onPress={() => unbookmarkEvent(item.id)}>
-                    <Text style={styles.removeBtnText}>Remove</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-            ListEmptyComponent={() => (
-              <View style={styles.emptyState}>
-                <Ionicons name="bookmark-outline" size={64} color={secondaryTextColor} />
-                <Text style={styles.emptyStateTitle}>No Bookmarks Yet</Text>
-                <Text style={styles.emptyStateText}>
-                  You haven't bookmarked any events yet. Start exploring events and save the ones you're interested in!
-                </Text>
-              </View>
-            )}
-          />
-        )}
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 12, marginBottom: 8 }}>
+              <TouchableOpacity
+                style={{
+                  paddingVertical: 8,
+                  paddingHorizontal: 24,
+                  borderRadius: 20,
+                  backgroundColor: myEventsTab === 'Registered' ? '#e0f7f4' : 'transparent',
+                  marginRight: 8,
+                }}
+                onPress={() => setMyEventsTab('Registered')}
+              >
+                <Text style={{
+                  fontWeight: 'bold',
+                  color: myEventsTab === 'Registered' ? '#43C6AC' : secondaryTextColor,
+                  fontSize: 16,
+                }}>Registered</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  paddingVertical: 8,
+                  paddingHorizontal: 24,
+                  borderRadius: 20,
+                  backgroundColor: myEventsTab === 'Bookmarked' ? '#e0f7f4' : 'transparent',
+                }}
+                onPress={() => setMyEventsTab('Bookmarked')}
+              >
+                <Text style={{
+                  fontWeight: 'bold',
+                  color: myEventsTab === 'Bookmarked' ? '#43C6AC' : secondaryTextColor,
+                  fontSize: 16,
+                }}>Bookmarked</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+              {myEventsTab === 'Registered' ? (
+                registeredEvents.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="calendar-outline" size={48} color={secondaryTextColor} />
+                    <Text style={styles.emptyStateTitle}>No Registered Events</Text>
+                    <Text style={styles.emptyStateText}>You haven't registered for any events yet.</Text>
+                  </View>
+                ) : registeredEvents.map(item => (
+                  <View key={item.id} style={[styles.eventCard, { marginBottom: 12 }]}> 
+                    <Image source={item.image} style={styles.eventImage} />
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={styles.eventTitle}>{item.title}</Text>
+                      <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
+                    </View>
+                  </View>
+                ))
+              ) : myEventsTab === 'Bookmarked' ? (
+                bookmarkedEvents.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="bookmark-outline" size={48} color={secondaryTextColor} />
+                    <Text style={styles.emptyStateTitle}>No Bookmarks Yet</Text>
+                    <Text style={styles.emptyStateText}>You haven't bookmarked any events yet. Start exploring events and save the ones you're interested in!</Text>
+                  </View>
+                ) : bookmarkedEvents.map(item => (
+                  <View key={item.id} style={[styles.eventCard, { marginBottom: 12 }]}> 
+                    <Image source={item.image} style={styles.eventImage} />
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={styles.eventTitle}>{item.title}</Text>
+                      <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
+                      <TouchableOpacity style={styles.removeBtn} onPress={() => unbookmarkEvent(item.id)}>
+                        <Text style={styles.removeBtnText}>Remove</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              ) : null}
+            </ScrollView>
+          </View>
+        ) : null}
         {/* Remove EventsTabBar from Events page */}
         {/* <EventsTabBar /> */}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
