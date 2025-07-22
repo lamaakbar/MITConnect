@@ -18,6 +18,8 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState(initialRole || 'employee');
   const [errors, setErrors] = useState({ email: '', password: '', confirm: '' });
@@ -128,10 +130,18 @@ export default function SignupScreen() {
               style={styles.input}
               placeholder="Password (min 6 characters)"
               placeholderTextColor="#9BA1A6"
-              secureTextEntry
+              secureTextEntry={!showPassword}
               value={password}
               onChangeText={setPassword}
             />
+            <TouchableOpacity onPress={() => setShowPassword((v) => !v)}>
+              <Ionicons
+                name={showPassword ? 'eye-off' : 'eye'}
+                size={20}
+                color="#1976D2"
+                style={styles.eyeIcon}
+              />
+            </TouchableOpacity>
           </View>
           {errors.password ? <Text style={styles.error}>{errors.password}</Text> : null}
           <View style={styles.inputGroup}>
@@ -140,10 +150,18 @@ export default function SignupScreen() {
               style={styles.input}
               placeholder="Confirm password"
               placeholderTextColor="#9BA1A6"
-              secureTextEntry
+              secureTextEntry={!showConfirmPassword}
               value={confirm}
               onChangeText={setConfirm}
             />
+            <TouchableOpacity onPress={() => setShowConfirmPassword((v) => !v)}>
+              <Ionicons
+                name={showConfirmPassword ? 'eye-off' : 'eye'}
+                size={20}
+                color="#1976D2"
+                style={styles.eyeIcon}
+              />
+            </TouchableOpacity>
           </View>
           {errors.confirm ? <Text style={styles.error}>{errors.confirm}</Text> : null}
           <Pressable style={styles.button} onPress={handleSignup} disabled={loading}>
@@ -227,6 +245,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#222',
     backgroundColor: 'transparent',
+  },
+  eyeIcon: {
+    marginLeft: 8,
   },
   error: {
     color: '#d32f2f',

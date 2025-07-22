@@ -7,7 +7,7 @@ import { supabase } from '../services/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
-const ADMIN_EMAIL = 'admin@example.com';
+const ADMIN_EMAIL = 'mitclead@gmail.com';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -147,7 +147,7 @@ export default function LoginScreen() {
               />
               <TouchableOpacity onPress={() => setShowPassword((v) => !v)}>
                 <Ionicons
-                  name={showPassword ? 'eye-off' : 'eye'}
+                  name={showPassword ? 'eye' : 'eye-off'}
                   size={20}
                   color="#1976D2"
                   style={styles.eyeIcon}
