@@ -4,7 +4,7 @@
     "slug": "MITConnect",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/mitconnect-logo.png",
     "scheme": "mitconnect",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -31,8 +31,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "image": "./assets/images/mitconnect-logo.png",
+          "imageWidth": 260,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }

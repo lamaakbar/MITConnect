@@ -113,11 +113,7 @@ export default function LoginScreen() {
     >
       <View style={styles.outerContainer}>
           <View style={styles.branding}>
-            <Image source={require('../assets/images/icon.png')} style={styles.logo} />
-            <Text style={styles.appName}>
-              <Text style={styles.appNameNavy}>MIT</Text>
-              <Text style={styles.appNameGreen}>Connect</Text>
-            </Text>
+            <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} />
             <Text style={styles.welcome}>Welcome Back</Text>
           </View>
           <View style={styles.card}>
@@ -194,9 +190,9 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   logo: {
-    width: 90,
-    height: 90,
-    marginBottom: 8,
+    width: 180,
+    height: 180,
+    marginBottom: 4,
     resizeMode: 'contain',
   },
   appName: {

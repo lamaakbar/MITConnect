@@ -84,7 +84,7 @@ export default function EmployeeHome() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
         <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
-          <Image source={require('../assets/images/icon.png')} style={styles.logo} />
+          <Image source={require('../assets/images/mitconnect-logo.png')} style={{ width: 40, height: 40, marginRight: 8, resizeMode: 'contain' }} />
           <Text style={[styles.appName, { color: textColor }]}><Text style={{ color: textColor }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
           <View style={styles.headerIcons}>
             <TouchableOpacity onPress={toggleTheme} style={styles.headerIcon}>
