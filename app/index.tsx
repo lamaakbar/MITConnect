@@ -1,17 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable, Alert, TouchableOpacity, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useUserContext } from '../components/UserContext';
+import { supabase } from '../services/supabase';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+
+const ADMIN_EMAIL = 'admin@example.com';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { setUserRole, getHomeRoute } = useUserContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [role, setRole] = useState('employee'); // default to employee
+  const [errors, setErrors] = useState({ email: '', password: '' });
 
   React.useEffect(() => {
     AsyncStorage.getItem('rememberedCredentials').then((data) => {
@@ -24,12 +30,34 @@ export default function LoginScreen() {
     });
   }, []);
 
+  const validate = () => {
+    let valid = true;
+    let errs = { email: '', password: '' };
+    if (!email) {
+      errs.email = 'Email is required.';
+      valid = false;
+    }
+    if (!password) {
+      errs.password = 'Password is required.';
+      valid = false;
+    }
+    setErrors(errs);
+    return valid;
+  };
+
   const handleLogin = async () => {
+    if (!validate()) return;
     setLoading(true);
-    setTimeout(async () => {
+    if (!email || !password) {
       setLoading(false);
-      if (!email || !password) {
-        Alert.alert('Error', 'Please enter both email and password.');
+      Alert.alert('Error', 'Please enter both email and password.');
+      return;
+    }
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error || !data.user) {
+        setLoading(false);
+        Alert.alert('Login Failed', error?.message || 'Invalid credentials.');
         return;
       }
       if (rememberMe) {
@@ -37,102 +65,215 @@ export default function LoginScreen() {
       } else {
         await AsyncStorage.removeItem('rememberedCredentials');
       }
-      // Set the user role in context
-      await setUserRole(role as 'admin' | 'employee' | 'trainee');
-      
-      // Navigate to the correct home screen based on role
+      const userRole = data.user.user_metadata?.role;
+      if (!userRole || !['admin', 'employee', 'trainee'].includes(userRole)) {
+        setLoading(false);
+        Alert.alert('Error', 'No valid role found in your account. Please contact support.');
+        return;
+      }
+      if (userRole === 'admin') {
+        if (email.trim().toLowerCase() !== ADMIN_EMAIL) {
+          setLoading(false);
+          Alert.alert('Access Denied', 'Only the designated admin can access the admin home screen.');
+          return;
+        }
+      }
+      await setUserRole(userRole);
+      setLoading(false);
       router.replace(getHomeRoute() as any);
-    }, 800);
+    } catch (err) {
+      setLoading(false);
+      Alert.alert('Login Error', 'An unexpected error occurred.');
+    }
   };
 
-  const handleForgotPassword = () => {
+  const handleForgotPassword = async () => {
     if (!email) {
       Alert.alert('Forgot Password', 'Please enter your email to receive a reset link.');
       return;
     }
-    Alert.alert('Reset Link Sent', `A password reset link has been sent to ${email}.`);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) {
+        Alert.alert('Error', error.message);
+      } else {
+        Alert.alert('Reset Link Sent', `A password reset link has been sent to ${email}.`);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'An unexpected error occurred.');
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
-      <View style={styles.roleRow}>
-        {['admin', 'employee', 'trainee'].map(r => (
-          <Pressable key={r} onPress={() => setRole(r)} style={[styles.roleButton, role === r && styles.roleButtonActive]}>
-            <Text style={{ color: role === r ? '#004080' : '#888', fontWeight: 'bold' }}>{r.charAt(0).toUpperCase() + r.slice(1)}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      <View style={styles.row}>
-        <Pressable style={styles.checkboxContainer} onPress={() => setRememberMe((v) => !v)}>
-          <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]} />
-          <Text style={styles.checkboxLabel}>Remember me</Text>
-        </Pressable>
-        <TouchableOpacity onPress={handleForgotPassword}>
-          <Text style={styles.forgot}>Forgot Password?</Text>
-        </TouchableOpacity>
-      </View>
-      <Pressable style={styles.button} onPress={handleLogin} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Login'}</Text>
-      </Pressable>
-    </View>
+    <LinearGradient
+      colors={['#00C9A7', '#0073CF']}
+      start={{ x: 0.5, y: 1 }}
+      end={{ x: 0.5, y: 0 }}
+      style={styles.gradient}
+    >
+      <View style={styles.outerContainer}>
+          <View style={styles.branding}>
+            <Image source={require('../assets/images/icon.png')} style={styles.logo} />
+            <Text style={styles.appName}>
+              <Text style={styles.appNameNavy}>MIT</Text>
+              <Text style={styles.appNameGreen}>Connect</Text>
+            </Text>
+            <Text style={styles.welcome}>Welcome Back</Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.title}>Login</Text>
+            <View style={styles.inputGroup}>
+              <Ionicons name="mail" size={20} color="#1976D2" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email address"
+                placeholderTextColor="#9BA1A6"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
+            {errors.email ? <Text style={styles.error}>{errors.email}</Text> : null}
+            <View style={styles.inputGroup}>
+              <Ionicons name="lock-closed" size={20} color="#1976D2" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor="#9BA1A6"
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+              />
+              <TouchableOpacity onPress={() => setShowPassword((v) => !v)}>
+                <Ionicons
+                  name={showPassword ? 'eye-off' : 'eye'}
+                  size={20}
+                  color="#1976D2"
+                  style={styles.eyeIcon}
+                />
+              </TouchableOpacity>
+            </View>
+            {errors.password ? <Text style={styles.error}>{errors.password}</Text> : null}
+            <View style={styles.optionsRow}>
+              <Pressable style={styles.checkboxContainer} onPress={() => setRememberMe((v) => !v)}>
+                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]} />
+                <Text style={styles.checkboxLabel}>Remember me</Text>
+              </Pressable>
+              <TouchableOpacity onPress={handleForgotPassword}>
+                <Text style={styles.forgot}>Forgot password?</Text>
+              </TouchableOpacity>
+            </View>
+            <Pressable style={styles.button} onPress={handleLogin} disabled={loading}>
+              <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Login'}</Text>
+            </Pressable>
+            <View style={styles.signupRow}>
+              <Text style={styles.signupText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={() => router.push('/signup')}>
+                <Text style={styles.signupLink}>Sign up</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  gradient: {
+    flex: 1,
+  },
+  outerContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 16,
+  },
+  branding: {
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  logo: {
+    width: 90,
+    height: 90,
+    marginBottom: 8,
+    resizeMode: 'contain',
+  },
+  appName: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  appNameNavy: {
+    color: '#1A2980',
+    fontWeight: 'bold',
+  },
+  appNameGreen: {
+    color: '#60C481',
+    fontWeight: 'bold',
+  },
+  welcome: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 10,
+    marginTop: 2,
+    textShadowColor: 'rgba(0,0,0,0.08)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
+  },
+  card: {
     backgroundColor: '#fff',
+    borderRadius: 28,
+    paddingVertical: 36,
+    paddingHorizontal: 28,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#1976D2',
+    shadowOpacity: 0.10,
+    shadowRadius: 16,
+    elevation: 8,
+    alignItems: 'center',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 24,
+    color: '#222',
+    marginBottom: 18,
+    letterSpacing: 0.5,
   },
-  roleRow: {
+  inputGroup: {
     flexDirection: 'row',
-    marginBottom: 16,
+    alignItems: 'center',
+    backgroundColor: '#f7fafc',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#e0eaff',
+    marginBottom: 8,
+    paddingHorizontal: 10,
+    width: '100%',
   },
-  roleButton: {
-    marginHorizontal: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: '#f0f4f8',
+  inputIcon: {
+    marginRight: 6,
   },
-  roleButtonActive: {
-    backgroundColor: '#e0eaff',
-    borderColor: '#004080',
-    borderWidth: 1,
+  eyeIcon: {
+    marginLeft: 6,
   },
   input: {
-    width: '100%',
-    padding: 12,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
+    flex: 1,
+    height: 44,
     fontSize: 16,
+    color: '#222',
+    backgroundColor: 'transparent',
   },
-  row: {
+  error: {
+    color: '#d32f2f',
+    fontSize: 13,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+    marginLeft: 6,
+  },
+  optionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -153,29 +294,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   checkboxChecked: {
-    backgroundColor: '#004080',
-    borderColor: '#004080',
+    backgroundColor: '#007BFF',
+    borderColor: '#007BFF',
   },
   checkboxLabel: {
     fontSize: 15,
     color: '#222',
   },
   forgot: {
-    color: '#007AFF',
+    color: '#007BFF',
     fontSize: 15,
   },
   button: {
-    backgroundColor: '#004080',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 16,
+    backgroundColor: '#007BFF',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    marginTop: 18,
     width: '100%',
     alignItems: 'center',
+    shadowColor: '#1976D2',
+    shadowOpacity: 0.13,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  signupRow: {
+    flexDirection: 'row',
+    marginTop: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signupText: {
+    fontSize: 16,
+    color: '#555',
+  },
+  signupLink: {
+    color: '#007BFF',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 }); 
