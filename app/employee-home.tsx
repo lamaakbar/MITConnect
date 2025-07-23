@@ -11,6 +11,8 @@ import { useThemeColor } from '../hooks/useThemeColor';
 import ProfileModal from '../components/ProfileModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import AutoCarousel from '../components/AutoCarousel';
+import EventsTabBar from '../components/EventsTabBar';
 
 
 const portalLinks = [
