@@ -11,6 +11,7 @@ import { useThemeColor } from '../hooks/useThemeColor';
 import ProfileModal from '../components/ProfileModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import EventsTabBar from '../components/EventsTabBar';
 
 
 const portalLinks = [
@@ -240,6 +241,7 @@ export default function EmployeeHome() {
           </TouchableOpacity>
         </ScrollView>
         <ProfileModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
+        <EventsTabBar />
       </View>
   );
 };

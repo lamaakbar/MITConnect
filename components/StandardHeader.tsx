@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useUserContext } from './UserContext';
 
 interface StandardHeaderProps {
   title: string;
@@ -23,12 +24,22 @@ export default function StandardHeader({
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
-  
+  const { getHomeRoute } = useUserContext();
+
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
   const borderColor = isDarkMode ? '#2A2A2A' : '#E0E0E0';
+
+  // Smart back handler
+  const handleBack = () => {
+    if (window?.history?.length > 1) {
+      router.back();
+    } else {
+      router.replace(getHomeRoute() as any);
+    }
+  };
 
   return (
     <View style={[
@@ -47,7 +58,7 @@ export default function StandardHeader({
     ]}>
       {showBackButton ? (
         <TouchableOpacity 
-          onPress={() => router.back()} 
+          onPress={handleBack} 
           style={[
             styles.backBtn, 
             { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }

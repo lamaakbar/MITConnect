@@ -19,10 +19,10 @@ const TABS = [
     route: '/events',
   },
   {
-    key: 'bookmarks',
-    label: 'Bookmarks',
-    icon: (color: string) => <Ionicons name="bookmark" size={26} color={color} />,
-    route: '/bookmarks',
+    key: 'gallery',
+    label: 'Gallery',
+    icon: (color: string) => <Ionicons name="image-outline" size={26} color={color} />,
+    route: '/gallery',
   },
 ];
 
