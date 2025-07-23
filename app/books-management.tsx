@@ -73,18 +73,22 @@ export default function AdminBooksScreen() {
           onPress={() => router.push('/add-book')}
           style={{
             backgroundColor: '#3CB371',
-            borderRadius: 20,
-            padding: 8,
+            borderRadius: 24,
+            width: 40,
+            height: 40,
             marginLeft: 8,
             alignItems: 'center',
             justifyContent: 'center',
-            width: 32,
-            height: 32,
+            shadowColor: '#000',
+            shadowOpacity: 0.12,
+            shadowRadius: 4,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 3,
           }}
           activeOpacity={0.85}
           accessibilityLabel="Add Book"
         >
-          <Ionicons name="add" size={24} color="#fff" />
+          <Ionicons name="add" size={26} color="#fff" />
         </TouchableOpacity>
       </View>
       <View style={[styles.container, { backgroundColor }]}>
