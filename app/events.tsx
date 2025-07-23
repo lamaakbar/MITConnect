@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, Image, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useLocalSearchParams } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
-import { Ionicons, Feather, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import EventsTabBar from '../components/EventsTabBar';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
@@ -15,14 +14,12 @@ const EVENT_TABS = ['All', 'Upcoming', 'My Events'];
 
 export default function EventsScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
   const { events, bookmarks, bookmarkEvent, unbookmarkEvent, registered, registerEvent, getUserEventStatus } = useEventContext();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('All');
   const [userEventStatuses, setUserEventStatuses] = useState<{[key: string]: any}>({});
   const [myEventsTab, setMyEventsTab] = useState<'Registered' | 'Bookmarked'>('Registered');
-  const { isDarkMode, toggleTheme } = useTheme();
-  const backgroundColor = useThemeColor({}, 'background');
+  const { isDarkMode } = useTheme();
   const textColor = useThemeColor({}, 'text');
   const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
   const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
@@ -38,11 +35,14 @@ export default function EventsScreen() {
   const darkHighlight = '#43C6AC';
   const { getHomeRoute } = useUserContext();
   const handleBack = () => {
-    if (window?.history?.length > 1) {
-      router.back();
-    } else {
-      router.replace(getHomeRoute() as any);
-    }
+    router.back();
+  };
+
+  // Helper function to get registration count
+  const getRegistrationCount = (eventId: string) => {
+    // Find the event and return its registered count
+    const event = events.find(e => e.id === eventId);
+    return event?.registeredCount || 0;
   };
 
   // Load user event statuses

@@ -786,7 +786,7 @@ const AdminEventListScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 
