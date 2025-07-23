@@ -33,7 +33,11 @@ export default function RootLayout() {
           <EventProvider>
             <CustomThemeProvider>
               <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                <Stack initialRouteName="splash">
+                <Stack
+                  screenOptions={{
+                    headerShown: false, // Hide the default header for all screens
+                  }}
+                >
                   <Stack.Screen name="splash" options={{ headerShown: false }} />
                   <Stack.Screen name="get-started" options={{ headerShown: false }} />
                   <Stack.Screen name="role-selection" options={{ headerShown: false }} />
@@ -76,6 +80,7 @@ export default function RootLayout() {
                   <Stack.Screen name="home" options={{ headerShown: false }} />
                   <Stack.Screen name="my-events" options={{ headerShown: false }} />
                   <Stack.Screen name="event-feedback" options={{ headerShown: false }} />
+                  <Stack.Screen name="library/[id]/details" options={{ headerShown: false }} />
                 </Stack>
                 <StatusBar style="auto" />
               </ThemeProvider>

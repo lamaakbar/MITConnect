@@ -34,14 +34,14 @@ export default function LibraryBookDetailsScreen() {
 
   if (!book) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor }]}> {/* Themed background */}
+      <View style={{ flex: 1, backgroundColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkCard : cardBackground }}>
         <View style={styles.container}>
           <Text style={[styles.errorText, { color: '#E74C3C' }]}>Book not found.</Text>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={24} color={iconColor} />
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -53,16 +53,16 @@ export default function LibraryBookDetailsScreen() {
 
   return (
     <View style={[styles.safeArea, { backgroundColor: isDarkMode ? darkBg : backgroundColor }]}> {/* Themed background */}
-      <ScrollView style={[styles.container, { backgroundColor }]} contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView style={{ flex: 1, backgroundColor }} contentContainerStyle={{ paddingBottom: 32 }}>
         {/* Header */}
         {userRole === 'employee' || userRole === 'trainee' ? (
           <>
-            <StatusBar style={isDarkMode ? 'light' : 'dark'} translucent backgroundColor="transparent" />
+            <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
             <View style={{
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
-              paddingHorizontal: 18,
+              paddingHorizontal: 0,
               paddingTop: insets.top + 10,
               paddingBottom: 6,
               backgroundColor: isDarkMode ? darkCard : cardBackground,
@@ -72,11 +72,19 @@ export default function LibraryBookDetailsScreen() {
               <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
                 <Ionicons name="arrow-back" size={24} color={iconColor} />
               </TouchableOpacity>
-              <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
+              <Text style={{
+                fontSize: 22,
+                fontWeight: '700',
+                letterSpacing: 0.5,
+                flex: 1,
+                textAlign: 'center',
+                color: isDarkMode ? darkText : textColor
+              }}>
                 MIT<Text style={{ color: darkHighlight }}>Connect</Text>
               </Text>
               <View style={{ width: 32 }} />
             </View>
+            <View style={{ height: 16 }} />
           </>
         ) : (
           <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}> {/* Themed header */}
