@@ -1,10 +1,18 @@
-import { View, Text, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import EventsTabBar from '../components/EventsTabBar';
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Home</Text>
-      <Text>Welcome to MITConnect!</Text>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <View style={[styles.header, { paddingTop: insets.top }]}> 
+        <Text style={styles.title}>Home</Text>
+        <Text>Welcome to MITConnect!</Text>
+      </View>
+      <EventsTabBar />
     </View>
   );
 }
@@ -12,9 +20,13 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+    justifyContent: 'space-between',
+  },
+  header: {
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 24,
@@ -22,3 +34,4 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 }); 
+

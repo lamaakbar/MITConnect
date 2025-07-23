@@ -90,7 +90,7 @@ export default function GalleryScreen() {
   const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
   const borderColor = isDarkMode ? '#2A2A2A' : '#E5E5EA';
   const iconColor = useThemeColor({}, 'icon');
-  const { userRole } = useUserContext();
+  const { userRole, getHomeRoute } = useUserContext();
   const insets = useSafeAreaInsets();
   const darkBg = '#181C20';
   const darkCard = '#23272b';
@@ -106,11 +106,11 @@ export default function GalleryScreen() {
     album.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleBackPress = () => {
-    if (selectedAlbum) {
-      setSelectedAlbum(null);
-    } else {
+  const handleBack = () => {
+    if (window?.history?.length > 1) {
       router.back();
+    } else {
+      router.replace(getHomeRoute() as any);
     }
   };
 
@@ -224,12 +224,13 @@ export default function GalleryScreen() {
   const albumCardBackground = isDarkMode ? '#18191A' : '#000';
   const albumOverlayBackground = isDarkMode ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.3)';
 
+  // Determine if this is the root tab (no navigation history)
+  const isRootTab = !selectedAlbum;
+
   if (selectedAlbum && album) {
     return (
       <View style={[styles.container, { backgroundColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkBg : backgroundColor }]}> 
-        {(userRole === 'employee' || userRole === 'trainee') && (
-          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-        )}
+        <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
         {/* Header */}
         {(userRole === 'employee' || userRole === 'trainee') ? (
           <View style={{
@@ -243,7 +244,7 @@ export default function GalleryScreen() {
             borderBottomWidth: 1,
             borderBottomColor: isDarkMode ? darkBorder : borderColor,
           }}>
-            <TouchableOpacity onPress={handleBackPress} style={{ padding: 4, marginRight: 8 }}>
+            <TouchableOpacity onPress={handleBack} style={{ padding: 4, marginRight: 8 }}>
               <Ionicons name="arrow-back" size={24} color={iconColor} />
             </TouchableOpacity>
             <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
@@ -253,7 +254,7 @@ export default function GalleryScreen() {
           </View>
         ) : (
           <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}> 
-            <TouchableOpacity onPress={handleBackPress} style={styles.backButton}> 
+            <TouchableOpacity onPress={handleBack} style={styles.backButton}> 
               <Ionicons name="chevron-back" size={24} color={iconColor} /> 
             </TouchableOpacity> 
             <Text style={[styles.headerTitle, { color: headerTitleColor }]}>{album.title}</Text> 
@@ -310,9 +311,7 @@ export default function GalleryScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkBg : backgroundColor }]}> 
-      {(userRole === 'employee' || userRole === 'trainee') && (
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-      )}
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       {/* Header */}
       {(userRole === 'employee' || userRole === 'trainee') ? (
         <View style={{
@@ -326,7 +325,7 @@ export default function GalleryScreen() {
           borderBottomWidth: 1,
           borderBottomColor: isDarkMode ? darkBorder : borderColor,
         }}>
-          <TouchableOpacity onPress={handleBackPress} style={{ padding: 4, marginRight: 8 }}>
+          <TouchableOpacity onPress={handleBack} style={{ padding: 4, marginRight: 8 }}>
             <Ionicons name="arrow-back" size={24} color={iconColor} />
           </TouchableOpacity>
           <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
@@ -336,7 +335,7 @@ export default function GalleryScreen() {
         </View>
       ) : (
         <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}> 
-          <TouchableOpacity onPress={handleBackPress} style={styles.backButton}> 
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}> 
             <Ionicons name="chevron-back" size={24} color={iconColor} /> 
           </TouchableOpacity> 
           <Text style={[styles.headerTitle, { color: headerTitleColor }]}>Gallery</Text> 

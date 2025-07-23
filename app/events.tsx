@@ -36,6 +36,14 @@ export default function EventsScreen() {
   const darkText = '#F3F6FA';
   const darkSecondary = '#AEB6C1';
   const darkHighlight = '#43C6AC';
+  const { getHomeRoute } = useUserContext();
+  const handleBack = () => {
+    if (window?.history?.length > 1) {
+      router.back();
+    } else {
+      router.replace(getHomeRoute() as any);
+    }
+  };
 
   // Load user event statuses
   useEffect(() => {
@@ -108,44 +116,35 @@ export default function EventsScreen() {
     return { text: 'Register', disabled: false };
   };
 
-  // Helper function to get registration count
-  const getRegistrationCount = (eventId: string) => {
-    // This would typically come from the event data or a separate API call
-    // For now, we'll use a placeholder
-    return Math.floor(Math.random() * 50) + 5; // Random number between 5-55
-  };
-
   return (
     <View style={{ flex: 1, backgroundColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkCard : cardBackground }}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       {(userRole === 'employee' || userRole === 'trainee') && (
-        <>
-          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-          <View style={{
-            paddingTop: insets.top,
-            backgroundColor: isDarkMode ? darkCard : cardBackground,
-            borderBottomColor: isDarkMode ? darkBorder : borderColor,
-            borderBottomWidth: 1,
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingHorizontal: 12,
-            paddingBottom: 12,
+        <View style={{
+          paddingTop: insets.top,
+          backgroundColor: isDarkMode ? darkCard : cardBackground,
+          borderBottomColor: isDarkMode ? darkBorder : borderColor,
+          borderBottomWidth: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 12,
+          paddingBottom: 12,
+        }}>
+          <TouchableOpacity onPress={handleBack} style={{ padding: 4, marginRight: 8 }}>
+            <Ionicons name="arrow-back" size={24} color={iconColor} />
+          </TouchableOpacity>
+          <Text style={{
+            fontSize: 22,
+            fontWeight: '700',
+            letterSpacing: 0.5,
+            flex: 1,
+            textAlign: 'center',
+            color: isDarkMode ? darkText : textColor
           }}>
-            <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
-              <Ionicons name="arrow-back" size={24} color={iconColor} />
-            </TouchableOpacity>
-            <Text style={{
-              fontSize: 22,
-              fontWeight: '700',
-              letterSpacing: 0.5,
-              flex: 1,
-              textAlign: 'center',
-              color: isDarkMode ? darkText : textColor
-            }}>
-              MIT<Text style={{ color: darkHighlight }}>Connect</Text>
-            </Text>
-            <View style={{ width: 32 }} />
-          </View>
-        </>
+            MIT<Text style={{ color: darkHighlight }}>Connect</Text>
+          </Text>
+          <View style={{ width: 32 }} />
+        </View>
       )}
       {/* Search Bar */}
       <View style={{

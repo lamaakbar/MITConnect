@@ -11,19 +11,21 @@ import { useThemeColor } from '../hooks/useThemeColor';
 import ProfileModal from '../components/ProfileModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import AutoCarousel from '../components/AutoCarousel';
+import EventsTabBar from '../components/EventsTabBar';
 
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
   { key: 'gallery', label: 'Gallery', icon: <Ionicons name="image-outline" size={28} color="#F7B801" /> },
-  { key: 'inspire', label: 'Inspire Corner', icon: <Feather name="users" size={28} color="#43C6AC" /> },
+  { key: 'inspire', label: 'Inspire Corner', icon: <Feather name="zap" size={28} color="#43C6AC" /> },
   { key: 'bookclub', label: 'Book Club', icon: <Ionicons name="book-outline" size={28} color="#FF8C42" /> },
 ];
 
 const featuredNews = [
   {
     id: '1',
-    image: require('../assets/images/react-logo.png'),
+    image: require('../assets/images/tennis-poster.png'),
     text: 'Winner of this week',
     progress: 0.6,
     eventId: '1', // Link to event id
@@ -99,31 +101,25 @@ export default function EmployeeHome() {
           </TouchableOpacity> 
         </View> 
       </View>
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, {alignItems: 'center', justifyContent: 'center', flexGrow: 1}]} showsVerticalScrollIndicator={false}>
           <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
-          <FlatList
+          <AutoCarousel
             data={featuredNews}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingLeft: 18, paddingBottom: 8 }}
-            renderItem={({ item }) => (
+            cardWidth={320}
+            renderItem={({ item, index }) => (
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={() => router.push({ pathname: '/event-details', params: { id: item.eventId } })}
+                style={{
+                  borderRadius: 24,
+                  overflow: 'hidden',
+                  width: 320,
+                  height: 180,
+                  marginBottom: 18,
+                  marginRight: index !== featuredNews.length - 1 ? 16 : 0,
+                }}
               >
-                <LinearGradient
-                  colors={['#A259FF', '#3BB2B8']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.featuredGradientCard}
-                >
-                  <Image source={item.image} style={styles.featuredImage} />
-                  <Text style={styles.featuredMonoText}>{item.text}</Text>
-                  <View style={styles.featuredProgressBarBg}>
-                    <View style={[styles.featuredProgressBar, { width: `${item.progress * 100}%` }]} />
-                  </View>
-                </LinearGradient>
+                <Image source={item.image} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
               </TouchableOpacity>
             )}
           />
@@ -240,6 +236,7 @@ export default function EmployeeHome() {
           </TouchableOpacity>
         </ScrollView>
         <ProfileModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
+        <EventsTabBar />
       </View>
   );
 };

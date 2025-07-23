@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { Text } from 'react-native';
 
 export type Book = {
   id: string;
@@ -16,7 +17,7 @@ interface BookContextType {
   removeBook: (id: string) => void;
 }
 
-const BookContext = createContext<BookContextType | undefined>(undefined);
+const BookContext = createContext<BookContextType | null>(null);
 
 const DEFAULT_BOOKS: Book[] = [
   {

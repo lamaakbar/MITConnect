@@ -17,6 +17,7 @@ import {
   Keyboard,
   ToastAndroid,
   ScrollView,
+  StatusBar,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../components/ThemeContext';
 import AdminTabBar from '../components/AdminTabBar';
 import AdminHeader from '../components/AdminHeader';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Album and Photo Types
 interface Photo {
@@ -159,11 +161,33 @@ export default function GalleryManagement() {
 
   // Albums Grid View
   if (!showCreate && !selectedAlbumId) {
+    const insets = useSafeAreaInsets();
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor }}>
-        <AdminHeader 
-          title=""
-        />
+      <View style={{ flex: 1, backgroundColor }}>
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+        <View style={{
+          paddingTop: insets.top,
+          backgroundColor: cardBackground,
+          borderBottomColor: borderColor,
+          borderBottomWidth: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 16,
+          paddingBottom: 12,
+        }}>
+          <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+            <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#fff' : '#222'} />
+          </TouchableOpacity>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{
+              fontSize: 20,
+              fontWeight: 'bold',
+              letterSpacing: 0.5,
+              color: isDarkMode ? '#fff' : '#222',
+            }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
+          </View>
+          <View style={{ width: 32 }} />
+        </View>
         <View style={[styles.mainContainer, { backgroundColor }]}>
           {/* Search Bar */}
           <View style={[styles.searchBarContainer, { backgroundColor: searchBackground }]}>
@@ -323,7 +347,7 @@ export default function GalleryManagement() {
             </View>
           </Modal>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 

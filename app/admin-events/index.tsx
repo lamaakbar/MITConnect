@@ -18,6 +18,7 @@ import {
   ToastAndroid,
   ScrollView,
   SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -26,6 +27,7 @@ import { useTheme } from '../../components/ThemeContext';
 import { useEventContext } from '../../components/EventContext';
 import AdminTabBar from '../../components/AdminTabBar';
 import AdminHeader from '../../components/AdminHeader';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Import event service
 import eventService, { EventService } from '../../services/EventService';
@@ -379,43 +381,12 @@ const AdminEventListScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
+  const insets = useSafeAreaInsets();
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor }}>
       {/* Unified Admin Header */}
       <AdminHeader 
         title=""
-        rightComponent={
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity
-              style={[styles.testBtn, { backgroundColor: '#FF6B35' }]}
-              onPress={testFunctionality}
-            >
-              <Text style={styles.testBtnText}>Test</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.testBtn, { backgroundColor: '#9B59B6' }]}
-              onPress={debugSession}
-            >
-              <Text style={styles.testBtnText}>Debug</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.testBtn, { backgroundColor: '#E74C3C' }]}
-              onPress={async () => {
-                try {
-                  const result = await eventService.cleanupOrphanedRecords();
-                  Alert.alert(
-                    'Cleanup Complete',
-                    `Deleted:\n• ${result.deletedRegistrations} orphaned registrations\n• ${result.deletedBookmarks} orphaned bookmarks\n• ${result.deletedFeedback} orphaned feedback`
-                  );
-                } catch (error) {
-                  Alert.alert('Error', 'Failed to cleanup orphaned records');
-                }
-              }}
-            >
-              <Text style={styles.testBtnText}>Cleanup</Text>
-            </TouchableOpacity>
-          </View>
-        }
       />
 
       {/* Search Bar */}
@@ -815,7 +786,7 @@ const AdminEventListScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
