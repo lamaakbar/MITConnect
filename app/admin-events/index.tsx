@@ -18,6 +18,7 @@ import {
   ToastAndroid,
   ScrollView,
   SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -25,6 +26,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../../components/ThemeContext';
 import AdminTabBar from '../../components/AdminTabBar';
 import AdminHeader from '../../components/AdminHeader';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Empty events array - no mock data
 const mockEvents: any[] = [];
@@ -232,12 +234,33 @@ const AdminEventListScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
+  const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor }}>
-      {/* Unified Admin Header */}
-      <AdminHeader 
-        title=""
-      />
+    <View style={{ flex: 1, backgroundColor }}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      <View style={{
+        paddingTop: insets.top,
+        backgroundColor: cardBackground,
+        borderBottomColor: borderColor,
+        borderBottomWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+      }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+          <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#fff' : '#222'} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{
+            fontSize: 20,
+            fontWeight: 'bold',
+            letterSpacing: 0.5,
+            color: isDarkMode ? '#fff' : '#222',
+          }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
+        </View>
+        <View style={{ width: 32 }} />
+      </View>
 
       {/* Search Bar */}
       <View style={[styles.searchBar, { backgroundColor: searchBackground }]}>
@@ -627,7 +650,7 @@ const AdminEventListScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 

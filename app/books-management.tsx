@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Alert, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Alert, SafeAreaView, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useBooks } from '../components/BookContext';
@@ -9,6 +9,7 @@ import Toast from 'react-native-root-toast';
 import AdminHeader from '../components/AdminHeader';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AdminBooksScreen() {
   const router = useRouter();
@@ -43,28 +44,49 @@ export default function AdminBooksScreen() {
     );
   };
 
+  const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor }}>
-      <AdminHeader 
-        title=""
-        rightComponent={
-          <TouchableOpacity
-            onPress={() => router.push('/add-book')}
-            style={{
-              backgroundColor: '#3CB371',
-              borderRadius: 20,
-              padding: 8,
-              marginLeft: 8,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            activeOpacity={0.85}
-            accessibilityLabel="Add Book"
-          >
-            <Ionicons name="add" size={24} color="#fff" />
-          </TouchableOpacity>
-        }
-      />
+    <View style={{ flex: 1, backgroundColor }}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      <View style={{
+        paddingTop: insets.top,
+        backgroundColor: cardBackground,
+        borderBottomColor: borderColor,
+        borderBottomWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+      }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+          <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#fff' : '#222'} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{
+            fontSize: 20,
+            fontWeight: 'bold',
+            letterSpacing: 0.5,
+            color: isDarkMode ? '#fff' : '#222',
+          }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => router.push('/add-book')}
+          style={{
+            backgroundColor: '#3CB371',
+            borderRadius: 20,
+            padding: 8,
+            marginLeft: 8,
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 32,
+            height: 32,
+          }}
+          activeOpacity={0.85}
+          accessibilityLabel="Add Book"
+        >
+          <Ionicons name="add" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
       <View style={[styles.container, { backgroundColor }]}>
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
@@ -137,7 +159,7 @@ export default function AdminBooksScreen() {
         {/* Bottom Tab Bar */}
         <AdminTabBar activeTab="books" />
       </View>
-    </SafeAreaView>
+    </View>
   ); 
 }
 

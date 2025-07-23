@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../components/ThemeContext';
@@ -8,6 +8,7 @@ import AdminHeader from '../components/AdminHeader';
 import { Colors } from '@/constants/Colors';
 import { ThemedView } from '../components/ThemedView';
 import { ThemedText } from '../components/ThemedText';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const mockEvents = [
   {
@@ -101,9 +102,33 @@ export default function EventsManagement() {
     </TouchableOpacity>
   );
 
+  const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor }}>
-      <AdminHeader title="" />
+    <View style={{ flex: 1, backgroundColor }}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      <View style={{
+        paddingTop: insets.top,
+        backgroundColor: cardBackground,
+        borderBottomColor: borderColor,
+        borderBottomWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+      }}>
+        <TouchableOpacity onPress={() => { /* TODO: implement back navigation */ }} style={{ padding: 4, marginRight: 8 }}>
+          <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#fff' : '#222'} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{
+            fontSize: 20,
+            fontWeight: 'bold',
+            letterSpacing: 0.5,
+            color: isDarkMode ? '#fff' : '#222',
+          }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
+        </View>
+        <View style={{ width: 32 }} />
+      </View>
       <View style={[styles.container, { backgroundColor, flex: 1 }]}> 
         {/* Search Bar - all styles inline */}
         <ThemedView style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 12, margin: 16, paddingHorizontal: 12, height: 44 }}>
@@ -191,7 +216,7 @@ export default function EventsManagement() {
         {AddEventFAB}
       </View>
       {/* Future: Add Event Modal can go here, controlled by showAddModal */}
-    </SafeAreaView>
+    </View>
   );
 }
 
