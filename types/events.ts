@@ -4,21 +4,14 @@ export type EventStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
 // Event type based on location
 export type EventType = 'MITC' | 'Online' | 'Hybrid';
 
-// Event category types
-export type EventCategory = 
-  | 'Workshop' 
-  | 'Seminar' 
-  | 'Conference' 
-  | 'Activity' 
-  | 'Meetup' 
-  | 'Training' 
-  | 'Networking';
+// Event category types - now allows any string
+export type EventCategory = string;
 
 // Main Event interface
 export interface Event {
   id: string;
   title: string;
-  desc: string;
+  description: string;
   date: string;
   time: string;
   location: string;
@@ -31,6 +24,7 @@ export interface Event {
   // Optional fields for future expansion
   maxCapacity?: number;
   organizer?: string;
+  coverImage?: string; // For cover_image field
   tags?: string[];
   requirements?: string[];
   materials?: string[];
@@ -114,7 +108,7 @@ export interface EventFilters {
 // Event creation/update interface (for admin)
 export interface EventFormData {
   title: string;
-  desc: string;
+  description: string;
   date: string;
   time: string;
   location: string;

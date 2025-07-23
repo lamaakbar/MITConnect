@@ -28,10 +28,13 @@ export default function RegistrationSuccessScreen() {
       </TouchableOpacity>
       <Text style={styles.successTitle}>You're successfully registered!</Text>
       <View style={styles.imageContainer}>
-        <Image source={event.image} style={styles.eventImage} />
+        <Image 
+          source={event.coverImage ? { uri: event.coverImage } : event.image} 
+          style={styles.eventImage} 
+        />
       </View>
       <Text style={styles.eventTitle}>{event.title}</Text>
-      <Text style={styles.eventDesc}>{event.desc}</Text>
+              <Text style={styles.eventDesc}>{event.description}</Text>
       <TouchableOpacity style={styles.calendarBtn} onPress={handleAddToCalendar}>
         <Text style={styles.calendarBtnText}>Add to Calendar</Text>
         <Ionicons name="calendar-outline" size={20} color="#222" style={{ marginLeft: 8 }} />

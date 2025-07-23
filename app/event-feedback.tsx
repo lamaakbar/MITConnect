@@ -33,7 +33,7 @@ export default function EventFeedbackScreen() {
         setEventStats(stats);
         
         // Load user event status
-        const userStatus = await getUserEventStatus(id as string, 'user-123');
+        const userStatus = await getUserEventStatus(id as string);
         setUserEventStatus(userStatus);
         
         // If user hasn't attended yet, mark them as attended (simulate attendance)
@@ -41,7 +41,7 @@ export default function EventFeedbackScreen() {
           const eventDate = new Date(foundEvent.date);
           const today = new Date();
           if (eventDate < today) {
-            await markUserAsAttended(id as string, 'user-123');
+            await markUserAsAttended(id as string);
             setUserEventStatus({ ...userStatus, status: 'attended' });
           }
         }
@@ -67,7 +67,6 @@ export default function EventFeedbackScreen() {
     try {
       const success = await submitFeedback({
         eventId: id as string,
-        userId: 'user-123', // Mock user ID
         rating: userRating,
         comment: feedback,
       });

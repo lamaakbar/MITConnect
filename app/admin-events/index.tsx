@@ -1,6 +1,6 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -23,17 +23,19 @@ import * as ImagePicker from 'expo-image-picker';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../../components/ThemeContext';
+import { useEventContext } from '../../components/EventContext';
 import AdminTabBar from '../../components/AdminTabBar';
 import AdminHeader from '../../components/AdminHeader';
 
-// Empty events array - no mock data
-const mockEvents: any[] = [];
+// Import event service
+import eventService, { EventService } from '../../services/EventService';
 
 const FILTERS = ['All', 'Upcoming', 'Past'];
 
 const AdminEventListScreen: React.FC = () => {
   const router = useRouter();
   const { isDarkMode } = useTheme();
+  const { handleEventDeletion } = useEventContext();
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -46,8 +48,9 @@ const AdminEventListScreen: React.FC = () => {
   
   const [search, setSearch] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('All');
-  const [events, setEvents] = useState(mockEvents);
+  const [events, setEvents] = useState<any[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [loading, setLoading] = useState(true);
   // Add Event form state
   const [addImage, setAddImage] = useState<string | null>(null);
   const [addTitle, setAddTitle] = useState('');
@@ -73,6 +76,43 @@ const AdminEventListScreen: React.FC = () => {
   const [showEditTypeDropdown, setShowEditTypeDropdown] = useState(false);
 
   const [showAttendeesModal, setShowAttendeesModal] = useState(false);
+
+  // Fetch events on component mount
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      const fetchedEvents = await eventService.getAllEvents();
+      setEvents(fetchedEvents);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Test functionality (for debugging)
+  const testFunctionality = async () => {
+    console.log('🧪 Running functionality tests...');
+    const results = await eventService.testAllFunctionality();
+    
+    const allPassed = Object.values(results).every(result => result);
+    if (allPassed) {
+      alert('✅ All tests passed! Check console for details.');
+    } else {
+      alert('❌ Some tests failed. Check console for details.');
+    }
+  };
+
+  // Debug session state
+  const debugSession = async () => {
+    console.log('🔍 Debugging session state...');
+    await eventService.debugSessionState();
+    alert('🔍 Session debug completed! Check console for details.');
+  };
   const [attendeesSearch, setAttendeesSearch] = useState('');
   // Add state for attendeeStatus
   const [attendeeStatus, setAttendeeStatus] = useState<'Confirmed' | 'Canceled'>('Confirmed');
@@ -95,38 +135,82 @@ const AdminEventListScreen: React.FC = () => {
     }
   };
 
-  const handleAddEvent = () => {
+  const handleAddEvent = async () => {
     setAddLoading(true);
-    setTimeout(() => {
-      setAddLoading(false);
+    try {
       if (!addTitle || !addType || !addDate || !addTime || !addLocation || !addDescription) {
         alert('Please fill in all fields.');
         return;
       }
-      setEvents(prev => [
-        ...prev,
-        {
-          id: (prev.length + 1).toString(),
-          title: addTitle,
-          type: addType,
-          date: addDate,
-          time: addTime,
-          location: addLocation,
-          description: addDescription,
-          coverImage: addImage ? { uri: addImage } : require('../../assets/images/splash-icon.png'),
-          featured: false,
-          attendees: [], // Add an empty attendees array for new events
-        },
-      ]);
-      setShowAddModal(false);
-      setAddImage(null);
-      setAddTitle('');
-      setAddType('');
-      setAddDate('');
-      setAddTime('');
-      setAddLocation('');
-      setAddDescription('');
-    }, 800);
+
+      // Validate date format
+      const formattedDate = EventService.validateAndFormatDate(addDate);
+      if (!formattedDate) {
+        alert('Invalid date format. Please use a valid date.');
+        return;
+      }
+
+      // Validate event type (now allows any text)
+      if (!addType.trim()) {
+        alert('Please enter an event type.');
+        return;
+      }
+
+      // Validate time format
+      if (!EventService.validateTimeFormat(addTime)) {
+        alert('Invalid time format. Please use HH:MM or HH:MM AM/PM format (e.g., 14:30 or 2:30 PM).');
+        return;
+      }
+
+      // Normalize time to 24-hour format
+      const normalizedTime = EventService.normalizeTimeFormat(addTime);
+      if (!normalizedTime) {
+        alert('Could not process time format. Please check your input.');
+        return;
+      }
+
+      console.log('Creating event with validated data:', {
+        title: addTitle,
+        date: formattedDate,
+        time: normalizedTime,
+        location: addLocation
+      });
+
+      const newEvent = await eventService.createEvent({
+        title: addTitle,
+        description: addDescription,
+        date: formattedDate,
+        time: normalizedTime,
+        location: addLocation,
+        image: addImage,
+        category: addType as any,
+        registeredCount: 0,
+        featured: false,
+        status: 'upcoming',
+        type: 'MITC'
+      });
+
+      if (newEvent) {
+        setEvents(prev => [...prev, newEvent]);
+        setShowAddModal(false);
+        
+        // Reset form
+        setAddImage(null);
+        setAddTitle('');
+        setAddType('');
+        setAddDate('');
+        setAddTime('');
+        setAddLocation('');
+        setAddDescription('');
+      } else {
+        alert('Failed to create event. Please check the console for details.');
+      }
+    } catch (error) {
+      console.error('Error creating event:', error);
+      alert('Failed to create event. Please try again.');
+    } finally {
+      setAddLoading(false);
+    }
   };
 
   // Open Edit Modal and populate fields
@@ -181,27 +265,90 @@ const AdminEventListScreen: React.FC = () => {
   };
 
   // Handle Edit Delete
-  const handleEditDelete = () => {
+  const handleEditDelete = async () => {
     if (editIndex !== null) {
       const eventToDelete = filteredEvents[editIndex];
-      setEvents(prev => prev.filter(e => e.id !== eventToDelete.id));
+      
+      // Show confirmation dialog
+      Alert.alert(
+        'Delete Event',
+        `Are you sure you want to delete "${eventToDelete.title}"? This action cannot be undone and will remove all registrations and bookmarks for this event.`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                setEditLoading(true);
+                
+                // Delete from database
+                const success = await eventService.deleteEvent(eventToDelete.id);
+                
+                if (success) {
+                  // Remove from local state
+                  setEvents(prev => prev.filter(e => e.id !== eventToDelete.id));
+                  
+                  // Clean up from all user contexts
+                  await handleEventDeletion(eventToDelete.id);
+                  
+                  // Show success message
+                  if (Platform.OS === 'android') {
+                    ToastAndroid.show('Event deleted successfully', ToastAndroid.SHORT);
+                  } else {
+                    Alert.alert('Success', 'Event deleted successfully');
+                  }
+                  
+                  console.log('Event deleted successfully:', eventToDelete.id);
+                } else {
+                  Alert.alert('Error', 'Failed to delete event. Please try again.');
+                }
+              } catch (error) {
+                console.error('Error deleting event:', error);
+                Alert.alert('Error', 'An error occurred while deleting the event.');
+              } finally {
+                setEditLoading(false);
+                setShowEditModal(false);
+                setEditIndex(null);
+              }
+            },
+          },
+        ]
+      );
     }
-    setShowEditModal(false);
-    setEditIndex(null);
   };
 
   // Open Attendees Modal
-  const openAttendeesModal = (eventId: string) => {
+  const openAttendeesModal = async (eventId: string) => {
     setCurrentEventId(eventId);
     setAttendeesSearch('');
     setShowAttendeesModal(true);
   };
 
   // Get current event's attendees
-  const currentEvent = events.find(e => e.id === currentEventId);
-  const filteredAttendees = currentEvent?.attendees.filter((a: any) => 
-    (a.name.toLowerCase().includes(attendeesSearch.toLowerCase()) ||
-     a.email.toLowerCase().includes(attendeesSearch.toLowerCase()))
+  const [currentEventAttendees, setCurrentEventAttendees] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (currentEventId) {
+      fetchEventAttendees(currentEventId);
+    }
+  }, [currentEventId]);
+
+  const fetchEventAttendees = async (eventId: string) => {
+    try {
+      const attendees = await eventService.getEventAttendees(eventId);
+      setCurrentEventAttendees(attendees);
+    } catch (error) {
+      console.error('Error fetching attendees:', error);
+    }
+  };
+
+  const filteredAttendees = currentEventAttendees.filter((a: any) => 
+    (a.auth_users?.email?.toLowerCase().includes(attendeesSearch.toLowerCase()) ||
+     a.user_id?.toLowerCase().includes(attendeesSearch.toLowerCase()))
   ) || [];
 
   // Floating action button for adding event (FAB)
@@ -237,6 +384,38 @@ const AdminEventListScreen: React.FC = () => {
       {/* Unified Admin Header */}
       <AdminHeader 
         title=""
+        rightComponent={
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              style={[styles.testBtn, { backgroundColor: '#FF6B35' }]}
+              onPress={testFunctionality}
+            >
+              <Text style={styles.testBtnText}>Test</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.testBtn, { backgroundColor: '#9B59B6' }]}
+              onPress={debugSession}
+            >
+              <Text style={styles.testBtnText}>Debug</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.testBtn, { backgroundColor: '#E74C3C' }]}
+              onPress={async () => {
+                try {
+                  const result = await eventService.cleanupOrphanedRecords();
+                  Alert.alert(
+                    'Cleanup Complete',
+                    `Deleted:\n• ${result.deletedRegistrations} orphaned registrations\n• ${result.deletedBookmarks} orphaned bookmarks\n• ${result.deletedFeedback} orphaned feedback`
+                  );
+                } catch (error) {
+                  Alert.alert('Error', 'Failed to cleanup orphaned records');
+                }
+              }}
+            >
+              <Text style={styles.testBtnText}>Cleanup</Text>
+            </TouchableOpacity>
+          </View>
+        }
       />
 
       {/* Search Bar */}
@@ -380,7 +559,7 @@ const AdminEventListScreen: React.FC = () => {
                   style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground }]}
                   value={addType}
                   onChangeText={setAddType}
-                  placeholder="Workshop, Seminar, etc."
+                  placeholder="Enter event type (e.g., Workshop, Seminar, Conference, etc.)"
                   placeholderTextColor={secondaryTextColor}
                 />
                 <Text style={[styles.modalLabel, { color: textColor }]}>Date</Text>
@@ -388,7 +567,7 @@ const AdminEventListScreen: React.FC = () => {
                   style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground }]}
                   value={addDate}
                   onChangeText={setAddDate}
-                  placeholder="YYYY-MM-DD"
+                  placeholder="YYYY-MM-DD (e.g., 2024-12-25)"
                   placeholderTextColor={secondaryTextColor}
                 />
                 <Text style={[styles.modalLabel, { color: textColor }]}>Time</Text>
@@ -396,7 +575,7 @@ const AdminEventListScreen: React.FC = () => {
                   style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground }]}
                   value={addTime}
                   onChangeText={setAddTime}
-                  placeholder="HH:MM AM/PM"
+                  placeholder="HH:MM or HH:MM AM/PM (e.g., 14:30 or 2:30 PM)"
                   placeholderTextColor={secondaryTextColor}
                 />
                 <Text style={[styles.modalLabel, { color: textColor }]}>Location</Text>
@@ -607,22 +786,31 @@ const AdminEventListScreen: React.FC = () => {
               </View>
             </View>
             <ScrollView style={styles.attendeesList}>
-              {filteredAttendees
-                .filter((a: any) => a.status === attendeeStatus)
-                .map((attendee: any, index: any) => (
-                  <View key={index} style={[styles.attendeeItem, { borderBottomColor: borderColor }]}>
-                    <View style={styles.attendeeInfo}>
-                      <Text style={[styles.attendeeName, { color: textColor }]}>{attendee.name}</Text>
-                      <Text style={[styles.attendeeEmail, { color: secondaryTextColor }]}>{attendee.email}</Text>
-                    </View>
-                    <View style={[
-                      styles.statusBadge,
-                      { backgroundColor: attendee.status === 'Confirmed' ? '#3CB371' : '#E74C3C' }
-                    ]}>
-                      <Text style={styles.statusBadgeText}>{attendee.status}</Text>
-                    </View>
+              {filteredAttendees.map((attendee: any, index: any) => (
+                <View key={index} style={[styles.attendeeItem, { borderBottomColor: borderColor }]}>
+                  <View style={styles.attendeeInfo}>
+                    <Text style={[styles.attendeeName, { color: textColor }]}>
+                      {attendee.auth_users?.email || attendee.user_id}
+                    </Text>
+                    <Text style={[styles.attendeeEmail, { color: secondaryTextColor }]}>
+                      User ID: {attendee.user_id}
+                    </Text>
                   </View>
-                ))}
+                  <View style={[
+                    styles.statusBadge,
+                    { backgroundColor: '#3CB371' }
+                  ]}>
+                    <Text style={styles.statusBadgeText}>Registered</Text>
+                  </View>
+                </View>
+              ))}
+              {filteredAttendees.length === 0 && (
+                <View style={styles.emptyAttendees}>
+                  <Text style={[styles.emptyAttendeesText, { color: secondaryTextColor }]}>
+                    No attendees found for this event
+                  </Text>
+                </View>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -1030,6 +1218,48 @@ const styles = StyleSheet.create({
   emptyStateButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyAttendees: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyAttendeesText: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  dropdownText: {
+    flex: 1,
+    fontSize: 16,
+  },
+  dropdownOptions: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    borderRadius: 8,
+    borderWidth: 1,
+    maxHeight: 200,
+  },
+  dropdownOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+  dropdownOptionText: {
+    fontSize: 16,
+  },
+  testBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  testBtnText: {
+    color: '#fff',
+    fontSize: 12,
     fontWeight: '600',
   },
   });

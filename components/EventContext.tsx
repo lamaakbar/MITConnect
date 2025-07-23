@@ -2,8 +2,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { Event, EventContextType, UserEvent, EventFeedback, EventStats, UserEventTracking } from '../types/events';
 import eventService from '../services/EventService';
 
-// Mock user ID (will be replaced with actual auth)
-const MOCK_USER_ID = 'user-123';
+// No longer needed - using authenticated user from Supabase
 
 // Legacy interface for backward compatibility
 interface LegacyEventContextType {
@@ -14,11 +13,13 @@ interface LegacyEventContextType {
   unbookmarkEvent: (id: string) => Promise<boolean>;
   registerEvent: (id: string) => Promise<boolean>;
   unregisterEvent: (id: string) => Promise<boolean>;
-  submitFeedback: (feedback: Omit<EventFeedback, 'id' | 'submittedAt'>) => Promise<boolean>;
+  submitFeedback: (feedback: Omit<EventFeedback, 'id' | 'submittedAt' | 'userId'>) => Promise<boolean>;
   getEventStats: (eventId: string) => Promise<EventStats | null>;
   getEventFeedback: (eventId: string) => Promise<EventFeedback[]>;
-  getUserEventStatus: (eventId: string, userId: string) => Promise<UserEventTracking | null>;
-  markUserAsAttended: (eventId: string, userId: string) => Promise<boolean>;
+  getUserEventStatus: (eventId: string) => Promise<UserEventTracking | null>;
+  markUserAsAttended: (eventId: string) => Promise<boolean>;
+  fetchUserEvents: () => Promise<void>;
+  handleEventDeletion: (deletedEventId: string) => Promise<void>;
 }
 
 const EventContext = createContext<LegacyEventContextType | undefined>(undefined);
@@ -35,7 +36,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
   // Initialize data on mount
   useEffect(() => {
     fetchEvents();
-    fetchUserEvents(MOCK_USER_ID);
+    fetchUserEvents();
   }, []);
 
   // Event operations
@@ -53,17 +54,21 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const fetchUserEvents = async (userId: string): Promise<void> => {
+  const fetchUserEvents = async (): Promise<void> => {
     setLoading(true);
     try {
-      const userRegisteredEvents = await eventService.getUserRegisteredEvents(userId);
-      const userBookmarkedEvents = await eventService.getUserBookmarkedEvents(userId);
+      const userRegisteredEvents = await eventService.getUserRegisteredEvents();
+      const userBookmarkedEvents = await eventService.getUserBookmarkedEvents();
       
       console.log('Fetched user registered events:', userRegisteredEvents.length);
       console.log('Fetched user bookmarked events:', userBookmarkedEvents.length);
       
+      // Filter out any events that might have been deleted
+      const validRegisteredEvents = userRegisteredEvents.filter(event => event.id);
+      const validBookmarkedEvents = userBookmarkedEvents.filter(event => event.id);
+      
       // Combine and process user events
-      const combinedUserEvents: UserEvent[] = userRegisteredEvents.map(event => ({
+      const combinedUserEvents: UserEvent[] = validRegisteredEvents.map(event => ({
         ...event,
         userStatus: 'registered' as const,
       }));
@@ -71,10 +76,11 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
       setUserEvents(combinedUserEvents);
       
       // Update local state for backward compatibility
-      setRegistered(userRegisteredEvents.map(e => e.id));
-      setBookmarks(userBookmarkedEvents.map(e => e.id));
+      setRegistered(validRegisteredEvents.map(e => e.id));
+      setBookmarks(validBookmarkedEvents.map(e => e.id));
       
-      console.log('Updated registered events:', userRegisteredEvents.map(e => e.id));
+      console.log('Updated registered events:', validRegisteredEvents.map(e => e.id));
+      console.log('Updated bookmarked events:', validBookmarkedEvents.map(e => e.id));
       
       setError(null);
     } catch (err) {
@@ -82,6 +88,27 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
       console.error('Error fetching user events:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Function to handle event deletion cleanup
+  const handleEventDeletion = async (deletedEventId: string): Promise<void> => {
+    try {
+      console.log('Handling deletion of event:', deletedEventId);
+      
+      // Remove from local state immediately
+      setRegistered(prev => prev.filter(id => id !== deletedEventId));
+      setBookmarks(prev => prev.filter(id => id !== deletedEventId));
+      setEvents(prev => prev.filter(event => event.id !== deletedEventId));
+      setUserEvents(prev => prev.filter(event => event.id !== deletedEventId));
+      
+      // Refresh all data to ensure consistency
+      await fetchEvents();
+      await fetchUserEvents();
+      
+      console.log('Successfully cleaned up deleted event from all user states');
+    } catch (err) {
+      console.error('Error handling event deletion cleanup:', err);
     }
   };
 
@@ -96,15 +123,11 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // User operations
-  const registerEvent = async (eventId: string, userId: string): Promise<boolean> => {
+  const registerEvent = async (eventId: string): Promise<boolean> => {
     try {
-      console.log('Registering for event:', eventId, 'User:', userId);
+      console.log('Registering for event:', eventId);
       
-      const success = await eventService.registerForEvent({
-        eventId,
-        userId,
-        registrationDate: new Date(),
-      });
+      const success = await eventService.registerForEvent(eventId);
       
       console.log('Registration result:', success);
       
@@ -115,7 +138,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
           return newState;
         });
         // Refresh user events
-        await fetchUserEvents(userId);
+        await fetchUserEvents();
       }
       
       return success;
@@ -126,14 +149,14 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const unregisterEvent = async (eventId: string, userId: string): Promise<boolean> => {
+  const unregisterEvent = async (eventId: string): Promise<boolean> => {
     try {
-      const success = await eventService.unregisterFromEvent(eventId, userId);
+      const success = await eventService.unregisterFromEvent(eventId);
       
       if (success) {
         setRegistered(prev => prev.filter(id => id !== eventId));
         // Refresh user events
-        await fetchUserEvents(userId);
+        await fetchUserEvents();
       }
       
       return success;
@@ -144,9 +167,9 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const bookmarkEvent = async (eventId: string, userId: string): Promise<boolean> => {
+  const bookmarkEvent = async (eventId: string): Promise<boolean> => {
     try {
-      const success = await eventService.toggleEventBookmark(eventId, userId, true);
+      const success = await eventService.toggleEventBookmark(eventId, true);
       
       if (success) {
         setBookmarks(prev => prev.includes(eventId) ? prev : [...prev, eventId]);
@@ -160,9 +183,9 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const unbookmarkEvent = async (eventId: string, userId: string): Promise<boolean> => {
+  const unbookmarkEvent = async (eventId: string): Promise<boolean> => {
     try {
-      const success = await eventService.toggleEventBookmark(eventId, userId, false);
+      const success = await eventService.toggleEventBookmark(eventId, false);
       
       if (success) {
         setBookmarks(prev => prev.filter(id => id !== eventId));
@@ -176,7 +199,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const submitFeedback = async (feedback: Omit<EventFeedback, 'id' | 'submittedAt'>): Promise<boolean> => {
+  const submitFeedback = async (feedback: Omit<EventFeedback, 'id' | 'submittedAt' | 'userId'>): Promise<boolean> => {
     try {
       return await eventService.submitEventFeedback({
         ...feedback,
@@ -209,9 +232,9 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const getUserEventStatus = async (eventId: string, userId: string): Promise<UserEventTracking | null> => {
+  const getUserEventStatus = async (eventId: string): Promise<UserEventTracking | null> => {
     try {
-      return await eventService.getUserEventStatus(eventId, userId);
+      return await eventService.getUserEventStatus(eventId);
     } catch (err) {
       setError('Failed to fetch user event status');
       console.error('Error fetching user event status:', err);
@@ -219,9 +242,9 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const markUserAsAttended = async (eventId: string, userId: string): Promise<boolean> => {
+  const markUserAsAttended = async (eventId: string): Promise<boolean> => {
     try {
-      return await eventService.markUserAsAttended(eventId, userId);
+      return await eventService.markUserAsAttended(eventId);
     } catch (err) {
       setError('Failed to mark user as attended');
       console.error('Error marking user as attended:', err);
@@ -236,19 +259,19 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
 
   // Backward compatibility methods (for existing components)
   const bookmarkEventLegacy = async (id: string) => {
-    return await bookmarkEvent(id, MOCK_USER_ID);
+    return await bookmarkEvent(id);
   };
 
   const unbookmarkEventLegacy = async (id: string) => {
-    return await unbookmarkEvent(id, MOCK_USER_ID);
+    return await unbookmarkEvent(id);
   };
 
   const registerEventLegacy = async (id: string) => {
-    return await registerEvent(id, MOCK_USER_ID);
+    return await registerEvent(id);
   };
 
   const unregisterEventLegacy = async (id: string) => {
-    return await unregisterEvent(id, MOCK_USER_ID);
+    return await unregisterEvent(id);
   };
 
   return (
@@ -266,6 +289,8 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
         getEventFeedback,
         getUserEventStatus,
         markUserAsAttended,
+        fetchUserEvents,
+        handleEventDeletion,
       }}
     >
       {children}

@@ -46,7 +46,7 @@ export default function MyEventsScreen() {
       const statuses: {[key: string]: any} = {};
       
       for (const event of userRegisteredEvents) {
-        const userStatus = await getUserEventStatus(event.id, 'user-123');
+        const userStatus = await getUserEventStatus(event.id);
         if (userStatus) {
           statuses[event.id] = userStatus;
         }

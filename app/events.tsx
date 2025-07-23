@@ -9,6 +9,7 @@ import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
 import { useUserContext } from '../components/UserContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import EventCard from '../components/EventCard';
 
 const EVENT_TABS = ['All', 'Upcoming', 'My Events'];
 
@@ -42,7 +43,7 @@ export default function EventsScreen() {
       const statuses: {[key: string]: any} = {};
       
       for (const event of events) {
-        const userStatus = await getUserEventStatus(event.id, 'user-123');
+        const userStatus = await getUserEventStatus(event.id);
         if (userStatus) {
           statuses[event.id] = userStatus;
         }
@@ -105,6 +106,13 @@ export default function EventsScreen() {
     if (isRegistered) return { text: 'Registered', disabled: true };
     if (isPast) return { text: 'Event Passed', disabled: true };
     return { text: 'Register', disabled: false };
+  };
+
+  // Helper function to get registration count
+  const getRegistrationCount = (eventId: string) => {
+    // This would typically come from the event data or a separate API call
+    // For now, we'll use a placeholder
+    return Math.floor(Math.random() * 50) + 5; // Random number between 5-55
   };
 
   return (
@@ -206,13 +214,26 @@ export default function EventsScreen() {
             keyExtractor={item => item.id}
             contentContainerStyle={{ padding: 16 }}
             renderItem={({ item }) => (
-              <View style={styles.eventCard}>
-                <Image source={item.image} style={styles.eventImage} />
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.eventTitle}>{item.title}</Text>
-                  <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
-                </View>
-              </View>
+              <EventCard
+                event={item}
+                isBookmarked={bookmarks.includes(item.id)}
+                onBookmark={() => {
+                  if (bookmarks.includes(item.id)) {
+                    unbookmarkEvent(item.id);
+                  } else {
+                    bookmarkEvent(item.id);
+                  }
+                }}
+                onRegister={() => {
+                  if (!getEventButtonState(item.id, item.date).disabled) {
+                    registerEvent(item.id);
+                  }
+                }}
+                onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                buttonText={getEventButtonState(item.id, item.date).text}
+                buttonDisabled={getEventButtonState(item.id, item.date).disabled}
+                registrationCount={getRegistrationCount(item.id)}
+              />
             )}
             ListEmptyComponent={() => (
               <View style={styles.emptyState}>
@@ -230,13 +251,26 @@ export default function EventsScreen() {
             keyExtractor={item => item.id}
             contentContainerStyle={{ padding: 16 }}
             renderItem={({ item }) => (
-              <View style={styles.eventCard}>
-                <Image source={item.image} style={styles.eventImage} />
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.eventTitle}>{item.title}</Text>
-                  <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
-                </View>
-              </View>
+              <EventCard
+                event={item}
+                isBookmarked={bookmarks.includes(item.id)}
+                onBookmark={() => {
+                  if (bookmarks.includes(item.id)) {
+                    unbookmarkEvent(item.id);
+                  } else {
+                    bookmarkEvent(item.id);
+                  }
+                }}
+                onRegister={() => {
+                  if (!getEventButtonState(item.id, item.date).disabled) {
+                    registerEvent(item.id);
+                  }
+                }}
+                onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                buttonText={getEventButtonState(item.id, item.date).text}
+                buttonDisabled={getEventButtonState(item.id, item.date).disabled}
+                registrationCount={getRegistrationCount(item.id)}
+              />
             )}
             ListEmptyComponent={() => (
               <View style={styles.emptyState}>
@@ -292,251 +326,69 @@ export default function EventsScreen() {
                     <Text style={styles.emptyStateText}>You haven't registered for any events yet.</Text>
                   </View>
                 ) : registeredEvents.map(item => (
-                  <View key={item.id} style={[styles.eventCard, { marginBottom: 12 }]}> 
-                <Image source={item.image} style={styles.eventImage} />
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.eventTitle}>{item.title}</Text>
-                  <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
-                </View>
-              </View>
+                  <EventCard
+                    key={item.id}
+                    event={item}
+                    isBookmarked={bookmarks.includes(item.id)}
+                    onBookmark={() => {
+                      if (bookmarks.includes(item.id)) {
+                        unbookmarkEvent(item.id);
+                      } else {
+                        bookmarkEvent(item.id);
+                      }
+                    }}
+                    onRegister={() => {
+                      if (!getEventButtonState(item.id, item.date).disabled) {
+                        registerEvent(item.id);
+                      }
+                    }}
+                    onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                    buttonText={getEventButtonState(item.id, item.date).text}
+                    buttonDisabled={getEventButtonState(item.id, item.date).disabled}
+                    registrationCount={getRegistrationCount(item.id)}
+                  />
                 ))
               ) : myEventsTab === 'Bookmarked' ? (
                 bookmarkedEvents.length === 0 ? (
-              <View style={styles.emptyState}>
+                  <View style={styles.emptyState}>
                     <Ionicons name="bookmark-outline" size={48} color={secondaryTextColor} />
                     <Text style={styles.emptyStateTitle}>No Bookmarks Yet</Text>
                     <Text style={styles.emptyStateText}>You haven't bookmarked any events yet. Start exploring events and save the ones you're interested in!</Text>
-              </View>
+                  </View>
                 ) : bookmarkedEvents.map(item => (
-                  <View key={item.id} style={[styles.eventCard, { marginBottom: 12 }]}> 
-                <Image source={item.image} style={styles.eventImage} />
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.eventTitle}>{item.title}</Text>
-                  <Text style={styles.eventType}>{item.category === 'Seminar' ? 'Online Event' : item.category}</Text>
-                  <TouchableOpacity style={styles.removeBtn} onPress={() => unbookmarkEvent(item.id)}>
-                    <Text style={styles.removeBtnText}>Remove</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+                  <EventCard
+                    key={item.id}
+                    event={item}
+                    isBookmarked={bookmarks.includes(item.id)}
+                    onBookmark={() => {
+                      if (bookmarks.includes(item.id)) {
+                        unbookmarkEvent(item.id);
+                      } else {
+                        bookmarkEvent(item.id);
+                      }
+                    }}
+                    onRegister={() => {
+                      if (!getEventButtonState(item.id, item.date).disabled) {
+                        registerEvent(item.id);
+                      }
+                    }}
+                    onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                    buttonText={getEventButtonState(item.id, item.date).text}
+                    buttonDisabled={getEventButtonState(item.id, item.date).disabled}
+                    registrationCount={getRegistrationCount(item.id)}
+                  />
                 ))
               ) : null}
             </ScrollView>
-              </View>
+          </View>
         ) : null}
       </View>
+      <EventsTabBar />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  headerIcon: {
-    marginLeft: 16,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 12,
-    margin: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  tabsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-  },
-  tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    borderRadius: 20,
-    backgroundColor: 'transparent',
-    marginRight: 8,
-  },
-  tabActive: {
-    backgroundColor: '#e0f7f4',
-  },
-  tabText: {
-    fontSize: 15,
-    color: '#888',
-    fontWeight: 'bold',
-  },
-  tabTextActive: {
-    color: '#43C6AC',
-  },
-  featuredCard: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    margin: 16,
-    padding: 18,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  featuredImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    marginBottom: 12,
-  },
-  featuredTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  featuredDesc: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  featuredMeta: {
-    fontSize: 13,
-    color: '#888',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  registerBtn: {
-    backgroundColor: '#b3e6e0',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    width: '100%',
-    marginTop: 8,
-  },
-  registerBtnText: {
-    color: '#222',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  registerBtnDisabled: {
-    backgroundColor: '#e0e0e0',
-    opacity: 0.7,
-  },
-  registerBtnTextDisabled: {
-    color: '#888',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 20,
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  eventCard: {
-    width: 180,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 12,
-    marginRight: 12,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 1,
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  eventImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-    marginRight: 12,
-  },
-  bookmarkIcon: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 2,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 2,
-  },
-  eventTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  eventType: {
-    fontSize: 13,
-    color: '#888',
-    marginBottom: 4,
-  },
-  eventDate: {
-    fontSize: 13,
-    color: '#888',
-    marginBottom: 2,
-  },
-  registeredBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: '#43C6AC',
-    borderRadius: 10,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    zIndex: 1,
-  },
-  registeredBadgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  myEventsButton: {
-    backgroundColor: '#43C6AC',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  myEventsButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  removeBtn: {
-    backgroundColor: '#ff6b6b',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginTop: 8,
-  },
-  removeBtnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
   emptyState: {
     flex: 1,
     alignItems: 'center',
@@ -557,12 +409,5 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 24,
-  },
-  emptySearchState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 40,
   },
 }); 

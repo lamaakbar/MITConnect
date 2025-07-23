@@ -60,7 +60,7 @@ export default function TraineeHome() {
         return {
           id: event.id,
           title: event.title,
-          desc: event.desc,
+          description: event.description,
           date: event.date,
           time: event.time,
           daysLeft: daysLeft,
@@ -164,7 +164,7 @@ export default function TraineeHome() {
                       <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
                     </View>
                     <Text style={styles.eventTitle}>{item.title}</Text>
-                    <Text style={styles.eventDesc}>{item.desc}</Text>
+                    <Text style={styles.eventDesc}>{item.description}</Text>
                     {registered.includes(item.id) && (
                       <View style={styles.registeredBadge}><Text style={styles.registeredBadgeText}>Registered</Text></View>
                     )}

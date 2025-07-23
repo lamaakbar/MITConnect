@@ -75,7 +75,7 @@ export default function EmployeeHome() {
         return {
           id: event.id,
           title: event.title,
-          desc: event.desc,
+          description: event.description,
           date: event.date,
           time: event.time,
           daysLeft: daysLeft,
@@ -147,7 +147,7 @@ export default function EmployeeHome() {
                       <Ionicons name="ellipsis-horizontal" size={18} color={secondaryTextColor} />
                     </View>
                     <Text style={styles.eventTitle}>{item.title}</Text>
-                    <Text style={styles.eventDesc}>{item.desc}</Text>
+                    <Text style={styles.eventDesc}>{item.description}</Text>
                     {registered && registered.includes(item.id) && (
                       <View style={styles.registeredBadge}>
                         <Text style={styles.registeredBadgeText}>Registered</Text>
