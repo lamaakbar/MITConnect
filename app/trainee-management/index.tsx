@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, Pressable, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, Pressable, SafeAreaView, StatusBar } from 'react-native';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../../components/ThemeContext';
 import AdminTabBar from '../../components/AdminTabBar';
 import AdminHeader from '../../components/AdminHeader';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TABS = ['Dashboard', 'Registrations', 'Progress'];
 
@@ -46,9 +47,33 @@ export default function TraineeDashboard() {
   const modalBackground = isDarkMode ? '#1E1E1E' : '#fff';
   const overlayBackground = isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.3)';
 
+  const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor }}>
-      <AdminHeader title="" />
+    <View style={{ flex: 1, backgroundColor }}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      <View style={{
+        paddingTop: insets.top,
+        backgroundColor: cardBackground,
+        borderBottomColor: borderColor,
+        borderBottomWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+      }}>
+        <TouchableOpacity onPress={() => {}} style={{ padding: 4, marginRight: 8 }}>
+          <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#fff' : '#222'} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{
+            fontSize: 20,
+            fontWeight: 'bold',
+            letterSpacing: 0.5,
+            color: isDarkMode ? '#fff' : '#222',
+          }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
+        </View>
+        <View style={{ width: 32 }} />
+      </View>
       <View style={[styles.container, { backgroundColor }]}> 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
           
@@ -366,7 +391,7 @@ export default function TraineeDashboard() {
         {/* Bottom Tab Bar */}
         <AdminTabBar activeTab="trainees" isDarkMode={isDarkMode} />
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

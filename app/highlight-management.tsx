@@ -8,6 +8,8 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../components/ThemeContext';
 import AdminTabBar from '../components/AdminTabBar';
 import AdminHeader from '../components/AdminHeader';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'react-native';
 
 export default function HighlightManagement() {
   const router = useRouter();
@@ -131,9 +133,34 @@ export default function HighlightManagement() {
     Keyboard.dismiss();
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor }}>
-      <AdminHeader title="" showBackButton={true} />
+    <View style={{ flex: 1, backgroundColor }}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      <View style={{
+        paddingTop: insets.top,
+        backgroundColor: cardBackground,
+        borderBottomColor: borderColor,
+        borderBottomWidth: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+      }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+          <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#fff' : '#222'} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{
+            fontSize: 20,
+            fontWeight: 'bold',
+            letterSpacing: 0.5,
+            color: isDarkMode ? '#fff' : '#222',
+          }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
+        </View>
+        <View style={{ width: 32 }} />
+      </View>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -288,7 +315,7 @@ export default function HighlightManagement() {
       {/* Bottom Tab Bar */}
       <AdminTabBar activeTab="highlights" isDarkMode={isDarkMode} />
     </KeyboardAvoidingView>
-  </SafeAreaView>
+  </View>
   );
 }
 
