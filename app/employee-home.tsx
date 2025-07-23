@@ -16,7 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
   { key: 'gallery', label: 'Gallery', icon: <Ionicons name="image-outline" size={28} color="#F7B801" /> },
-  { key: 'inspire', label: 'Inspire Corner', icon: <Feather name="users" size={28} color="#43C6AC" /> },
+  { key: 'inspire', label: 'Inspire Corner', icon: <Feather name="zap" size={28} color="#43C6AC" /> },
   { key: 'bookclub', label: 'Book Club', icon: <Ionicons name="book-outline" size={28} color="#FF8C42" /> },
 ];
 
