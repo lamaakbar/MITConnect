@@ -56,6 +56,7 @@ const recentBooks = [
 export default function BookClubScreen() {
   const router = useRouter();
   const { books } = useBooks();
+  if (!Array.isArray(books)) return null; // Defensive: don't render if books is not an array
   const [activeTab, setActiveTab] = useState('bookclub');
   const [userRating, setUserRating] = useState(0);
   const [mainCommentInput, setMainCommentInput] = useState('');
