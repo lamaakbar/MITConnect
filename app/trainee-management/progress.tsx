@@ -24,9 +24,13 @@ interface TraineePlan {
   created_at: string;
 }
 
-function getWeekStatus(hours: number | undefined): 'done' | 'in-progress' | 'not-started' {
-  if (hours && hours >= 40) return 'done';
-  if (hours && hours > 0) return 'in-progress';
+function getWeekStatus(from: string, to: string): 'done' | 'in-progress' | 'not-started' {
+  const today = new Date();
+  const fromDate = from ? new Date(from) : null;
+  const toDate = to ? new Date(to) : null;
+  if (toDate && today > toDate) return 'done';
+  if (fromDate && toDate && today >= fromDate && today <= toDate) return 'in-progress';
+  if (fromDate && today < fromDate) return 'not-started';
   return 'not-started';
 }
 
@@ -74,7 +78,8 @@ export default function TraineeProgress() {
       )}
       {progressData.map((trainee) => {
         const totalWeeks = trainee.weeks?.length || 0;
-        const completedWeeks = trainee.weeks?.filter(w => w.hours && w.hours >= 40).length || 0;
+        // Count completed weeks based on date logic
+        const completedWeeks = trainee.weeks?.filter(w => getWeekStatus(w.from, w.to) === 'done').length || 0;
         const progress = totalWeeks > 0 ? Math.round((completedWeeks / totalWeeks) * 100) : 0;
         return (
           <View key={trainee.id} style={[styles.card, { backgroundColor: cardBackground, shadowColor: isDarkMode ? '#000' : '#000' }] }>
@@ -92,11 +97,11 @@ export default function TraineeProgress() {
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.weekChipsRow}>
                 {trainee.weeks?.map((w, idx) => {
-                  const status = getWeekStatus(w.hours);
+                  const status = getWeekStatus(w.from, w.to);
                   let chipColor = '#B0B0B0', icon = 'ellipse-outline';
                   if (status === 'done') { chipColor = '#4ECB71'; icon = 'checkmark-circle'; }
                   else if (status === 'in-progress') { chipColor = '#F7B801'; icon = 'hourglass'; }
-                  else if (status === 'not-started') { chipColor = '#E57373'; icon = 'close-circle'; }
+                  else if (status === 'not-started') { chipColor = '#E57373'; icon = 'hourglass'; }
                   return (
                     <View key={idx} style={[styles.weekChip, { backgroundColor: chipColor + '22' }]}> 
                       <Ionicons name={icon as any} size={18} color={chipColor} />
