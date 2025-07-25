@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView, ScrollView as RNScrollView, Alert, Modal, TextInput } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { useState, useMemo } from 'react';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useState, useMemo, useEffect } from 'react';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
 import RoleGuard from '../components/RoleGuard';
@@ -14,7 +14,7 @@ import ProfileModal from '../components/ProfileModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import AutoCarousel from '../components/AutoCarousel';
-import { useLocalSearchParams } from 'expo-router';
+import { supabase } from '../services/supabase';
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
@@ -42,6 +42,17 @@ const featuredNews = [
   },
 ];
 
+type BookOfMonth = {
+  id: number;
+  title: string;
+  author: string;
+  description?: string;
+  cover_image_url?: string;
+  genre?: string;
+  genre_color?: string;
+  category: string;
+};
+
 export default function TraineeHome() {
   const router = useRouter();
   const { fromLogin } = useLocalSearchParams();
@@ -59,16 +70,49 @@ export default function TraineeHome() {
   const [planInput, setPlanInput] = useState('');
   const [planSubmitted, setPlanSubmitted] = useState(false);
 
+  // Book of the Month state
+  const [bookOfMonth, setBookOfMonth] = useState<BookOfMonth | null>(null);
+  const [loadingBookOfMonth, setLoadingBookOfMonth] = useState(true);
+
   // Debug logging
   console.log('TraineeHome: Current userRole:', userRole, 'isInitialized:', isInitialized);
 
-  React.useEffect(() => {
+  // Handle fromLogin navigation
+  useEffect(() => {
     if (fromLogin) {
       // Optionally reset navigation or scroll to top, etc.
       // For now, just log for debug
       console.log('Navigated from login, ignoring previous route state.');
     }
   }, [fromLogin]);
+
+  // Fetch Book of the Month
+  useEffect(() => {
+    const fetchBookOfMonth = async () => {
+      try {
+        setLoadingBookOfMonth(true);
+        const { data: books, error } = await supabase
+          .from('books')
+          .select('*')
+          .eq('category', 'book_of_the_month')
+          .limit(1);
+
+        if (error) {
+          console.error('Error fetching book of the month:', error);
+          setBookOfMonth(null);
+        } else {
+          setBookOfMonth(books && books.length > 0 ? books[0] : null);
+        }
+      } catch (err) {
+        console.error('Error fetching book of the month:', err);
+        setBookOfMonth(null);
+      } finally {
+        setLoadingBookOfMonth(false);
+      }
+    };
+
+    fetchBookOfMonth();
+  }, []);
 
   // Get upcoming events (events with future dates)
   const upcomingEvents = useMemo(() => {
@@ -229,30 +273,54 @@ export default function TraineeHome() {
             ))}
           </View>
           <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Book of the Month</Text>
-          <TouchableOpacity style={[styles.featuredBookCard, { backgroundColor: isDarkMode ? '#23272b' : '#fff' }]} onPress={() => router.push('/bookclub')}>
-            <Image source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
-            <View style={{ flex: 1, marginLeft: 16 }}>
-              <View style={[styles.genreChip, { backgroundColor: isDarkMode ? '#7cae92' : '#A3C9A8' }]}><Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>Philosophical Fiction</Text></View>
-              <Text style={[styles.featuredBookTitle, { color: isDarkMode ? '#fff' : '#222' }]}>The Alchemist</Text>
-              <Text style={[styles.featuredBookAuthor, { color: isDarkMode ? '#fff' : '#888' }]}>By Paulo Coelho</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                {[1,2,3,4,5].map(i => (
-                  <MaterialIcons
-                    key={i}
-                    name={i <= 5 ? 'star' : 'star-border'}
-                    size={20}
-                    color="#F4B400"
-                    style={{ marginRight: 2 }}
-                  />
-                ))}
-                <Text style={[styles.ratingText, { color: isDarkMode ? '#fff' : '#222' }]}>4.9</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                <Ionicons name="person" size={16} color={isDarkMode ? '#9BA1A6' : '#888'} style={{ marginRight: 4 }} />
-                <Text style={[styles.recommender, { color: isDarkMode ? '#9BA1A6' : '#888' }]}>Nizar Naghi</Text>
-              </View>
+          {loadingBookOfMonth ? (
+            <View style={[styles.emptyState, { backgroundColor: cardBackground }]}>
+              <Ionicons name="book-outline" size={64} color={secondaryTextColor} />
+              <Text style={[styles.emptyStateTitle, { color: textColor }]}>Loading Book of the Month...</Text>
+              <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+                We are fetching the latest book of the month for you.
+              </Text>
             </View>
-          </TouchableOpacity>
+          ) : bookOfMonth ? (
+            <TouchableOpacity 
+              style={[styles.featuredBookCard, { backgroundColor: isDarkMode ? '#23272b' : '#fff' }]} 
+              onPress={() => router.push({ 
+                pathname: '/books-management/[id]/details', 
+                params: { id: bookOfMonth.id.toString() } 
+              })}
+            >
+              <Image source={{ uri: bookOfMonth.cover_image_url || 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
+              <View style={{ flex: 1, marginLeft: 16 }}>
+                <View style={[styles.genreChip, { backgroundColor: bookOfMonth.genre_color || '#A3C9A8' }]}><Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{bookOfMonth.genre || 'Philosophical Fiction'}</Text></View>
+                <Text style={[styles.featuredBookTitle, { color: isDarkMode ? '#fff' : '#222' }]}>{bookOfMonth.title}</Text>
+                <Text style={[styles.featuredBookAuthor, { color: isDarkMode ? '#fff' : '#888' }]}>By {bookOfMonth.author}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                  {[1,2,3,4,5].map(i => (
+                    <MaterialIcons
+                      key={i}
+                      name={i <= 5 ? 'star' : 'star-border'}
+                      size={20}
+                      color="#F4B400"
+                      style={{ marginRight: 2 }}
+                    />
+                  ))}
+                  <Text style={[styles.ratingText, { color: isDarkMode ? '#fff' : '#222' }]}>4.9</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                  <Ionicons name="person" size={16} color={isDarkMode ? '#9BA1A6' : '#888'} style={{ marginRight: 4 }} />
+                  <Text style={[styles.recommender, { color: isDarkMode ? '#9BA1A6' : '#888' }]}>Nizar Naghi</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.emptyState, { backgroundColor: cardBackground }]}>
+              <Ionicons name="book-outline" size={64} color={secondaryTextColor} />
+              <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Book of the Month Set</Text>
+              <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+                There is no book of the month currently set. Check back later for exciting reads!
+              </Text>
+            </View>
+          )}
         </ScrollView>
         <View style={{
           flexDirection: 'row',

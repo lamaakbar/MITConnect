@@ -20,7 +20,6 @@
     "@react-navigation/native": "^7.1.14",
     "@react-navigation/stack": "^7.4.2",
     "@supabase/supabase-js": "^2.52.0",
-    "expo": "~53.0.17",
     "expo-blur": "~14.1.5",
     "expo-clipboard": "^7.1.5",
     "expo-constants": "~17.1.7",
@@ -58,6 +57,7 @@
     "@types/react-native": "^0.72.8",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
+    "expo": "^53.0.20",
     "typescript": "~5.8.3"
   },
   "private": true

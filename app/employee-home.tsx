@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { useState, useMemo } from 'react';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
 import { useTheme } from '../components/ThemeContext';
@@ -13,8 +12,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import AutoCarousel from '../components/AutoCarousel';
 import EventsTabBar from '../components/EventsTabBar';
-import { useLocalSearchParams } from 'expo-router';
+import { useAuth } from '../components/AuthContext';
+import { supabase } from '../services/supabase';
 
+
+type BookOfMonth = {
+  id: number;
+  title: string;
+  author: string;
+  genre?: string;
+  genreColor?: string;
+  cover_image_url?: string;
+  cover?: string;
+  description?: string;
+  category?: string;
+};
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
@@ -46,17 +58,46 @@ export default function EmployeeHome() {
   const [activeTab, setActiveTab] = useState('home');
   const { events, registered } = useEventContext();
   const { userRole, isInitialized } = useUserContext();
+  const { user, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const [profileVisible, setProfileVisible] = useState(false);
   const insets = useSafeAreaInsets();
 
-  React.useEffect(() => {
+  const [bookOfMonth, setBookOfMonth] = useState<BookOfMonth | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Handle fromLogin navigation
+  useEffect(() => {
     if (fromLogin) {
       // Optionally reset navigation or scroll to top, etc.
       // For now, just log for debug
       console.log('Navigated from login, ignoring previous route state.');
     }
   }, [fromLogin]);
+
+  // Fetch Book of the Month
+  useEffect(() => {
+    const fetchBookOfMonth = async () => {
+      setLoading(true);
+      try {
+        const { data: booksData, error: booksError } = await supabase
+          .from('books')
+          .select('*')
+          .eq('category', 'book_of_the_month')
+          .limit(1)
+          .single();
+        if (booksError && booksError.code !== 'PGRST116') throw booksError; // PGRST116 = no rows returned
+        setBookOfMonth(booksData);
+      } catch (err) {
+        console.error('Error fetching book of month:', err);
+        setBookOfMonth(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookOfMonth();
+  }, []);
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -211,39 +252,56 @@ export default function EmployeeHome() {
 
           {/* Book of the Month Section */}
           <Text style={[styles.sectionTitle, { color: textColor }]}>Book of the Month</Text>
-          <TouchableOpacity
-            style={[styles.featuredBookCard, { backgroundColor: cardBackground }]}
-            activeOpacity={0.85}
-            onPress={() => router.push('/bookclub')}
-          >
-            <Image
-              source={{ uri: 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }}
-              style={styles.featuredBookCover}
-            />
-            <View style={{ flex: 1, marginLeft: 16 }}>
-              <View style={styles.genreChip}>
-                <Text style={styles.genreText}>Philosophical Fiction</Text>
+          {loading ? (
+            <Text style={{ textAlign: 'center', color: secondaryTextColor, marginTop: 20 }}>Loading...</Text>
+          ) : bookOfMonth ? (
+            <TouchableOpacity
+              style={[styles.featuredBookCard, { backgroundColor: cardBackground }]}
+              activeOpacity={0.85}
+              onPress={() => router.push({ 
+                pathname: '/books-management/[id]/details', 
+                params: { id: bookOfMonth.id.toString() } 
+              })}
+            >
+              <Image
+                source={{ uri: bookOfMonth.cover_image_url || bookOfMonth.cover || 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }}
+                style={styles.featuredBookCover}
+              />
+              <View style={{ flex: 1, marginLeft: 16 }}>
+                {bookOfMonth.genre && (
+                  <View style={[styles.genreChip, { backgroundColor: bookOfMonth.genreColor || '#A3C9A8' }]}>
+                    <Text style={styles.genreText}>{bookOfMonth.genre}</Text>
+                  </View>
+                )}
+                <Text style={styles.featuredBookTitle}>{bookOfMonth.title}</Text>
+                <Text style={styles.featuredBookAuthor}>By {bookOfMonth.author}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                  {[1,2,3,4,5].map(i => (
+                    <MaterialIcons
+                      key={i}
+                      name={i <= 5 ? 'star' : 'star-border'}
+                      size={20}
+                      color="#F4B400"
+                      style={{ marginRight: 2 }}
+                    />
+                  ))}
+                  <Text style={styles.ratingText}>4.9</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                  <Ionicons name="person" size={16} color={secondaryTextColor} style={{ marginRight: 4 }} />
+                  <Text style={styles.recommender}>Nizar Naghi</Text>
+                </View>
               </View>
-              <Text style={styles.featuredBookTitle}>The Alchemist</Text>
-              <Text style={styles.featuredBookAuthor}>By Paulo Coelho</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                {[1,2,3,4,5].map(i => (
-                  <MaterialIcons
-                    key={i}
-                    name={i <= 5 ? 'star' : 'star-border'}
-                    size={20}
-                    color="#F4B400"
-                    style={{ marginRight: 2 }}
-                  />
-                ))}
-                <Text style={styles.ratingText}>4.9</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                <Ionicons name="person" size={16} color={secondaryTextColor} style={{ marginRight: 4 }} />
-                <Text style={styles.recommender}>Nizar Naghi</Text>
-              </View>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="book-outline" size={48} color={secondaryTextColor} />
+              <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Book of the Month</Text>
+              <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+                No book has been set as Book of the Month yet.
+              </Text>
             </View>
-          </TouchableOpacity>
+          )}
         </ScrollView>
         <ProfileModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
         <EventsTabBar />
@@ -521,5 +579,20 @@ const styles = StyleSheet.create({
   recommender: {
     fontSize: 13,
     color: '#888',
+  },
+  emptyState: {
+    alignItems: 'center',
+    marginTop: 20,
+    padding: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 10,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 5,
   },
 });

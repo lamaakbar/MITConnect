@@ -1,0 +1,13 @@
+-- comments.sql
+CREATE TABLE IF NOT EXISTS comments (
+  id SERIAL PRIMARY KEY,
+  user_id UUID NOT NULL,
+  book_id INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+);
+
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+-- Add RLS policies as needed 
