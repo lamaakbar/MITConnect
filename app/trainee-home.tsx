@@ -14,6 +14,7 @@ import ProfileModal from '../components/ProfileModal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import AutoCarousel from '../components/AutoCarousel';
+import { useLocalSearchParams } from 'expo-router';
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
@@ -43,6 +44,7 @@ const featuredNews = [
 
 export default function TraineeHome() {
   const router = useRouter();
+  const { fromLogin } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState('home');
   const { events, registered } = useEventContext();
   const { userRole, isInitialized } = useUserContext();
@@ -59,6 +61,14 @@ export default function TraineeHome() {
 
   // Debug logging
   console.log('TraineeHome: Current userRole:', userRole, 'isInitialized:', isInitialized);
+
+  React.useEffect(() => {
+    if (fromLogin) {
+      // Optionally reset navigation or scroll to top, etc.
+      // For now, just log for debug
+      console.log('Navigated from login, ignoring previous route state.');
+    }
+  }, [fromLogin]);
 
   // Get upcoming events (events with future dates)
   const upcomingEvents = useMemo(() => {

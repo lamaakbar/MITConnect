@@ -12,6 +12,10 @@ import { View, Text } from 'react-native';
 import { ThemeProvider as CustomThemeProvider } from '../components/ThemeContext';
 import { AuthProvider } from '../components/AuthContext';
 
+export const unstable_settings = {
+  initialRouteName: '/',
+};
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({

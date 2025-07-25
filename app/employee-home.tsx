@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import AutoCarousel from '../components/AutoCarousel';
 import EventsTabBar from '../components/EventsTabBar';
+import { useLocalSearchParams } from 'expo-router';
 
 
 const portalLinks = [
@@ -41,12 +42,21 @@ const featuredNews = [
 
 export default function EmployeeHome() {
   const router = useRouter();
+  const { fromLogin } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState('home');
   const { events, registered } = useEventContext();
   const { userRole, isInitialized } = useUserContext();
   const { isDarkMode, toggleTheme } = useTheme();
   const [profileVisible, setProfileVisible] = useState(false);
   const insets = useSafeAreaInsets();
+
+  React.useEffect(() => {
+    if (fromLogin) {
+      // Optionally reset navigation or scroll to top, etc.
+      // For now, just log for debug
+      console.log('Navigated from login, ignoring previous route state.');
+    }
+  }, [fromLogin]);
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');

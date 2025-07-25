@@ -6,6 +6,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import AdminTabBar from '../components/AdminTabBar';
 import { useTheme } from '../components/ThemeContext';
 import ProfileModal from '../components/ProfileModal';
+import { useLocalSearchParams } from 'expo-router';
 
 // Mock user data for admin
 const mockAdminUser = {
@@ -17,6 +18,15 @@ export default function AdminHome() {
   const router = useRouter();
   const { isDarkMode, toggleTheme } = useTheme();
   const [profileVisible, setProfileVisible] = useState(false);
+  const { fromLogin } = useLocalSearchParams();
+
+  React.useEffect(() => {
+    if (fromLogin) {
+      // Optionally reset navigation or scroll to top, etc.
+      // For now, just log for debug
+      console.log('Navigated from login, ignoring previous route state.');
+    }
+  }, [fromLogin]);
 
   const getThemeColors = () => {
     return isDarkMode ? {

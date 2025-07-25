@@ -63,24 +63,41 @@ export default function SignupScreen() {
           data: { role },
         },
       });
-      setLoading(false);
+
       if (error) {
+        setLoading(false);
         Alert.alert('Signup Failed', error.message);
         return;
       }
+
       if (!data.user) {
+        setLoading(false);
         Alert.alert('Signup Failed', 'No user returned from Supabase.');
         return;
       }
+
+      // ✅ Insert into users table
+      const { error: insertError } = await supabase.from('users').insert([
+        {
+          id: data.user.id,
+          email: email,
+          role: role,
+          name: email, // Or change to a real name field if collected
+        },
+      ]);
+
+      if (insertError) {
+        setLoading(false);
+        console.error('❌ Failed to insert user into users table:', insertError.message);
+        Alert.alert('Signup Error', 'Account created but role save failed. Please contact support.');
+        return;
+      }
+
+      setLoading(false);
       Alert.alert(
         'Success',
-        'Account created! Please check your email to confirm your account before logging in.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/'),
-          },
-        ]
+        'Account created! Please check your email to confirm before logging in.',
+        [{ text: 'OK', onPress: () => router.replace('/') }]
       );
     } catch (err) {
       setLoading(false);
