@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, 
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useState, useMemo } from 'react';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
 import { useTheme } from '../components/ThemeContext';
@@ -14,7 +13,21 @@ import { StatusBar } from 'expo-status-bar';
 import AutoCarousel from '../components/AutoCarousel';
 import EventsTabBar from '../components/EventsTabBar';
 import { useLocalSearchParams } from 'expo-router';
+import { useAuth } from '../components/AuthContext';
 
+// BookOfMonth type definition
+// (copied from app/bookclub.tsx)
+type BookOfMonth = {
+  id: number;
+  title: string;
+  author: string;
+  genre?: string;
+  genreColor?: string;
+  cover_image_url?: string;
+  cover?: string;
+  description?: string;
+  category?: string;
+};
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
