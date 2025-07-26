@@ -14,6 +14,8 @@ import AutoCarousel from '../components/AutoCarousel';
 import EventsTabBar from '../components/EventsTabBar';
 import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../components/AuthContext';
+import { fetchHighlights } from '../services/supabase';
+import { supabase } from '../services/supabase';
 
 // BookOfMonth type definition
 // (copied from app/bookclub.tsx)
@@ -61,6 +63,61 @@ export default function EmployeeHome() {
       console.log('Navigated from login, ignoring previous route state.');
     }
   }, [fromLogin]);
+
+  // Fetch highlights from Supabase
+  useEffect(() => {
+    const loadHighlights = async () => {
+      try {
+        const data = await fetchHighlights();
+        setHighlightCards(data);
+      } catch (error) {
+        console.error('Error loading highlights:', error);
+        setHighlightCards([]);
+      }
+    };
+    
+    loadHighlights();
+  }, []);
+
+  // Fetch book of the month
+  useEffect(() => {
+    const fetchBookOfMonth = async () => {
+      setLoading(true);
+      try {
+        const { data: booksData, error: booksError } = await supabase
+          .from('books')
+          .select('*')
+          .eq('category', 'book_of_the_month')
+          .maybeSingle();
+        
+        if (booksError) {
+          console.error('Error fetching book of the month:', booksError);
+          setBookOfMonth(null);
+        } else {
+          console.log('📚 Book of the month data:', booksData);
+          console.log('📚 Book cover URL:', booksData.cover_image_url);
+          
+          // Handle books with local file URIs by using a fallback
+          if (booksData && booksData.cover_image_url && booksData.cover_image_url.startsWith('file://')) {
+            console.log('⚠️ Book has local file URI, using fallback image');
+            setBookOfMonth({
+              ...booksData,
+              cover_image_url: 'https://covers.openlibrary.org/b/id/7222246-L.jpg'
+            });
+          } else {
+            setBookOfMonth(booksData);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching book of the month:', error);
+        setBookOfMonth(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookOfMonth();
+  }, []);
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -235,10 +292,20 @@ export default function EmployeeHome() {
                 params: { id: bookOfMonth.id.toString() } 
               })}
             >
-              <Image
-                source={{ uri: bookOfMonth.cover_image_url || bookOfMonth.cover || 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }}
-                style={styles.featuredBookCover}
-              />
+              <View style={styles.featuredBookCover}>
+                <Image
+                  source={{ uri: bookOfMonth.cover_image_url || bookOfMonth.cover || 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover"
+                  onError={(error) => console.log('❌ Book image error:', error.nativeEvent.error)}
+                  onLoad={() => console.log('✅ Book image loaded successfully')}
+                />
+                {!bookOfMonth.cover_image_url && !bookOfMonth.cover && (
+                  <View style={styles.fallbackImage}>
+                    <Ionicons name="book-outline" size={40} color="#ccc" />
+                  </View>
+                )}
+              </View>
               <View style={{ flex: 1, marginLeft: 16 }}>
                 {bookOfMonth.genre && (
                   <View style={[styles.genreChip, { backgroundColor: bookOfMonth.genreColor || '#A3C9A8' }]}>
@@ -263,6 +330,11 @@ export default function EmployeeHome() {
                   <Ionicons name="person" size={16} color={secondaryTextColor} style={{ marginRight: 4 }} />
                   <Text style={styles.recommender}>Nizar Naghi</Text>
                 </View>
+                {bookOfMonth.description && (
+                  <Text style={[styles.bookDescription, { color: isDarkMode ? '#ccc' : '#666' }]} numberOfLines={2}>
+                    {bookOfMonth.description}
+                  </Text>
+                )}
               </View>
             </TouchableOpacity>
           ) : (
@@ -551,6 +623,82 @@ const styles = StyleSheet.create({
   recommender: {
     fontSize: 13,
     color: '#888',
+  },
+  // Book of the Month additional styles
+  aboutBox: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+  },
+  aboutLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  aboutText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    gap: 8,
+  },
+  statCardNewSmall: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+  },
+  statNameBold: {
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  statNumberSmall: {
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  statLabelNewSmall: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  rateBox: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+  },
+  rateLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  starButton: {
+    padding: 4,
+  },
+  bookDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  fallbackImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
   },
   emptyState: {
     alignItems: 'center',

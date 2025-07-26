@@ -71,6 +71,48 @@ export function BookProvider({ children }: { children: ReactNode }) {
 
   const addBook = async (book: Book) => {
     try {
+      // Upload image to Supabase storage if it's a local file URI
+      let imageUrl = book.cover;
+      if (book.cover && book.cover.startsWith('file://')) {
+        try {
+          const ext = book.cover.split('.').pop() || 'jpg';
+          const fileName = `book-${Date.now()}.${ext}`;
+          
+          // Read file as base64
+          const response = await fetch(book.cover);
+          const blob = await response.blob();
+          
+          // Upload to Supabase storage with RLS bypass
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('book-covers')
+            .upload(fileName, blob, {
+              contentType: `image/${ext}`,
+              upsert: true,
+              cacheControl: '3600',
+            });
+          
+          if (uploadError) {
+            console.error('❌ Image upload error:', uploadError);
+            // If upload fails due to RLS, try using a placeholder URL
+            imageUrl = 'https://via.placeholder.com/300x400/cccccc/666666?text=Book+Cover';
+            console.log('⚠️ Using placeholder image due to upload failure');
+          } else {
+            // Get the public URL
+            const { data: { publicUrl } } = supabase.storage
+              .from('book-covers')
+              .getPublicUrl(uploadData.path);
+            
+            imageUrl = publicUrl;
+            console.log('✅ Book image uploaded successfully:', publicUrl);
+          }
+        } catch (uploadErr) {
+          console.error('❌ Image upload failed:', uploadErr);
+          // Use placeholder image if upload fails
+          imageUrl = 'https://via.placeholder.com/300x400/cccccc/666666?text=Book+Cover';
+          console.log('⚠️ Using placeholder image due to upload failure');
+        }
+      }
+
       // If the new book is being set as "Book of the Month", reset all existing books first
       if (book.category === 'book_of_the_month') {
         const { error: resetError } = await supabase
@@ -97,7 +139,7 @@ export function BookProvider({ children }: { children: ReactNode }) {
             description: book.description,
             genre: book.genre,
             genre_color: book.genreColor,
-            cover_image_url: book.cover,
+            cover_image_url: imageUrl,
             category: book.category || 'library',
           },
         ])

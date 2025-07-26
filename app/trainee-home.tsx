@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, 
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
 import RoleGuard from '../components/RoleGuard';
@@ -15,6 +15,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import AutoCarousel from '../components/AutoCarousel';
 import { useLocalSearchParams } from 'expo-router';
+import { fetchHighlights } from '../services/supabase';
+import { supabase } from '../services/supabase';
+
+// BookOfMonth type definition
+type BookOfMonth = {
+  id: number;
+  title: string;
+  author: string;
+  genre?: string;
+  genreColor?: string;
+  cover_image_url?: string;
+  cover?: string;
+  description?: string;
+  category?: string;
+  genre_color?: string;
+};
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
@@ -77,6 +93,61 @@ export default function TraineeHome() {
       console.log('Navigated from login, ignoring previous route state.');
     }
   }, [fromLogin]);
+
+  // Fetch highlights from Supabase
+  useEffect(() => {
+    const loadHighlights = async () => {
+      try {
+        const data = await fetchHighlights();
+        setHighlightCards(data);
+      } catch (error) {
+        console.error('Error loading highlights:', error);
+        setHighlightCards([]);
+      }
+    };
+    
+    loadHighlights();
+  }, []);
+
+  // Fetch book of the month
+  useEffect(() => {
+    const fetchBookOfMonth = async () => {
+      setLoadingBookOfMonth(true);
+      try {
+        const { data: booksData, error: booksError } = await supabase
+          .from('books')
+          .select('*')
+          .eq('category', 'book_of_the_month')
+          .maybeSingle();
+        
+        if (booksError) {
+          console.error('Error fetching book of the month:', booksError);
+          setBookOfMonth(null);
+        } else {
+          console.log('📚 Book of the month data:', booksData);
+          console.log('📚 Book cover URL:', booksData.cover_image_url);
+          
+          // Handle books with local file URIs by using a fallback
+          if (booksData && booksData.cover_image_url && booksData.cover_image_url.startsWith('file://')) {
+            console.log('⚠️ Book has local file URI, using fallback image');
+            setBookOfMonth({
+              ...booksData,
+              cover_image_url: 'https://covers.openlibrary.org/b/id/7222246-L.jpg'
+            });
+          } else {
+            setBookOfMonth(booksData);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching book of the month:', error);
+        setBookOfMonth(null);
+      } finally {
+        setLoadingBookOfMonth(false);
+      }
+    };
+
+    fetchBookOfMonth();
+  }, []);
 
   // Get upcoming events (events with future dates)
   const upcomingEvents = useMemo(() => {
@@ -255,14 +326,28 @@ export default function TraineeHome() {
               </Text>
             </View>
           ) : bookOfMonth ? (
-            <TouchableOpacity 
-              style={[styles.featuredBookCard, { backgroundColor: isDarkMode ? '#23272b' : '#fff' }]} 
+            <TouchableOpacity
+              style={[styles.featuredBookCard, { backgroundColor: isDarkMode ? '#23272b' : '#fff' }]}
+              activeOpacity={0.85}
               onPress={() => router.push({ 
                 pathname: '/books-management/[id]/details', 
                 params: { id: bookOfMonth.id.toString() } 
               })}
             >
-              <Image source={{ uri: bookOfMonth.cover_image_url || 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} style={styles.featuredBookCover} />
+              <View style={styles.featuredBookCover}>
+                <Image 
+                  source={{ uri: bookOfMonth.cover_image_url || 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} 
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover"
+                  onError={(error) => console.log('❌ Book image error:', error.nativeEvent.error)}
+                  onLoad={() => console.log('✅ Book image loaded successfully')}
+                />
+                {!bookOfMonth.cover_image_url && !bookOfMonth.cover && (
+                  <View style={styles.fallbackImage}>
+                    <Ionicons name="book-outline" size={40} color="#ccc" />
+                  </View>
+                )}
+              </View>
               <View style={{ flex: 1, marginLeft: 16 }}>
                 <View style={[styles.genreChip, { backgroundColor: bookOfMonth.genre_color || '#A3C9A8' }]}><Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{bookOfMonth.genre || 'Philosophical Fiction'}</Text></View>
                 <Text style={[styles.featuredBookTitle, { color: isDarkMode ? '#fff' : '#222' }]}>{bookOfMonth.title}</Text>
@@ -283,6 +368,11 @@ export default function TraineeHome() {
                   <Ionicons name="person" size={16} color={isDarkMode ? '#9BA1A6' : '#888'} style={{ marginRight: 4 }} />
                   <Text style={[styles.recommender, { color: isDarkMode ? '#9BA1A6' : '#888' }]}>Nizar Naghi</Text>
                 </View>
+                {bookOfMonth.description && (
+                  <Text style={[styles.bookDescription, { color: isDarkMode ? '#ccc' : '#666' }]} numberOfLines={2}>
+                    {bookOfMonth.description}
+                  </Text>
+                )}
               </View>
             </TouchableOpacity>
           ) : (
@@ -679,5 +769,81 @@ const styles = StyleSheet.create({
   recommender: {
     fontSize: 13,
     color: '#888',
+  },
+  // Book of the Month additional styles
+  aboutBox: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+  },
+  aboutLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  aboutText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    gap: 8,
+  },
+  statCardNewSmall: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+  },
+  statNameBold: {
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  statNumberSmall: {
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  statLabelNewSmall: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  rateBox: {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+  },
+  rateLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  starButton: {
+    padding: 4,
+  },
+  bookDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  fallbackImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
   },
 }); 
