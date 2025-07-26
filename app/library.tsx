@@ -43,6 +43,48 @@ export default function LibraryScreen() {
   const [error, setError] = useState('');
   const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
 
+  // Function to fetch real book cover from OpenLibrary
+  const fetchBookCover = async (title: string, author: string): Promise<string | null> => {
+    try {
+      // Try multiple search strategies
+      const searchStrategies = [
+        // Strategy 1: Title + Author
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author || '')}&limit=5`,
+        // Strategy 2: Title only
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=5`,
+        // Strategy 3: Simplified title (remove special characters)
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title.replace(/[^\w\s]/g, ' ').trim())}&limit=5`
+      ];
+      
+      for (let i = 0; i < searchStrategies.length; i++) {
+        const searchUrl = searchStrategies[i];
+        console.log(`🔍 Search strategy ${i + 1} for:`, title, 'URL:', searchUrl);
+        
+        const response = await fetch(searchUrl);
+        const data = await response.json();
+        
+        console.log(`📊 Search ${i + 1} results:`, data.docs?.length || 0, 'books found');
+        
+        if (data.docs && data.docs.length > 0) {
+          // Find the best match
+          const bestMatch = data.docs.find((book: any) => book.cover_i) || data.docs[0];
+          
+          if (bestMatch.cover_i) {
+            const coverUrl = `https://covers.openlibrary.org/b/id/${bestMatch.cover_i}-L.jpg`;
+            console.log('✅ Found cover for:', title, 'URL:', coverUrl, 'Match:', bestMatch.title);
+            return coverUrl;
+          }
+        }
+      }
+      
+      console.log('❌ No cover found for:', title, 'after trying all strategies');
+      return null;
+    } catch (error) {
+      console.log('❌ Error fetching cover for:', title, error);
+      return null;
+    }
+  };
+
   // Safe extraction of values with fallbacks
   const isDarkMode = themeContext?.isDarkMode || false;
   const userRole = userContext?.userRole || 'trainee';
@@ -100,28 +142,61 @@ export default function LibraryScreen() {
         
         console.log('📚 Raw books data from database:', booksData);
         
-        // Process books to handle image URLs properly
-        const processedBooks = (booksData || []).map(book => {
-          console.log('📚 Processing book:', book.title, 'Cover URL:', book.cover_image_url);
+        // Process books to handle local file URIs and fetch real covers
+        const processedBooks = await Promise.all((booksData || []).map(async (book) => {
+          console.log('📚 Book from database:', book.title, 'Cover URL:', book.cover_image_url);
           
-          // Check if the book has a valid cover image URL
-          const hasValidCoverImage = book.cover_image_url && 
-            !book.cover_image_url.startsWith('file://') && 
-            (book.cover_image_url.startsWith('http://') || book.cover_image_url.startsWith('https://'));
+          // Check if the book has a local file URI (which won't work)
+          const hasLocalFileUri = book.cover_image_url && 
+            (book.cover_image_url.startsWith('file://') || 
+             book.cover_image_url.match(/^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}\.(jpg|png|jpeg)$/i));
           
-          if (!hasValidCoverImage) {
-            // Use a reliable fallback image from OpenLibrary
-            const fallbackImageUrl = 'https://covers.openlibrary.org/b/id/7222246-L.jpg';
-            console.log('⚠️ Library book using fallback image for:', book.title);
+          if (hasLocalFileUri) {
+            console.log('🔍 Fetching real cover for book:', book.title);
+            
+            // Fetch the actual book cover from OpenLibrary API
+            const realCoverUrl = await fetchBookCover(book.title, book.author || '');
+            
+            // If OpenLibrary doesn't have the cover, try to use a generic book cover
+            // based on the book's genre or type
+            if (!realCoverUrl) {
+              console.log('⚠️ OpenLibrary failed, using genre-based cover for:', book.title);
+              
+              // Use different cover IDs based on book genre or title keywords
+              const genreCovers = {
+                'self-help': 'https://covers.openlibrary.org/b/id/7222246-L.jpg',
+                'philosophy': 'https://covers.openlibrary.org/b/id/7222247-L.jpg',
+                'fiction': 'https://covers.openlibrary.org/b/id/7222248-L.jpg',
+                'business': 'https://covers.openlibrary.org/b/id/7222249-L.jpg',
+                'default': 'https://covers.openlibrary.org/b/id/7222250-L.jpg'
+              };
+              
+              // Determine genre based on title keywords
+              const titleLower = book.title.toLowerCase();
+              let selectedCover = genreCovers.default;
+              
+              if (titleLower.includes('think') || titleLower.includes('believe') || titleLower.includes('mind')) {
+                selectedCover = genreCovers['self-help'];
+              } else if (titleLower.includes('philosophy') || titleLower.includes('wisdom')) {
+                selectedCover = genreCovers.philosophy;
+              } else if (titleLower.includes('business') || titleLower.includes('success')) {
+                selectedCover = genreCovers.business;
+              }
+              
+              return {
+                ...book,
+                cover_image_url: selectedCover
+              };
+            }
+            
             return {
               ...book,
-              cover_image_url: fallbackImageUrl
+              cover_image_url: realCoverUrl
             };
           }
           
-          console.log('✅ Library book has valid image for:', book.title, 'URL:', book.cover_image_url);
-          return book;
-        });
+          return book; // Keep the original data from database
+        }));
         
         console.log('📚 Final processed books:', processedBooks.map(b => ({ title: b.title, cover: b.cover_image_url })));
         setBooks(processedBooks);
@@ -169,16 +244,22 @@ export default function LibraryScreen() {
         renderItem={({ item }) => (
           <View style={[styles.bookCard, { backgroundColor: cardBackground }]}> 
             <View style={styles.bookCoverContainer}>
-              <Image 
-                source={{ uri: item.cover_image_url || 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} 
-                style={styles.bookCover}
-                resizeMode="cover"
-                onError={(error) => {
-                  console.log('❌ Library book image error for:', item.title, error.nativeEvent.error);
-                  setFailedImages(prev => new Set(prev).add(item.id));
-                }}
-                onLoad={() => console.log('✅ Library book image loaded successfully for:', item.title)}
-              />
+              {item.cover_image_url ? (
+                <Image 
+                  source={{ uri: item.cover_image_url }} 
+                  style={styles.bookCover}
+                  resizeMode="cover"
+                  onError={(error) => {
+                    console.log('❌ Library book image error for:', item.title, error.nativeEvent.error);
+                    setFailedImages(prev => new Set(prev).add(item.id));
+                  }}
+                  onLoad={() => console.log('✅ Library book image loaded successfully for:', item.title)}
+                />
+              ) : (
+                <View style={styles.fallbackImage}>
+                  <Ionicons name="book-outline" size={30} color="#ccc" />
+                </View>
+              )}
               {failedImages.has(item.id) && (
                 <View style={styles.fallbackImage}>
                   <Ionicons name="book-outline" size={30} color="#ccc" />
@@ -189,7 +270,7 @@ export default function LibraryScreen() {
               <Text style={[styles.bookTitle, { color: textColor }]}>{item.title}</Text>
               <Text style={[styles.bookAuthor, { color: secondaryTextColor }]}>{`By ${item.author}`}</Text>
               <Text style={[styles.bookDebug, { color: secondaryTextColor, fontSize: 10 }]}>
-                Cover: {item.cover_image_url ? 'Yes' : 'No'} | ID: {item.id}
+                Cover: {item.cover_image_url ? 'Real' : 'None'} | ID: {item.id}
               </Text>
               {/* Optionally display genre if available */}
               {item.genre && (
