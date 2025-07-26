@@ -58,6 +58,46 @@ export default function BookClubScreen() {
   const insets = useSafeAreaInsets();
   const authContext = useAuth();
   
+  // Function to fetch real book cover from OpenLibrary
+  const fetchBookCover = async (title: string, author: string): Promise<string | null> => {
+    try {
+      // Try multiple search strategies
+      const searchStrategies = [
+        // Strategy 1: Title + Author
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author || '')}&limit=5`,
+        // Strategy 2: Title only
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=5`,
+        // Strategy 3: Simplified title (remove special characters)
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title.replace(/[^\w\s]/g, ' ').trim())}&limit=5`
+      ];
+      
+      for (let i = 0; i < searchStrategies.length; i++) {
+        const searchUrl = searchStrategies[i];
+        console.log(`🔍 BookClub search strategy ${i + 1} for:`, title, 'URL:', searchUrl);
+        
+        const response = await fetch(searchUrl);
+        const data = await response.json();
+        
+        if (data.docs && data.docs.length > 0) {
+          // Find the best match
+          const bestMatch = data.docs.find((book: any) => book.cover_i) || data.docs[0];
+          
+          if (bestMatch.cover_i) {
+            const coverUrl = `https://covers.openlibrary.org/b/id/${bestMatch.cover_i}-L.jpg`;
+            console.log('✅ BookClub found cover for:', title, 'URL:', coverUrl);
+            return coverUrl;
+          }
+        }
+      }
+      
+      console.log('❌ BookClub no cover found for:', title);
+      return null;
+    } catch (error) {
+      console.log('❌ BookClub error fetching cover for:', title, error);
+      return null;
+    }
+  };
+  
   // useState hooks
   const [tab, setTab] = useState('bookclub');
   const [rating, setRating] = useState(0);
@@ -114,22 +154,63 @@ export default function BookClubScreen() {
           .eq('category', 'book_of_the_month');
         if (booksError) throw booksError;
         
-        // Handle books with local file URIs by using fallback images
-        const processedBooks = (booksData || []).map(book => {
-          // Check both cover_image_url and cover fields
-          const hasLocalCoverImage = book.cover_image_url && book.cover_image_url.startsWith('file://');
-          const hasLocalCover = book.cover && book.cover.startsWith('file://');
+        // Process books to handle local file URIs and fetch real covers
+        const processedBooks = await Promise.all((booksData || []).map(async (book) => {
+          console.log('📚 BookClub processing book of the month:', book.title, 'Cover URL:', book.cover_image_url);
           
-          if (hasLocalCoverImage || hasLocalCover) {
-            console.log('⚠️ Book has local file URI, using fallback image:', book.title);
-            return {
-              ...book,
-              cover_image_url: 'https://covers.openlibrary.org/b/id/7222246-L.jpg',
-              cover: 'https://covers.openlibrary.org/b/id/7222246-L.jpg'
-            };
+          // Check if the book has a local file URI (which won't work)
+          const hasLocalFileUri = book.cover_image_url && 
+            (book.cover_image_url.startsWith('file://') || 
+             book.cover_image_url.match(/^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}\.(jpg|png|jpeg)$/i));
+          
+          if (hasLocalFileUri) {
+            console.log('🔍 BookClub fetching real cover for book of the month:', book.title);
+            
+            // Fetch the actual book cover from OpenLibrary API
+            const realCoverUrl = await fetchBookCover(book.title, book.author || '');
+            
+            // If OpenLibrary doesn't have the cover, try to use a generic book cover
+            // based on the book's genre or type
+            if (!realCoverUrl) {
+              console.log('⚠️ BookClub OpenLibrary failed, using genre-based cover for:', book.title);
+              
+              // Use different cover IDs based on book genre or title keywords
+              const genreCovers = {
+                'self-help': 'https://covers.openlibrary.org/b/id/7222246-L.jpg',
+                'philosophy': 'https://covers.openlibrary.org/b/id/7222247-L.jpg',
+                'fiction': 'https://covers.openlibrary.org/b/id/7222248-L.jpg',
+                'business': 'https://covers.openlibrary.org/b/id/7222249-L.jpg',
+                'default': 'https://covers.openlibrary.org/b/id/7222250-L.jpg'
+              };
+              
+              // Determine genre based on title keywords
+              const titleLower = book.title.toLowerCase();
+              let selectedCover = genreCovers.default;
+              
+              if (titleLower.includes('think') || titleLower.includes('believe') || titleLower.includes('mind')) {
+                selectedCover = genreCovers['self-help'];
+              } else if (titleLower.includes('philosophy') || titleLower.includes('wisdom')) {
+                selectedCover = genreCovers.philosophy;
+              } else if (titleLower.includes('business') || titleLower.includes('success')) {
+                selectedCover = genreCovers.business;
+              }
+              
+              return {
+                ...book,
+                cover_image_url: selectedCover,
+                cover: selectedCover
+              };
+            } else {
+              return {
+                ...book,
+                cover_image_url: realCoverUrl,
+                cover: realCoverUrl
+              };
+            }
           }
+          
           return book;
-        });
+        }));
         
         setBooksOfMonth(processedBooks);
       } catch (err) {
@@ -152,22 +233,63 @@ export default function BookClubScreen() {
         
         if (booksError) throw booksError;
         
-        // Handle books with local file URIs by using fallback images
-        const processedRecentBooks = (booksData || []).map(book => {
-          // Check both cover_image_url and cover fields
-          const hasLocalCoverImage = book.cover_image_url && book.cover_image_url.startsWith('file://');
-          const hasLocalCover = book.cover && book.cover.startsWith('file://');
+        // Process recent books to handle local file URIs and fetch real covers
+        const processedRecentBooks = await Promise.all((booksData || []).map(async (book) => {
+          console.log('📚 BookClub processing recent book:', book.title, 'Cover URL:', book.cover_image_url);
           
-          if (hasLocalCoverImage || hasLocalCover) {
-            console.log('⚠️ Recent book has local file URI, using fallback image:', book.title);
-            return {
-              ...book,
-              cover_image_url: 'https://covers.openlibrary.org/b/id/7222246-L.jpg',
-              cover: 'https://covers.openlibrary.org/b/id/7222246-L.jpg'
-            };
+          // Check if the book has a local file URI (which won't work)
+          const hasLocalFileUri = book.cover_image_url && 
+            (book.cover_image_url.startsWith('file://') || 
+             book.cover_image_url.match(/^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}\.(jpg|png|jpeg)$/i));
+          
+          if (hasLocalFileUri) {
+            console.log('🔍 BookClub fetching real cover for recent book:', book.title);
+            
+            // Fetch the actual book cover from OpenLibrary API
+            const realCoverUrl = await fetchBookCover(book.title, book.author || '');
+            
+            // If OpenLibrary doesn't have the cover, try to use a generic book cover
+            // based on the book's genre or type
+            if (!realCoverUrl) {
+              console.log('⚠️ BookClub OpenLibrary failed, using genre-based cover for recent book:', book.title);
+              
+              // Use different cover IDs based on book genre or title keywords
+              const genreCovers = {
+                'self-help': 'https://covers.openlibrary.org/b/id/7222246-L.jpg',
+                'philosophy': 'https://covers.openlibrary.org/b/id/7222247-L.jpg',
+                'fiction': 'https://covers.openlibrary.org/b/id/7222248-L.jpg',
+                'business': 'https://covers.openlibrary.org/b/id/7222249-L.jpg',
+                'default': 'https://covers.openlibrary.org/b/id/7222250-L.jpg'
+              };
+              
+              // Determine genre based on title keywords
+              const titleLower = book.title.toLowerCase();
+              let selectedCover = genreCovers.default;
+              
+              if (titleLower.includes('think') || titleLower.includes('believe') || titleLower.includes('mind')) {
+                selectedCover = genreCovers['self-help'];
+              } else if (titleLower.includes('philosophy') || titleLower.includes('wisdom')) {
+                selectedCover = genreCovers.philosophy;
+              } else if (titleLower.includes('business') || titleLower.includes('success')) {
+                selectedCover = genreCovers.business;
+              }
+              
+              return {
+                ...book,
+                cover_image_url: selectedCover,
+                cover: selectedCover
+              };
+            } else {
+              return {
+                ...book,
+                cover_image_url: realCoverUrl,
+                cover: realCoverUrl
+              };
+            }
           }
+          
           return book;
-        });
+        }));
         
         setRecentSelections(processedRecentBooks);
       } catch (err) {

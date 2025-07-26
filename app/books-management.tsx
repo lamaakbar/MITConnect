@@ -17,6 +17,46 @@ export default function AdminBooksScreen() {
   const router = useRouter();
   const { isDarkMode } = useTheme();
   const { books, removeBook, updateBookCategory } = useBooks();
+  
+  // Function to fetch real book cover from OpenLibrary
+  const fetchBookCover = async (title: string, author: string): Promise<string | null> => {
+    try {
+      // Try multiple search strategies
+      const searchStrategies = [
+        // Strategy 1: Title + Author
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author || '')}&limit=5`,
+        // Strategy 2: Title only
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=5`,
+        // Strategy 3: Simplified title (remove special characters)
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title.replace(/[^\w\s]/g, ' ').trim())}&limit=5`
+      ];
+      
+      for (let i = 0; i < searchStrategies.length; i++) {
+        const searchUrl = searchStrategies[i];
+        console.log(`🔍 Admin search strategy ${i + 1} for:`, title, 'URL:', searchUrl);
+        
+        const response = await fetch(searchUrl);
+        const data = await response.json();
+        
+        if (data.docs && data.docs.length > 0) {
+          // Find the best match
+          const bestMatch = data.docs.find((book: any) => book.cover_i) || data.docs[0];
+          
+          if (bestMatch.cover_i) {
+            const coverUrl = `https://covers.openlibrary.org/b/id/${bestMatch.cover_i}-L.jpg`;
+            console.log('✅ Admin found cover for:', title, 'URL:', coverUrl);
+            return coverUrl;
+          }
+        }
+      }
+      
+      console.log('❌ Admin no cover found for:', title);
+      return null;
+    } catch (error) {
+      console.log('❌ Admin error fetching cover for:', title, error);
+      return null;
+    }
+  };
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -82,10 +122,18 @@ export default function AdminBooksScreen() {
 
   const insets = useSafeAreaInsets();
 
-  const renderBookCard = ({ item }: { item: any }) => (
-    <View style={[styles.bookCard, { backgroundColor: cardBackground, borderColor }]}>
-      <View style={styles.bookHeader}>
-        <Image source={{ uri: item.cover }} style={styles.bookCover} />
+  const renderBookCard = ({ item }: { item: any }) => {
+    return (
+      <View style={[styles.bookCard, { backgroundColor: cardBackground, borderColor }]}>
+        <View style={styles.bookHeader}>
+          <Image 
+            source={{ uri: item.cover }} 
+            style={styles.bookCover}
+            onError={(error) => {
+              console.log('❌ Admin book image error for:', item.title, error.nativeEvent.error);
+            }}
+            onLoad={() => console.log('✅ Admin book image loaded successfully for:', item.title)}
+          />
         <View style={styles.bookInfo}>
           <Text style={[styles.bookTitle, { color: textColor }]} numberOfLines={2}>
             {item.title}
@@ -139,6 +187,7 @@ export default function AdminBooksScreen() {
       </View>
     </View>
   );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
@@ -175,6 +224,9 @@ export default function AdminBooksScreen() {
         renderItem={renderBookCard}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        onLayout={() => {
+          console.log('📚 Admin books data:', books.map(b => ({ title: b.title, cover: b.cover })));
+        }}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="library-outline" size={64} color={secondaryTextColor} />

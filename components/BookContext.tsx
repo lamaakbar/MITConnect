@@ -27,6 +27,46 @@ export function BookProvider({ children }: { children: ReactNode }) {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Function to fetch real book cover from OpenLibrary
+  const fetchBookCover = async (title: string, author: string): Promise<string | null> => {
+    try {
+      // Try multiple search strategies
+      const searchStrategies = [
+        // Strategy 1: Title + Author
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author || '')}&limit=5`,
+        // Strategy 2: Title only
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=5`,
+        // Strategy 3: Simplified title (remove special characters)
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title.replace(/[^\w\s]/g, ' ').trim())}&limit=5`
+      ];
+      
+      for (let i = 0; i < searchStrategies.length; i++) {
+        const searchUrl = searchStrategies[i];
+        console.log(`🔍 BookContext search strategy ${i + 1} for:`, title, 'URL:', searchUrl);
+        
+        const response = await fetch(searchUrl);
+        const data = await response.json();
+        
+        if (data.docs && data.docs.length > 0) {
+          // Find the best match
+          const bestMatch = data.docs.find((book: any) => book.cover_i) || data.docs[0];
+          
+          if (bestMatch.cover_i) {
+            const coverUrl = `https://covers.openlibrary.org/b/id/${bestMatch.cover_i}-L.jpg`;
+            console.log('✅ BookContext found cover for:', title, 'URL:', coverUrl);
+            return coverUrl;
+          }
+        }
+      }
+      
+      console.log('❌ BookContext no cover found for:', title);
+      return null;
+    } catch (error) {
+      console.log('❌ BookContext error fetching cover for:', title, error);
+      return null;
+    }
+  };
+
   const fetchBooks = async () => {
     try {
       setLoading(true);
@@ -39,18 +79,72 @@ export function BookProvider({ children }: { children: ReactNode }) {
         console.error('Error fetching books:', error);
         setBooks([]);
       } else {
-        // Transform the data to match our Book type
-        const transformedBooks: Book[] = (data || []).map(book => ({
-          id: book.id.toString(),
-          title: book.title,
-          author: book.author,
-          genre: book.genre || '',
-          genreColor: book.genre_color || '#A3C9A8',
-          cover: book.cover_image_url || book.cover || '',
-          description: book.description,
-          category: book.category || 'library',
+        console.log('📚 BookContext raw books data:', data);
+        
+        // Process books to handle local file URIs and fetch real covers
+        const processedBooks = await Promise.all((data || []).map(async (book) => {
+          console.log('📚 BookContext processing book:', book.title, 'Cover URL:', book.cover_image_url);
+          
+          // Check if the book has a local file URI (which won't work)
+          const hasLocalFileUri = book.cover_image_url && 
+            (book.cover_image_url.startsWith('file://') || 
+             book.cover_image_url.match(/^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}\.(jpg|png|jpeg)$/i));
+          
+          let processedCover = book.cover_image_url || book.cover || '';
+          
+          if (hasLocalFileUri) {
+            console.log('🔍 BookContext fetching real cover for book:', book.title);
+            
+            // Fetch the actual book cover from OpenLibrary API
+            const realCoverUrl = await fetchBookCover(book.title, book.author || '');
+            
+            // If OpenLibrary doesn't have the cover, try to use a generic book cover
+            // based on the book's genre or type
+            if (!realCoverUrl) {
+              console.log('⚠️ BookContext OpenLibrary failed, using genre-based cover for:', book.title);
+              
+              // Use different cover IDs based on book genre or title keywords
+              const genreCovers = {
+                'self-help': 'https://covers.openlibrary.org/b/id/7222246-L.jpg',
+                'philosophy': 'https://covers.openlibrary.org/b/id/7222247-L.jpg',
+                'fiction': 'https://covers.openlibrary.org/b/id/7222248-L.jpg',
+                'business': 'https://covers.openlibrary.org/b/id/7222249-L.jpg',
+                'default': 'https://covers.openlibrary.org/b/id/7222250-L.jpg'
+              };
+              
+              // Determine genre based on title keywords
+              const titleLower = book.title.toLowerCase();
+              let selectedCover = genreCovers.default;
+              
+              if (titleLower.includes('think') || titleLower.includes('believe') || titleLower.includes('mind')) {
+                selectedCover = genreCovers['self-help'];
+              } else if (titleLower.includes('philosophy') || titleLower.includes('wisdom')) {
+                selectedCover = genreCovers.philosophy;
+              } else if (titleLower.includes('business') || titleLower.includes('success')) {
+                selectedCover = genreCovers.business;
+              }
+              
+              processedCover = selectedCover;
+            } else {
+              processedCover = realCoverUrl;
+            }
+          }
+          
+          // Transform the data to match our Book type
+          return {
+            id: book.id.toString(),
+            title: book.title,
+            author: book.author,
+            genre: book.genre || '',
+            genreColor: book.genre_color || '#A3C9A8',
+            cover: processedCover,
+            description: book.description,
+            category: book.category || 'library',
+          };
         }));
-        setBooks(transformedBooks);
+        
+        console.log('📚 BookContext final processed books:', processedBooks.map(b => ({ title: b.title, cover: b.cover })));
+        setBooks(processedBooks);
       }
     } catch (error) {
       console.error('Error fetching books:', error);

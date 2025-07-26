@@ -26,6 +26,46 @@ export default function BookDetailsScreen() {
   const isDarkMode = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
   
+  // Function to fetch real book cover from OpenLibrary
+  const fetchBookCover = async (title: string, author: string): Promise<string | null> => {
+    try {
+      // Try multiple search strategies
+      const searchStrategies = [
+        // Strategy 1: Title + Author
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author || '')}&limit=5`,
+        // Strategy 2: Title only
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=5`,
+        // Strategy 3: Simplified title (remove special characters)
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title.replace(/[^\w\s]/g, ' ').trim())}&limit=5`
+      ];
+      
+      for (let i = 0; i < searchStrategies.length; i++) {
+        const searchUrl = searchStrategies[i];
+        console.log(`🔍 Details search strategy ${i + 1} for:`, title, 'URL:', searchUrl);
+        
+        const response = await fetch(searchUrl);
+        const data = await response.json();
+        
+        if (data.docs && data.docs.length > 0) {
+          // Find the best match
+          const bestMatch = data.docs.find((book: any) => book.cover_i) || data.docs[0];
+          
+          if (bestMatch.cover_i) {
+            const coverUrl = `https://covers.openlibrary.org/b/id/${bestMatch.cover_i}-L.jpg`;
+            console.log('✅ Details found cover for:', title, 'URL:', coverUrl);
+            return coverUrl;
+          }
+        }
+      }
+      
+      console.log('❌ Details no cover found for:', title);
+      return null;
+    } catch (error) {
+      console.log('❌ Details error fetching cover for:', title, error);
+      return null;
+    }
+  };
+  
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -64,7 +104,56 @@ export default function BookDetailsScreen() {
           }
           setBook(null);
         } else {
-          setBook(bookData);
+          console.log('📚 Details raw book data:', bookData);
+          
+          // Process the book cover image
+          let processedBook = { ...bookData };
+          
+          // Check if the book has a local file URI (which won't work)
+          const hasLocalFileUri = bookData.cover_image_url && 
+            (bookData.cover_image_url.startsWith('file://') || 
+             bookData.cover_image_url.match(/^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}\.(jpg|png|jpeg)$/i));
+          
+          if (hasLocalFileUri) {
+            console.log('🔍 Details fetching real cover for book:', bookData.title);
+            
+            // Fetch the actual book cover from OpenLibrary API
+            const realCoverUrl = await fetchBookCover(bookData.title, bookData.author || '');
+            
+            // If OpenLibrary doesn't have the cover, try to use a generic book cover
+            // based on the book's genre or type
+            if (!realCoverUrl) {
+              console.log('⚠️ Details OpenLibrary failed, using genre-based cover for:', bookData.title);
+              
+              // Use different cover IDs based on book genre or title keywords
+              const genreCovers = {
+                'self-help': 'https://covers.openlibrary.org/b/id/7222246-L.jpg',
+                'philosophy': 'https://covers.openlibrary.org/b/id/7222247-L.jpg',
+                'fiction': 'https://covers.openlibrary.org/b/id/7222248-L.jpg',
+                'business': 'https://covers.openlibrary.org/b/id/7222249-L.jpg',
+                'default': 'https://covers.openlibrary.org/b/id/7222250-L.jpg'
+              };
+              
+              // Determine genre based on title keywords
+              const titleLower = bookData.title.toLowerCase();
+              let selectedCover = genreCovers.default;
+              
+              if (titleLower.includes('think') || titleLower.includes('believe') || titleLower.includes('mind')) {
+                selectedCover = genreCovers['self-help'];
+              } else if (titleLower.includes('philosophy') || titleLower.includes('wisdom')) {
+                selectedCover = genreCovers.philosophy;
+              } else if (titleLower.includes('business') || titleLower.includes('success')) {
+                selectedCover = genreCovers.business;
+              }
+              
+              processedBook.cover_image_url = selectedCover;
+            } else {
+              processedBook.cover_image_url = realCoverUrl;
+            }
+          }
+          
+          console.log('📚 Details final processed book:', processedBook);
+          setBook(processedBook);
         }
       } catch (err) {
         console.error('Error fetching book:', err);
@@ -140,7 +229,11 @@ export default function BookDetailsScreen() {
           <View style={{ flexDirection: 'row' }}>
             <Image 
               source={{ uri: book.cover_image_url || book.cover || 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} 
-              style={styles.featuredCover} 
+              style={styles.featuredCover}
+              onError={(error) => {
+                console.log('❌ Details book image error for:', book.title, error.nativeEvent.error);
+              }}
+              onLoad={() => console.log('✅ Details book image loaded successfully for:', book.title)}
             />
             <View style={{ flex: 1, marginLeft: 16 }}>
               {book.genre && (

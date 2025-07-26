@@ -109,6 +109,46 @@ export default function TraineeHome() {
     loadHighlights();
   }, []);
 
+  // Function to fetch real book cover from OpenLibrary
+  const fetchBookCover = async (title: string, author: string): Promise<string | null> => {
+    try {
+      // Try multiple search strategies
+      const searchStrategies = [
+        // Strategy 1: Title + Author
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author || '')}&limit=5`,
+        // Strategy 2: Title only
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=5`,
+        // Strategy 3: Simplified title (remove special characters)
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title.replace(/[^\w\s]/g, ' ').trim())}&limit=5`
+      ];
+      
+      for (let i = 0; i < searchStrategies.length; i++) {
+        const searchUrl = searchStrategies[i];
+        console.log(`🔍 TraineeHome search strategy ${i + 1} for:`, title, 'URL:', searchUrl);
+        
+        const response = await fetch(searchUrl);
+        const data = await response.json();
+        
+        if (data.docs && data.docs.length > 0) {
+          // Find the best match
+          const bestMatch = data.docs.find((book: any) => book.cover_i) || data.docs[0];
+          
+          if (bestMatch.cover_i) {
+            const coverUrl = `https://covers.openlibrary.org/b/id/${bestMatch.cover_i}-L.jpg`;
+            console.log('✅ TraineeHome found cover for:', title, 'URL:', coverUrl);
+            return coverUrl;
+          }
+        }
+      }
+      
+      console.log('❌ TraineeHome no cover found for:', title);
+      return null;
+    } catch (error) {
+      console.log('❌ TraineeHome error fetching cover for:', title, error);
+      return null;
+    }
+  };
+
   // Fetch book of the month
   useEffect(() => {
     const fetchBookOfMonth = async () => {
@@ -124,18 +164,61 @@ export default function TraineeHome() {
           console.error('Error fetching book of the month:', booksError);
           setBookOfMonth(null);
         } else {
-          console.log('📚 Book of the month data:', booksData);
-          console.log('📚 Book cover URL:', booksData.cover_image_url);
+          console.log('📚 TraineeHome book of the month data:', booksData);
           
-          // Handle books with local file URIs by using a fallback
-          if (booksData && booksData.cover_image_url && booksData.cover_image_url.startsWith('file://')) {
-            console.log('⚠️ Book has local file URI, using fallback image');
-            setBookOfMonth({
-              ...booksData,
-              cover_image_url: 'https://covers.openlibrary.org/b/id/7222246-L.jpg'
-            });
+          if (booksData) {
+            // Check if the book has a local file URI (which won't work)
+            const hasLocalFileUri = booksData.cover_image_url && 
+              (booksData.cover_image_url.startsWith('file://') || 
+               booksData.cover_image_url.match(/^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}\.(jpg|png|jpeg)$/i));
+            
+            if (hasLocalFileUri) {
+              console.log('🔍 TraineeHome fetching real cover for book of the month:', booksData.title);
+              
+              // Fetch the actual book cover from OpenLibrary API
+              const realCoverUrl = await fetchBookCover(booksData.title, booksData.author || '');
+              
+              // If OpenLibrary doesn't have the cover, try to use a generic book cover
+              // based on the book's genre or type
+              if (!realCoverUrl) {
+                console.log('⚠️ TraineeHome OpenLibrary failed, using genre-based cover for:', booksData.title);
+                
+                // Use different cover IDs based on book genre or title keywords
+                const genreCovers = {
+                  'self-help': 'https://covers.openlibrary.org/b/id/7222246-L.jpg',
+                  'philosophy': 'https://covers.openlibrary.org/b/id/7222247-L.jpg',
+                  'fiction': 'https://covers.openlibrary.org/b/id/7222248-L.jpg',
+                  'business': 'https://covers.openlibrary.org/b/id/7222249-L.jpg',
+                  'default': 'https://covers.openlibrary.org/b/id/7222250-L.jpg'
+                };
+                
+                // Determine genre based on title keywords
+                const titleLower = booksData.title.toLowerCase();
+                let selectedCover = genreCovers.default;
+                
+                if (titleLower.includes('think') || titleLower.includes('believe') || titleLower.includes('mind')) {
+                  selectedCover = genreCovers['self-help'];
+                } else if (titleLower.includes('philosophy') || titleLower.includes('wisdom')) {
+                  selectedCover = genreCovers.philosophy;
+                } else if (titleLower.includes('business') || titleLower.includes('success')) {
+                  selectedCover = genreCovers.business;
+                }
+                
+                setBookOfMonth({
+                  ...booksData,
+                  cover_image_url: selectedCover
+                });
+              } else {
+                setBookOfMonth({
+                  ...booksData,
+                  cover_image_url: realCoverUrl
+                });
+              }
+            } else {
+              setBookOfMonth(booksData);
+            }
           } else {
-            setBookOfMonth(booksData);
+            setBookOfMonth(null);
           }
         }
       } catch (error) {

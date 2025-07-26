@@ -79,6 +79,46 @@ export default function EmployeeHome() {
     loadHighlights();
   }, []);
 
+  // Function to fetch real book cover from OpenLibrary
+  const fetchBookCover = async (title: string, author: string): Promise<string | null> => {
+    try {
+      // Try multiple search strategies
+      const searchStrategies = [
+        // Strategy 1: Title + Author
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author || '')}&limit=5`,
+        // Strategy 2: Title only
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=5`,
+        // Strategy 3: Simplified title (remove special characters)
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title.replace(/[^\w\s]/g, ' ').trim())}&limit=5`
+      ];
+      
+      for (let i = 0; i < searchStrategies.length; i++) {
+        const searchUrl = searchStrategies[i];
+        console.log(`🔍 EmployeeHome search strategy ${i + 1} for:`, title, 'URL:', searchUrl);
+        
+        const response = await fetch(searchUrl);
+        const data = await response.json();
+        
+        if (data.docs && data.docs.length > 0) {
+          // Find the best match
+          const bestMatch = data.docs.find((book: any) => book.cover_i) || data.docs[0];
+          
+          if (bestMatch.cover_i) {
+            const coverUrl = `https://covers.openlibrary.org/b/id/${bestMatch.cover_i}-L.jpg`;
+            console.log('✅ EmployeeHome found cover for:', title, 'URL:', coverUrl);
+            return coverUrl;
+          }
+        }
+      }
+      
+      console.log('❌ EmployeeHome no cover found for:', title);
+      return null;
+    } catch (error) {
+      console.log('❌ EmployeeHome error fetching cover for:', title, error);
+      return null;
+    }
+  };
+
   // Fetch book of the month
   useEffect(() => {
     const fetchBookOfMonth = async () => {
@@ -94,18 +134,61 @@ export default function EmployeeHome() {
           console.error('Error fetching book of the month:', booksError);
           setBookOfMonth(null);
         } else {
-          console.log('📚 Book of the month data:', booksData);
-          console.log('📚 Book cover URL:', booksData.cover_image_url);
+          console.log('📚 EmployeeHome book of the month data:', booksData);
           
-          // Handle books with local file URIs by using a fallback
-          if (booksData && booksData.cover_image_url && booksData.cover_image_url.startsWith('file://')) {
-            console.log('⚠️ Book has local file URI, using fallback image');
-            setBookOfMonth({
-              ...booksData,
-              cover_image_url: 'https://covers.openlibrary.org/b/id/7222246-L.jpg'
-            });
+          if (booksData) {
+            // Check if the book has a local file URI (which won't work)
+            const hasLocalFileUri = booksData.cover_image_url && 
+              (booksData.cover_image_url.startsWith('file://') || 
+               booksData.cover_image_url.match(/^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}\.(jpg|png|jpeg)$/i));
+            
+            if (hasLocalFileUri) {
+              console.log('🔍 EmployeeHome fetching real cover for book of the month:', booksData.title);
+              
+              // Fetch the actual book cover from OpenLibrary API
+              const realCoverUrl = await fetchBookCover(booksData.title, booksData.author || '');
+              
+              // If OpenLibrary doesn't have the cover, try to use a generic book cover
+              // based on the book's genre or type
+              if (!realCoverUrl) {
+                console.log('⚠️ EmployeeHome OpenLibrary failed, using genre-based cover for:', booksData.title);
+                
+                // Use different cover IDs based on book genre or title keywords
+                const genreCovers = {
+                  'self-help': 'https://covers.openlibrary.org/b/id/7222246-L.jpg',
+                  'philosophy': 'https://covers.openlibrary.org/b/id/7222247-L.jpg',
+                  'fiction': 'https://covers.openlibrary.org/b/id/7222248-L.jpg',
+                  'business': 'https://covers.openlibrary.org/b/id/7222249-L.jpg',
+                  'default': 'https://covers.openlibrary.org/b/id/7222250-L.jpg'
+                };
+                
+                // Determine genre based on title keywords
+                const titleLower = booksData.title.toLowerCase();
+                let selectedCover = genreCovers.default;
+                
+                if (titleLower.includes('think') || titleLower.includes('believe') || titleLower.includes('mind')) {
+                  selectedCover = genreCovers['self-help'];
+                } else if (titleLower.includes('philosophy') || titleLower.includes('wisdom')) {
+                  selectedCover = genreCovers.philosophy;
+                } else if (titleLower.includes('business') || titleLower.includes('success')) {
+                  selectedCover = genreCovers.business;
+                }
+                
+                setBookOfMonth({
+                  ...booksData,
+                  cover_image_url: selectedCover
+                });
+              } else {
+                setBookOfMonth({
+                  ...booksData,
+                  cover_image_url: realCoverUrl
+                });
+              }
+            } else {
+              setBookOfMonth(booksData);
+            }
           } else {
-            setBookOfMonth(booksData);
+            setBookOfMonth(null);
           }
         }
       } catch (error) {
@@ -309,11 +392,11 @@ export default function EmployeeHome() {
               <View style={{ flex: 1, marginLeft: 16 }}>
                 {bookOfMonth.genre && (
                   <View style={[styles.genreChip, { backgroundColor: bookOfMonth.genreColor || '#A3C9A8' }]}>
-                    <Text style={styles.genreText}>{bookOfMonth.genre}</Text>
+                    <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{bookOfMonth.genre}</Text>
                   </View>
                 )}
-                <Text style={styles.featuredBookTitle}>{bookOfMonth.title}</Text>
-                <Text style={styles.featuredBookAuthor}>By {bookOfMonth.author}</Text>
+                <Text style={[styles.featuredBookTitle, { color: textColor }]}>{bookOfMonth.title}</Text>
+                <Text style={[styles.featuredBookAuthor, { color: secondaryTextColor }]}>By {bookOfMonth.author}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                   {[1,2,3,4,5].map(i => (
                     <MaterialIcons
@@ -324,11 +407,11 @@ export default function EmployeeHome() {
                       style={{ marginRight: 2 }}
                     />
                   ))}
-                  <Text style={styles.ratingText}>4.9</Text>
+                  <Text style={[styles.ratingText, { color: textColor }]}>4.9</Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
                   <Ionicons name="person" size={16} color={secondaryTextColor} style={{ marginRight: 4 }} />
-                  <Text style={styles.recommender}>Nizar Naghi</Text>
+                  <Text style={[styles.recommender, { color: secondaryTextColor }]}>Nizar Naghi</Text>
                 </View>
                 {bookOfMonth.description && (
                   <Text style={[styles.bookDescription, { color: isDarkMode ? '#ccc' : '#666' }]} numberOfLines={2}>
