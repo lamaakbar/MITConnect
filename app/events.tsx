@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, StatusBar } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, StatusBar, ActivityIndicator, RefreshControl, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,43 +14,175 @@ const EVENT_TABS = ['All', 'Upcoming', 'My Events'];
 
 export default function EventsScreen() {
   const router = useRouter();
-  const { events, bookmarks, bookmarkEvent, unbookmarkEvent, registered, registerEvent, getUserEventStatus } = useEventContext();
+  const { events, bookmarks, bookmarkEvent, unbookmarkEvent, registered, registerEvent, getUserEventStatus, searchEvents } = useEventContext();
   const [search, setSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [activeTab, setActiveTab] = useState('All');
   const [userEventStatuses, setUserEventStatuses] = useState<{[key: string]: any}>({});
   const [myEventsTab, setMyEventsTab] = useState<'Registered' | 'Bookmarked'>('Registered');
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
   const { isDarkMode } = useTheme();
-  const textColor = useThemeColor({}, 'text');
-  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
-  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
-  const borderColor = isDarkMode ? '#2A2A2A' : '#f0f0f0';
-  const iconColor = useThemeColor({}, 'icon');
+  
+  // Enhanced theme-aware colors with better contrast
+  const textColor = isDarkMode ? '#FFFFFF' : '#1A1A1A';
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#FFFFFF';
+  const secondaryTextColor = isDarkMode ? '#B0B0B0' : '#666666';
+  const borderColor = isDarkMode ? '#333333' : '#E5E5E5';
+  const iconColor = isDarkMode ? '#FFFFFF' : '#1A1A1A';
   const { userRole } = useUserContext();
   const insets = useSafeAreaInsets();
-  const darkBg = '#181C20';
-  const darkCard = '#23272b';
-  const darkBorder = '#2D333B';
-  const darkText = '#F3F6FA';
-  const darkSecondary = '#AEB6C1';
+  
+  // Dark mode specific colors
+  const darkBg = '#121212';
+  const darkCard = '#1E1E1E';
+  const darkBorder = '#333333';
+  const darkText = '#FFFFFF';
+  const darkSecondary = '#B0B0B0';
   const darkHighlight = '#43C6AC';
+  const darkSearchBg = '#2A2A2A';
+  const darkTabBg = '#2A2A2A';
+  const darkTabBorder = '#404040';
+  const darkEmptyStateBg = '#2A2A2A';
+  
+  // Light mode specific colors
+  const lightSearchBg = '#F8F9FA';
+  const lightTabBg = '#FFFFFF';
+  const lightTabBorder = '#E0E0E0';
+  const lightEmptyStateBg = '#F8F9FA';
+  
+  // Tab colors for better visibility - ensuring consistency
+  const activeTabBg = isDarkMode ? '#43C6AC' : '#2E7D32';
+  const activeTabText = isDarkMode ? '#FFFFFF' : '#FFFFFF';
+  const inactiveTabText = isDarkMode ? '#B0B0B0' : '#666666';
+  const activeTabBorder = isDarkMode ? '#43C6AC' : '#2E7D32';
+  const inactiveTabBorder = isDarkMode ? '#404040' : '#E0E0E0';
+  
+  // Helper function for consistent tab styling
+  const getTabStyle = (isActive: boolean) => ({
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 28,
+    backgroundColor: isActive ? activeTabBg : 'transparent',
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: isActive ? activeTabBorder : inactiveTabBorder,
+    shadowColor: isActive ? activeTabBg : 'transparent',
+    shadowOpacity: isActive ? 0.3 : 0,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: isActive ? 4 : 0,
+  });
+
+  const getTabTextStyle = (isActive: boolean) => ({
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: isActive ? activeTabText : inactiveTabText,
+  });
+  
   const { getHomeRoute } = useUserContext();
+  
+  // Animation values
+  const searchScale = new Animated.Value(1);
+  const tabOpacity = new Animated.Value(1);
+  
   const handleBack = () => {
-    router.back();
+    const homeRoute = getHomeRoute();
+    if (homeRoute === '/home') {
+      router.push('/home');
+    } else if (homeRoute === '/admin-home') {
+      router.push('/admin-home');
+    } else if (homeRoute === '/employee-home') {
+      router.push('/employee-home');
+    } else if (homeRoute === '/trainee-home') {
+      router.push('/trainee-home');
+    } else {
+      router.push('/home');
+    }
   };
 
   // Helper function to get registration count
   const getRegistrationCount = (eventId: string) => {
-    // Find the event and return its registered count
     const event = events.find(e => e.id === eventId);
     return event?.registeredCount || 0;
   };
+
+  // Pull to refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    // Simulate refresh delay
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
+
+  // Search focus animations
+  const onSearchFocus = () => {
+    setSearchFocused(true);
+    Animated.spring(searchScale, {
+      toValue: 1.02,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const onSearchBlur = () => {
+    setSearchFocused(false);
+    Animated.spring(searchScale, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // Tab change animation
+  const handleTabChange = (tab: string) => {
+    Animated.sequence([
+      Animated.timing(tabOpacity, {
+        toValue: 0.5,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(tabOpacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    setActiveTab(tab);
+  };
+
+  // Search effect
+  useEffect(() => {
+    const performSearch = async () => {
+      if (search.trim()) {
+        setIsSearching(true);
+        try {
+          const results = await searchEvents(search);
+          setSearchResults(results);
+        } catch (error) {
+          console.error('Search error:', error);
+          setSearchResults([]);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+        setIsSearching(false);
+      }
+    };
+
+    const timeoutId = setTimeout(performSearch, 300);
+    return () => clearTimeout(timeoutId);
+  }, [search, searchEvents]);
 
   // Load user event statuses
   useEffect(() => {
     const loadUserEventStatuses = async () => {
       const statuses: {[key: string]: any} = {};
       
-      for (const event of events) {
+      const eventsToProcess = search.trim() ? searchResults : events;
+      
+      for (const event of eventsToProcess) {
         const userStatus = await getUserEventStatus(event.id);
         if (userStatus) {
           statuses[event.id] = userStatus;
@@ -60,53 +192,48 @@ export default function EventsScreen() {
       setUserEventStatuses(statuses);
     };
 
-    if (events.length > 0) {
+    if ((search.trim() ? searchResults : events).length > 0) {
       loadUserEventStatuses();
     }
-  }, [events, getUserEventStatus]);
+  }, [events, searchResults, search, getUserEventStatus]);
 
-  // Filter events based on tab and search
-  const filteredEvents = events.filter(e => {
-    const eventDate = new Date(e.date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
-    
-    if (activeTab === 'Upcoming') {
-      // Show only future events
-      return eventDate >= today;
+  // Helper function to check if event is in the past
+  const isEventInPast = (eventDate: string, eventTime: string) => {
+    try {
+      const today = new Date();
+      const eventDateTime = new Date(`${eventDate} ${eventTime}`);
+      return eventDateTime < today;
+    } catch (error) {
+      console.error('Error parsing event date/time:', error);
+      return false;
     }
-    if (activeTab === 'Past') {
-      // Show only past events
-      return eventDate < today;
-    }
-    // For 'All' tab, show all events
-    return true;
-  }).filter(e => e.title.toLowerCase().includes(search.toLowerCase()));
+  };
+
+  // Use search results if searching, otherwise use all events
+  const eventsToUse = search.trim() ? searchResults : events;
+  
+  // Categorize events into upcoming and past
+  const upcomingEvents = eventsToUse.filter((e) => !isEventInPast(e.date, e.time));
+  const pastEvents = eventsToUse.filter((e) => isEventInPast(e.date, e.time));
+
+  // Filter events based on tab
+  let filteredEvents: any[] = [];
+  
+  if (activeTab === 'Upcoming') {
+    filteredEvents = upcomingEvents;
+  } else if (activeTab === 'Past') {
+    filteredEvents = pastEvents;
+  } else {
+    filteredEvents = eventsToUse;
+  }
 
   // Registered events for My Events tab
   const registeredEvents = events.filter(e => registered.includes(e.id));
-  // Bookmarked events for Bookmark tab
   const bookmarkedEvents = events.filter(e => bookmarks.includes(e.id));
 
-  // Dynamically select the nearest upcoming event as featured
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const upcomingEvents = events
-    .filter(e => new Date(e.date) >= today)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  
-  const featured = upcomingEvents.length > 0 ? upcomingEvents[0] : null;
-
-  // Helper function to check if an event is in the past
-  const isEventInPast = (eventDate: string) => {
-    const eventDateObj = new Date(eventDate);
-    return eventDateObj < today;
-  };
-
   // Helper function to get button text and state for an event
-  const getEventButtonState = (eventId: string, eventDate: string) => {
-    const isPast = isEventInPast(eventDate);
+  const getEventButtonState = (eventId: string, eventDate: string, eventTime: string) => {
+    const isPast = isEventInPast(eventDate, eventTime);
     const isRegistered = registered.includes(eventId);
     const isCompleted = userEventStatuses[eventId]?.status === 'completed';
     
@@ -118,7 +245,9 @@ export default function EventsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkCard : cardBackground }}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? "light-content" : "dark-content"} />
+      
+      {/* Header */}
       {(userRole === 'employee' || userRole === 'trainee') && (
         <View style={{
           paddingTop: insets.top,
@@ -127,7 +256,7 @@ export default function EventsScreen() {
           borderBottomWidth: 1,
           flexDirection: 'row',
           alignItems: 'center',
-          paddingHorizontal: 12,
+          paddingHorizontal: 16,
           paddingBottom: 12,
         }}>
           <TouchableOpacity onPress={handleBack} style={{ padding: 4, marginRight: 8 }}>
@@ -146,109 +275,197 @@ export default function EventsScreen() {
           <View style={{ width: 32 }} />
         </View>
       )}
-      {/* Search Bar */}
-      <View style={{
-        marginTop: 12,
+      
+      {/* Enhanced Search Bar */}
+      <Animated.View style={{
+        marginTop: 16,
+        transform: [{ scale: searchScale }],
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkCard : '#F2F2F7',
-        borderRadius: 12,
+        backgroundColor: isDarkMode ? darkSearchBg : lightSearchBg,
+        borderRadius: 20,
         marginHorizontal: 16,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderWidth: 1,
-        borderColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkBorder : '#E0E0E0',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderWidth: 2,
+        borderColor: searchFocused 
+          ? '#43C6AC' 
+          : isDarkMode ? darkBorder : '#E9ECEF',
+        shadowColor: '#000',
+        shadowOpacity: searchFocused ? 0.1 : 0.05,
+        shadowRadius: searchFocused ? 8 : 4,
+        shadowOffset: { width: 0, height: searchFocused ? 4 : 2 },
+        elevation: searchFocused ? 4 : 2,
       }}>
-        <Ionicons name="search" size={20} color={(userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkSecondary : secondaryTextColor} style={{ marginRight: 8 }} />
+        <Ionicons 
+          name="search" 
+          size={20} 
+          color={searchFocused ? '#43C6AC' : (isDarkMode ? darkSecondary : secondaryTextColor)} 
+          style={{ marginRight: 12 }} 
+        />
         <TextInput
-          style={{ flex: 1, fontSize: 16, color: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkText : textColor }}
+          style={{ flex: 1, fontSize: 16, color: isDarkMode ? darkText : textColor }}
           placeholder="Search events..."
-          placeholderTextColor={(userRole === 'employee' || userRole === 'trainee') && isDarkMode ? darkSecondary : secondaryTextColor}
+          placeholderTextColor={isDarkMode ? darkSecondary : secondaryTextColor}
           value={search}
           onChangeText={setSearch}
+          onFocus={onSearchFocus}
+          onBlur={onSearchBlur}
         />
-      </View>
-      {/* Tabs for My Events and Bookmark */}
-      <View style={{
-        marginTop: 8,
-        backgroundColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? '#23272b' : '#fff',
+        {isSearching && (
+          <ActivityIndicator size="small" color="#43C6AC" style={{ marginLeft: 8 }} />
+        )}
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')} style={{ marginLeft: 8 }}>
+            <Ionicons name="close-circle" size={20} color={isDarkMode ? darkSecondary : secondaryTextColor} />
+          </TouchableOpacity>
+        )}
+      </Animated.View>
+      
+      {/* Enhanced Tabs */}
+      <Animated.View style={{
+        marginTop: 16,
+        opacity: tabOpacity,
+        backgroundColor: isDarkMode ? darkTabBg : lightTabBg,
         borderBottomWidth: 1,
-        borderBottomColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode ? '#2D333B' : '#f0f0f0',
+        borderBottomColor: isDarkMode ? darkBorder : borderColor,
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 16,
       }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row' }}>
           <View style={{ flexDirection: 'row', justifyContent: 'flex-start' }}>
             {EVENT_TABS.map(tab => {
               const isActive = activeTab === tab;
               return (
-                <TouchableOpacity
-                  key={tab}
-                  style={{
-                    paddingVertical: 8,
-                    paddingHorizontal: 18,
-                    borderRadius: 20,
-                    backgroundColor: (userRole === 'employee' || userRole === 'trainee') && isDarkMode && isActive ? '#23272b' : 'transparent',
-                    marginRight: 8,
-                  }}
-                  onPress={() => setActiveTab(tab)}
-                >
-                  <Text style={{
-                    fontSize: 15,
-                    fontWeight: 'bold',
-                    color: (userRole === 'employee' || userRole === 'trainee') && isDarkMode
-                      ? (isActive ? '#F3F6FA' : '#AEB6C1')
-                      : (isActive ? '#43C6AC' : secondaryTextColor),
-                  }}>{tab}</Text>
-                </TouchableOpacity>
+                                 <TouchableOpacity
+                   key={tab}
+                   style={getTabStyle(isActive)}
+                   onPress={() => handleTabChange(tab)}
+                   activeOpacity={0.8}
+                 >
+                   <Text style={getTabTextStyle(isActive)}>{tab}</Text>
+                 </TouchableOpacity>
               );
             })}
           </View>
         </ScrollView>
-      </View>
+      </Animated.View>
+      
       <View style={{ flex: 1 }}>
         {activeTab === 'All' ? (
-          <FlatList
-            data={filteredEvents}
-            keyExtractor={item => item.id}
-            contentContainerStyle={{ padding: 16 }}
-            renderItem={({ item }) => (
-              <EventCard
-                event={item}
-                isBookmarked={bookmarks.includes(item.id)}
-                onBookmark={() => {
-                  if (bookmarks.includes(item.id)) {
-                    unbookmarkEvent(item.id);
-                  } else {
-                    bookmarkEvent(item.id);
-                  }
-                }}
-                onRegister={() => {
-                  if (!getEventButtonState(item.id, item.date).disabled) {
-                    registerEvent(item.id);
-                  }
-                }}
-                onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
-                buttonText={getEventButtonState(item.id, item.date).text}
-                buttonDisabled={getEventButtonState(item.id, item.date).disabled}
-                registrationCount={getRegistrationCount(item.id)}
+          <ScrollView 
+            contentContainerStyle={{ padding: 16 }} 
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#43C6AC']}
+                tintColor="#43C6AC"
               />
+            }
+          >
+            {/* Upcoming Events Section */}
+            {upcomingEvents.length > 0 && (
+              <View style={styles.sectionContainer}>
+                <View style={styles.sectionHeader}>
+                  <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? darkEmptyStateBg : lightEmptyStateBg }]}>
+                    <Ionicons name="calendar-outline" size={20} color="#43C6AC" />
+                  </View>
+                  <Text style={[styles.sectionTitle, { color: textColor }]}>Upcoming Events ({upcomingEvents.length})</Text>
+                </View>
+                {upcomingEvents.map((item, index) => (
+                  <EventCard
+                    key={item.id}
+                    event={item}
+                    isBookmarked={bookmarks.includes(item.id)}
+                    onBookmark={() => {
+                      if (bookmarks.includes(item.id)) {
+                        unbookmarkEvent(item.id);
+                      } else {
+                        bookmarkEvent(item.id);
+                      }
+                    }}
+                    onRegister={() => {
+                      if (!getEventButtonState(item.id, item.date, item.time).disabled) {
+                        registerEvent(item.id);
+                      }
+                    }}
+                    onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                    buttonText={getEventButtonState(item.id, item.date, item.time).text}
+                    buttonDisabled={getEventButtonState(item.id, item.date, item.time).disabled}
+                    registrationCount={getRegistrationCount(item.id)}
+                  />
+                ))}
+              </View>
             )}
-            ListEmptyComponent={() => (
+
+            {/* Past Events Section */}
+            {pastEvents.length > 0 && (
+              <View style={styles.sectionContainer}>
+                <View style={styles.sectionHeader}>
+                  <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? darkEmptyStateBg : lightEmptyStateBg }]}>
+                    <Ionicons name="time-outline" size={20} color="#888" />
+                  </View>
+                  <Text style={[styles.sectionTitle, { color: textColor }]}>Past Events ({pastEvents.length})</Text>
+                </View>
+                {pastEvents.map(item => (
+                  <EventCard
+                    key={item.id}
+                    event={item}
+                    isBookmarked={bookmarks.includes(item.id)}
+                    onBookmark={() => {
+                      if (bookmarks.includes(item.id)) {
+                        unbookmarkEvent(item.id);
+                      } else {
+                        bookmarkEvent(item.id);
+                      }
+                    }}
+                    onRegister={() => {
+                      if (!getEventButtonState(item.id, item.date, item.time).disabled) {
+                        registerEvent(item.id);
+                      }
+                    }}
+                    onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                    buttonText={getEventButtonState(item.id, item.date, item.time).text}
+                    buttonDisabled={getEventButtonState(item.id, item.date, item.time).disabled}
+                    registrationCount={getRegistrationCount(item.id)}
+                  />
+                ))}
+              </View>
+            )}
+
+            {/* Enhanced Empty State */}
+            {upcomingEvents.length === 0 && pastEvents.length === 0 && (
               <View style={styles.emptyState}>
-                <Ionicons name="calendar-outline" size={64} color="#ccc" />
-                <Text style={styles.emptyStateTitle}>No Events Available</Text>
-                <Text style={styles.emptyStateText}>
-                  There are no events scheduled at the moment. Check back later for exciting activities!
+                <View style={[styles.emptyStateIconContainer, { backgroundColor: isDarkMode ? darkEmptyStateBg : lightEmptyStateBg }]}>
+                  <Ionicons name="calendar-outline" size={64} color={isDarkMode ? '#666' : '#ccc'} />
+                </View>
+                <Text style={[styles.emptyStateTitle, { color: textColor }]}>
+                  {search.trim() ? 'No Events Found' : 'No Events Available'}
+                </Text>
+                <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+                  {search.trim() 
+                    ? `No events found matching "${search}". Try a different search term.`
+                    : 'There are no events scheduled at the moment. Check back later for exciting activities!'
+                  }
                 </Text>
               </View>
             )}
-          />
+          </ScrollView>
         ) : activeTab === 'Upcoming' ? (
           <FlatList
             data={upcomingEvents}
             keyExtractor={item => item.id}
             contentContainerStyle={{ padding: 16 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#43C6AC']}
+                tintColor="#43C6AC"
+              />
+            }
             renderItem={({ item }) => (
               <EventCard
                 event={item}
@@ -261,68 +478,71 @@ export default function EventsScreen() {
                   }
                 }}
                 onRegister={() => {
-                  if (!getEventButtonState(item.id, item.date).disabled) {
+                  if (!getEventButtonState(item.id, item.date, item.time).disabled) {
                     registerEvent(item.id);
                   }
                 }}
                 onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
-                buttonText={getEventButtonState(item.id, item.date).text}
-                buttonDisabled={getEventButtonState(item.id, item.date).disabled}
+                buttonText={getEventButtonState(item.id, item.date, item.time).text}
+                buttonDisabled={getEventButtonState(item.id, item.date, item.time).disabled}
                 registrationCount={getRegistrationCount(item.id)}
               />
             )}
             ListEmptyComponent={() => (
               <View style={styles.emptyState}>
-                <Ionicons name="calendar-outline" size={64} color="#ccc" />
-                <Text style={styles.emptyStateTitle}>No Upcoming Events</Text>
-                <Text style={styles.emptyStateText}>
-                  There are no upcoming events at the moment.
+                <View style={[styles.emptyStateIconContainer, { backgroundColor: isDarkMode ? darkEmptyStateBg : lightEmptyStateBg }]}>
+                  <Ionicons name="calendar-outline" size={64} color={isDarkMode ? '#666' : '#ccc'} />
+                </View>
+                <Text style={[styles.emptyStateTitle, { color: textColor }]}>
+                  {search.trim() ? 'No Upcoming Events Found' : 'No Upcoming Events'}
+                </Text>
+                <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+                  {search.trim() 
+                    ? `No upcoming events found matching "${search}". Try a different search term.`
+                    : 'There are no upcoming events at the moment.'
+                  }
                 </Text>
               </View>
             )}
           />
         ) : activeTab === 'My Events' ? (
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 12, marginBottom: 8 }}>
-              <TouchableOpacity
-                style={{
-                  paddingVertical: 8,
-                  paddingHorizontal: 24,
-                  borderRadius: 20,
-                  backgroundColor: myEventsTab === 'Registered' ? '#e0f7f4' : 'transparent',
-                  marginRight: 8,
-                }}
-                onPress={() => setMyEventsTab('Registered')}
-              >
-                <Text style={{
-                  fontWeight: 'bold',
-                  color: myEventsTab === 'Registered' ? '#43C6AC' : secondaryTextColor,
-                  fontSize: 16,
-                }}>Registered</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  paddingVertical: 8,
-                  paddingHorizontal: 24,
-                  borderRadius: 20,
-                  backgroundColor: myEventsTab === 'Bookmarked' ? '#e0f7f4' : 'transparent',
-                }}
-                onPress={() => setMyEventsTab('Bookmarked')}
-              >
-                <Text style={{
-                  fontWeight: 'bold',
-                  color: myEventsTab === 'Bookmarked' ? '#43C6AC' : secondaryTextColor,
-                  fontSize: 16,
-                }}>Bookmarked</Text>
-              </TouchableOpacity>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 16, marginBottom: 8 }}>
+                             <TouchableOpacity
+                 style={getTabStyle(myEventsTab === 'Registered')}
+                 onPress={() => setMyEventsTab('Registered')}
+                 activeOpacity={0.8}
+               >
+                 <Text style={getTabTextStyle(myEventsTab === 'Registered')}>Registered</Text>
+               </TouchableOpacity>
+               <TouchableOpacity
+                 style={getTabStyle(myEventsTab === 'Bookmarked')}
+                 onPress={() => setMyEventsTab('Bookmarked')}
+                 activeOpacity={0.8}
+               >
+                 <Text style={getTabTextStyle(myEventsTab === 'Bookmarked')}>Bookmarked</Text>
+               </TouchableOpacity>
             </View>
-            <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+            <ScrollView 
+              contentContainerStyle={{ padding: 16, paddingBottom: 32 }} 
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={['#43C6AC']}
+                  tintColor="#43C6AC"
+                />
+              }
+            >
               {myEventsTab === 'Registered' ? (
                 registeredEvents.length === 0 ? (
                   <View style={styles.emptyState}>
-                    <Ionicons name="calendar-outline" size={48} color={secondaryTextColor} />
-                    <Text style={styles.emptyStateTitle}>No Registered Events</Text>
-                    <Text style={styles.emptyStateText}>You haven't registered for any events yet.</Text>
+                    <View style={[styles.emptyStateIconContainer, { backgroundColor: isDarkMode ? darkEmptyStateBg : lightEmptyStateBg }]}>
+                      <Ionicons name="calendar-outline" size={48} color={isDarkMode ? darkSecondary : secondaryTextColor} />
+                    </View>
+                    <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Registered Events</Text>
+                    <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>You haven't registered for any events yet.</Text>
                   </View>
                 ) : registeredEvents.map(item => (
                   <EventCard
@@ -337,22 +557,24 @@ export default function EventsScreen() {
                       }
                     }}
                     onRegister={() => {
-                      if (!getEventButtonState(item.id, item.date).disabled) {
+                      if (!getEventButtonState(item.id, item.date, item.time).disabled) {
                         registerEvent(item.id);
                       }
                     }}
                     onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
-                    buttonText={getEventButtonState(item.id, item.date).text}
-                    buttonDisabled={getEventButtonState(item.id, item.date).disabled}
+                    buttonText={getEventButtonState(item.id, item.date, item.time).text}
+                    buttonDisabled={getEventButtonState(item.id, item.date, item.time).disabled}
                     registrationCount={getRegistrationCount(item.id)}
                   />
                 ))
               ) : myEventsTab === 'Bookmarked' ? (
                 bookmarkedEvents.length === 0 ? (
                   <View style={styles.emptyState}>
-                    <Ionicons name="bookmark-outline" size={48} color={secondaryTextColor} />
-                    <Text style={styles.emptyStateTitle}>No Bookmarks Yet</Text>
-                    <Text style={styles.emptyStateText}>You haven't bookmarked any events yet. Start exploring events and save the ones you're interested in!</Text>
+                    <View style={[styles.emptyStateIconContainer, { backgroundColor: isDarkMode ? darkEmptyStateBg : lightEmptyStateBg }]}>
+                      <Ionicons name="bookmark-outline" size={48} color={isDarkMode ? darkSecondary : secondaryTextColor} />
+                    </View>
+                    <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Bookmarks Yet</Text>
+                    <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>You haven't bookmarked any events yet. Start exploring events and save the ones you're interested in!</Text>
                   </View>
                 ) : bookmarkedEvents.map(item => (
                   <EventCard
@@ -367,13 +589,13 @@ export default function EventsScreen() {
                       }
                     }}
                     onRegister={() => {
-                      if (!getEventButtonState(item.id, item.date).disabled) {
+                      if (!getEventButtonState(item.id, item.date, item.time).disabled) {
                         registerEvent(item.id);
                       }
                     }}
                     onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
-                    buttonText={getEventButtonState(item.id, item.date).text}
-                    buttonDisabled={getEventButtonState(item.id, item.date).disabled}
+                    buttonText={getEventButtonState(item.id, item.date, item.time).text}
+                    buttonDisabled={getEventButtonState(item.id, item.date, item.time).disabled}
                     registrationCount={getRegistrationCount(item.id)}
                   />
                 ))
@@ -395,18 +617,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingTop: 60,
   },
+  emptyStateIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
   emptyStateTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
-    marginTop: 16,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#666',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  // Section Styles
+  sectionContainer: {
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  sectionIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 }); 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from './ThemeContext';
 
 interface EventCardProps {
   event: {
@@ -16,7 +17,7 @@ interface EventCardProps {
   isBookmarked: boolean;
   onBookmark: () => void;
   onRegister: () => void;
-  onPress: () => void; // Add navigation handler
+  onPress: () => void;
   buttonText: string;
   buttonDisabled: boolean;
   registrationCount: number;
@@ -32,21 +33,46 @@ const EventCard: React.FC<EventCardProps> = ({
   buttonDisabled,
   registrationCount
 }) => {
+  const { isDarkMode } = useTheme();
+
   // Helper function to format date and time
   const formatDateAndTime = (dateStr: string, timeStr: string) => {
     const date = new Date(dateStr);
     const formattedDate = date.toLocaleDateString('en-US', { 
       month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+      day: 'numeric'
     });
     
     const time = timeStr || 'TBD';
     return `${formattedDate} · ${time}`;
   };
 
+  // Enhanced theme-aware colors with better contrast
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#FFFFFF';
+  const textColor = isDarkMode ? '#FFFFFF' : '#1A1A1A';
+  const secondaryTextColor = isDarkMode ? '#B0B0B0' : '#666666';
+  const borderColor = isDarkMode ? '#333333' : '#E5E5E5';
+  const shadowColor = isDarkMode ? '#000000' : '#000000';
+  const accentColor = '#43C6AC';
+  const categoryBadgeBg = isDarkMode ? '#2A3A2A' : '#E8F5E8';
+  const categoryTextColor = isDarkMode ? '#4CAF50' : '#2E7D32';
+  const iconColor = isDarkMode ? '#4CAF50' : '#43C6AC';
+  const disabledButtonBg = isDarkMode ? '#404040' : '#E0E0E0';
+  const disabledButtonText = isDarkMode ? '#888888' : '#999999';
+
   return (
-    <TouchableOpacity style={styles.eventCard} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity 
+      style={[
+        styles.eventCard,
+        {
+          backgroundColor: cardBackground,
+          borderColor: borderColor,
+          shadowColor: shadowColor,
+        }
+      ]} 
+      onPress={onPress} 
+      activeOpacity={0.9}
+    >
       {/* Cover Image */}
       <View style={styles.imageContainer}>
         <Image 
@@ -58,11 +84,12 @@ const EventCard: React.FC<EventCardProps> = ({
         <TouchableOpacity
           style={styles.bookmarkIcon}
           onPress={onBookmark}
+          activeOpacity={0.8}
         >
           <Ionicons 
             name={isBookmarked ? "bookmark" : "bookmark-outline"} 
-            size={20} 
-            color={isBookmarked ? "#43C6AC" : "#fff"} 
+            size={18} 
+            color={isBookmarked ? accentColor : "#FFFFFF"} 
           />
         </TouchableOpacity>
       </View>
@@ -70,37 +97,61 @@ const EventCard: React.FC<EventCardProps> = ({
       {/* Event Content */}
       <View style={styles.eventContent}>
         {/* Category Badge */}
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>{event.category}</Text>
+        <View style={[styles.categoryBadge, { backgroundColor: categoryBadgeBg }]}>
+          <Text style={[styles.categoryText, { color: categoryTextColor }]}>{event.category}</Text>
         </View>
         
-        {/* Title */}
-        <Text style={styles.eventTitle}>{event.title}</Text>
+        {/* Title - Max 2 lines */}
+        <Text 
+          style={[styles.eventTitle, { color: textColor }]} 
+          numberOfLines={2}
+        >
+          {event.title}
+        </Text>
         
-        {/* Location */}
-        <Text style={styles.eventLocation}>{event.location}</Text>
+        {/* Date & Time with icon */}
+        <View style={styles.infoRow}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="calendar-outline" size={14} color={iconColor} />
+          </View>
+          <Text style={[styles.infoText, { color: secondaryTextColor }]}>
+            {formatDateAndTime(event.date, event.time)}
+          </Text>
+        </View>
         
-        {/* Date & Time */}
-        <Text style={styles.eventDateTime}>{formatDateAndTime(event.date, event.time)}</Text>
+        {/* Location with icon */}
+        <View style={styles.infoRow}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="location-outline" size={14} color={iconColor} />
+          </View>
+          <Text style={[styles.infoText, { color: secondaryTextColor }]} numberOfLines={1}>
+            {event.location}
+          </Text>
+        </View>
         
         {/* Registration Count */}
         <View style={styles.registrationCount}>
-          <Ionicons name="people-outline" size={16} color="#888" />
-          <Text style={styles.registrationText}>+{registrationCount} registered</Text>
+          <View style={styles.iconContainer}>
+            <Ionicons name="people-outline" size={14} color={iconColor} />
+          </View>
+          <Text style={[styles.registrationText, { color: secondaryTextColor }]}>
+            {registrationCount} registered
+          </Text>
         </View>
         
         {/* Register Button */}
         <TouchableOpacity
           style={[
             styles.registerBtn,
-            buttonDisabled && styles.registerBtnDisabled
+            buttonDisabled && [styles.registerBtnDisabled, { backgroundColor: disabledButtonBg }]
           ]}
           onPress={onRegister}
           disabled={buttonDisabled}
+          activeOpacity={0.8}
         >
           <Text style={[
             styles.registerBtnText,
-            buttonDisabled && styles.registerBtnTextDisabled
+            buttonDisabled && [styles.registerBtnTextDisabled, { color: disabledButtonText }]
           ]}>
             {buttonText}
           </Text>
@@ -112,20 +163,22 @@ const EventCard: React.FC<EventCardProps> = ({
 
 const styles = StyleSheet.create({
   eventCard: {
-    width: 320,
+    width: '100%',
     backgroundColor: '#fff',
     borderRadius: 16,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
     overflow: 'hidden',
+    borderWidth: 1,
   },
   imageContainer: {
     position: 'relative',
     width: '100%',
-    height: 160,
+    height: 200,
   },
   eventCoverImage: {
     width: '100%',
@@ -136,70 +189,89 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 20,
     padding: 8,
     zIndex: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
   },
   eventContent: {
-    padding: 16,
+    padding: 12,
   },
   categoryBadge: {
-    backgroundColor: '#e0f7f4',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
     alignSelf: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 6,
+    shadowColor: '#43C6AC',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   categoryText: {
-    color: '#43C6AC',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 'bold',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   eventTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#222',
-    lineHeight: 24,
+    lineHeight: 20,
   },
-  eventLocation: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 6,
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
   },
-  eventDateTime: {
-    fontSize: 14,
-    color: '#888',
-    marginBottom: 12,
+  iconContainer: {
+    width: 18,
+    alignItems: 'center',
+    marginRight: 6,
+  },
+  infoText: {
+    fontSize: 13,
+    flex: 1,
+    fontWeight: '500',
   },
   registrationCount: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   registrationText: {
-    fontSize: 14,
-    color: '#888',
-    marginLeft: 6,
+    fontSize: 12,
+    fontWeight: '500',
   },
   registerBtn: {
     backgroundColor: '#43C6AC',
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
     width: '100%',
+    shadowColor: '#43C6AC',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
   },
   registerBtnText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
+    letterSpacing: 0.5,
   },
   registerBtnDisabled: {
-    backgroundColor: '#e0e0e0',
     opacity: 0.7,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   registerBtnTextDisabled: {
     color: '#888',

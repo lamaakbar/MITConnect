@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Image,
     Platform,
@@ -11,52 +11,143 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Alert,
+    ActivityIndicator,
 } from 'react-native';
 import AdminHeader from '../../../components/AdminHeader';
+import DatePickerModal from '../../../components/DatePickerModal';
+import TimePickerModal from '../../../components/TimePickerModal';
+import eventService from '../../../services/EventService';
+import { Event } from '../../../types/events';
 
 const EVENT_TYPES = ['Seminar', 'Workshop', 'Conference', 'Meetup'];
-
-const mockEvent = {
-  id: '1',
-  title: 'Technology Table Tennis',
-  type: 'MITC',
-  category: 'Workshop',
-  date: '2025-07-22',
-  time: '12:00 PM - 1:00 PM',
-  location: 'MITC, Jeddah',
-  description: 'A fun table tennis event with a tech twist!',
-  organizer: 'John Doe',
-  maxCapacity: 30,
-  status: 'upcoming',
-  featured: false,
-  tags: ['technology', 'sports', 'fun'],
-  requirements: ['Basic knowledge', 'Comfortable clothes'],
-  materials: ['Rackets provided', 'Balls provided'],
-  coverImage: require('../../../assets/images/partial-react-logo.png'),
-};
 
 const EditEventScreen: React.FC = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  // In a real app, fetch event by id
-  const event = mockEvent;
 
+  // Form state - completely admin-driven
   const [image, setImage] = useState<string | null>(null);
-  const [title, setTitle] = useState(event.title);
-  const [type, setType] = useState(event.type);
-  const [category, setCategory] = useState(event.category);
-  const [date, setDate] = useState(event.date);
-  const [time, setTime] = useState(event.time);
-  const [location, setLocation] = useState(event.location);
-  const [description, setDescription] = useState(event.description);
-  const [organizer, setOrganizer] = useState(event.organizer);
-  const [maxCapacity, setMaxCapacity] = useState(event.maxCapacity.toString());
-  const [status, setStatus] = useState(event.status);
-  const [featured, setFeatured] = useState(event.featured);
-  const [tags, setTags] = useState(event.tags.join(', '));
-  const [requirements, setRequirements] = useState(event.requirements.join(', '));
-  const [materials, setMaterials] = useState(event.materials.join(', '));
+  const [title, setTitle] = useState('');
+  const [type, setType] = useState('MITC');
+  const [category, setCategory] = useState('');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [location, setLocation] = useState('');
+  const [description, setDescription] = useState('');
+  const [organizer, setOrganizer] = useState('');
+  const [maxCapacity, setMaxCapacity] = useState('');
+  const [status, setStatus] = useState('upcoming');
+  const [featured, setFeatured] = useState(false);
+  const [tags, setTags] = useState('');
+  const [requirements, setRequirements] = useState('');
+  const [materials, setMaterials] = useState('');
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Date and Time Picker states
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedTime, setSelectedTime] = useState(new Date());
+
+  // Load event data when component mounts
+  useEffect(() => {
+    loadEventData();
+  }, [id]);
+
+  const loadEventData = async () => {
+    try {
+      setLoading(true);
+      
+      if (!id) {
+        Alert.alert('Error', 'No event ID provided');
+        router.push('/admin-events');
+        return;
+      }
+
+      // Fetch event from database using EventService
+      const eventData = await eventService.getEventById(id as string);
+      
+      if (!eventData) {
+        Alert.alert('Error', 'Event not found');
+        router.push('/admin-events');
+        return;
+      }
+
+      // Populate form fields with event data
+      setTitle(eventData.title || '');
+      setType(eventData.type || 'MITC');
+      setCategory(eventData.category || '');
+      setDate(eventData.date || '');
+      setTime(eventData.time || '');
+      setLocation(eventData.location || '');
+      setDescription(eventData.description || '');
+      setOrganizer(eventData.organizer || '');
+      setMaxCapacity(eventData.maxCapacity?.toString() || '');
+      setStatus(eventData.status || 'upcoming');
+      setFeatured(eventData.featured || false);
+      setTags(eventData.tags?.join(', ') || '');
+      setRequirements(eventData.requirements?.join(', ') || '');
+      setMaterials(eventData.materials?.join(', ') || '');
+      setImage(eventData.coverImage || null);
+      
+      // Set picker initial values
+      if (eventData.date) {
+        try {
+          const eventDate = new Date(eventData.date);
+          if (!isNaN(eventDate.getTime())) {
+            setSelectedDate(eventDate);
+          }
+        } catch (error) {
+          console.log('Error parsing event date:', error);
+        }
+      }
+      
+      if (eventData.time) {
+        try {
+          // Parse time string to Date object
+          const timeStr = eventData.time;
+          let hour = 0;
+          let minute = 0;
+          
+          // Handle different time formats
+          if (timeStr.includes(':')) {
+            const [timePart, period] = timeStr.split(' ');
+            const [hours, minutes] = timePart.split(':');
+            hour = parseInt(hours);
+            minute = parseInt(minutes);
+            
+            // Convert to 24-hour format
+            if (period === 'PM' && hour !== 12) {
+              hour += 12;
+            } else if (period === 'AM' && hour === 12) {
+              hour = 0;
+            }
+          } else {
+            // Handle 24-hour format
+            const [hours, minutes] = timeStr.split(':');
+            hour = parseInt(hours);
+            minute = parseInt(minutes);
+          }
+          
+          const timeDate = new Date();
+          timeDate.setHours(hour, minute, 0, 0);
+          setSelectedTime(timeDate);
+        } catch (error) {
+          console.log('Error parsing event time:', error);
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error loading event data:', error);
+      Alert.alert('Error', 'Failed to load event data');
+      router.push('/admin-events');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -70,6 +161,122 @@ const EditEventScreen: React.FC = () => {
     }
   };
 
+  // Date Picker Functions
+  const openDatePicker = () => {
+    console.log('openDatePicker called - setting showDatePicker to true');
+    setShowDatePicker(true);
+  };
+
+  const onDateConfirm = (date: Date) => {
+    setSelectedDate(date);
+    const formattedDate = date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    setDate(formattedDate);
+    setShowDatePicker(false);
+    
+    // Auto-update status based on date
+    updateStatusBasedOnDate(date);
+  };
+
+  const onDateCancel = () => {
+    setShowDatePicker(false);
+  };
+
+  // Time Picker Functions
+  const openTimePicker = () => {
+    console.log('openTimePicker called - setting showTimePicker to true');
+    setShowTimePicker(true);
+  };
+
+  const onTimeConfirm = (time: Date) => {
+    setSelectedTime(time);
+    const formattedTime = time.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+    setTime(formattedTime);
+    setShowTimePicker(false);
+  };
+
+  const onTimeCancel = () => {
+    setShowTimePicker(false);
+  };
+
+  // Auto-update status based on event date
+  const updateStatusBasedOnDate = (eventDate: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+    
+    const eventDateOnly = new Date(eventDate);
+    eventDateOnly.setHours(0, 0, 0, 0);
+    
+    const newStatus = eventDateOnly >= today ? 'upcoming' : 'past';
+    setStatus(newStatus);
+  };
+
+  // Save event function
+  const saveEvent = async () => {
+    if (!title || !date || !time || !location || !description) {
+      Alert.alert('Validation Error', 'Please fill in all required fields (Title, Date, Time, Location, Description)');
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      // Prepare event data for update
+      const eventData: Partial<Event> = {
+        title: title.trim(),
+        type: type as any,
+        category: category as any,
+        date: date,
+        time: time,
+        location: location.trim(),
+        description: description.trim(),
+        organizer: organizer.trim(),
+        maxCapacity: parseInt(maxCapacity) || 0,
+        status: status as any,
+        featured: featured,
+        tags: tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
+        requirements: requirements ? requirements.split(',').map(req => req.trim()).filter(req => req) : [],
+        materials: materials ? materials.split(',').map(mat => mat.trim()).filter(mat => mat) : [],
+        coverImage: image || undefined,
+      };
+
+      // Update event in database using EventService
+      const success = await eventService.updateEvent(id as string, eventData);
+      
+      if (success) {
+        Alert.alert('Success', 'Event updated successfully!', [
+          { text: 'OK', onPress: () => router.push('/admin-events') }
+        ]);
+      } else {
+        Alert.alert('Error', 'Failed to update event. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving event:', error);
+      Alert.alert('Error', 'Failed to save event. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <AdminHeader title="Edit Event" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4ECB71" />
+          <Text style={styles.loadingText}>Loading event data...</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <AdminHeader title="Edit Event" />
@@ -80,18 +287,24 @@ const EditEventScreen: React.FC = () => {
           {image ? (
             <Image source={{ uri: image }} style={styles.uploadedImage} />
           ) : (
-            <Image source={event.coverImage} style={styles.uploadedImage} />
+            <View style={{ alignItems: 'center' }}>
+              <Text style={styles.uploadText}>Tap to upload an event image</Text>
+              <Text style={styles.uploadSubText}>Supported formats: .jpg, .png</Text>
+              <View style={styles.uploadBtn}><Text style={styles.uploadBtnText}>Upload</Text></View>
+            </View>
           )}
         </TouchableOpacity>
+        
         {/* Event Title */}
-        <Text style={styles.label}>Event Title</Text>
+        <Text style={styles.label}>Event Title *</Text>
         <TextInput
           style={styles.input}
-          placeholder="e.g.,  Data Science Bootcamp"
+          placeholder="e.g., Data Science Bootcamp"
           placeholderTextColor="#8BA18C"
           value={title}
           onChangeText={setTitle}
         />
+        
         {/* Event Type Input */}
         <Text style={styles.label}>Event Type</Text>
         <TextInput
@@ -101,35 +314,43 @@ const EditEventScreen: React.FC = () => {
           value={type}
           onChangeText={setType}
         />
+        
         {/* Event Date */}
-        <Text style={styles.label}>Event Date</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Select  date"
-          placeholderTextColor="#8BA18C"
-          value={date}
-          onChangeText={setDate}
-        />
+        <Text style={styles.label}>Event Date *</Text>
+        <TouchableOpacity 
+          style={styles.input} 
+          onPress={openDatePicker} 
+          activeOpacity={0.7}
+        >
+          <Text style={date ? styles.inputText : styles.placeholderText}>
+            {date || 'Select date'}
+          </Text>
+        </TouchableOpacity>
+        
         {/* Event Time */}
-        <Text style={styles.label}>Event Time</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g.,  09:00 AM – 11:00 AM"
-          placeholderTextColor="#8BA18C"
-          value={time}
-          onChangeText={setTime}
-        />
+        <Text style={styles.label}>Event Time *</Text>
+        <TouchableOpacity 
+          style={styles.input} 
+          onPress={openTimePicker} 
+          activeOpacity={0.7}
+        >
+          <Text style={time ? styles.inputText : styles.placeholderText}>
+            {time || 'Select time'}
+          </Text>
+        </TouchableOpacity>
+        
         {/* Location */}
-        <Text style={styles.label}>Location</Text>
+        <Text style={styles.label}>Location *</Text>
         <TextInput
           style={styles.input}
-          placeholder="e.g.,  SNB HQ Auditorium"
+          placeholder="e.g., SNB HQ Auditorium"
           placeholderTextColor="#8BA18C"
           value={location}
           onChangeText={setLocation}
         />
+        
         {/* Description */}
-        <Text style={styles.label}>Description</Text>
+        <Text style={styles.label}>Description *</Text>
         <TextInput
           style={[styles.input, { height: 70, textAlignVertical: 'top' }]}
           placeholder="Brief description of the event"
@@ -170,8 +391,8 @@ const EditEventScreen: React.FC = () => {
           keyboardType="numeric"
         />
         
-        {/* Status */}
-        <Text style={styles.label}>Status</Text>
+        {/* Status (Auto-updated based on date) */}
+        <Text style={styles.label}>Status (Auto-updated based on date)</Text>
         <View style={styles.pickerContainer}>
           <TouchableOpacity
             style={[styles.pickerOption, status === 'upcoming' && styles.pickerOptionSelected]}
@@ -195,6 +416,14 @@ const EditEventScreen: React.FC = () => {
           >
             <Text style={[styles.pickerOptionText, status === 'completed' && styles.pickerOptionTextSelected]}>
               Completed
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.pickerOption, status === 'past' && styles.pickerOptionSelected]}
+            onPress={() => setStatus('past')}
+          >
+            <Text style={[styles.pickerOptionText, status === 'past' && styles.pickerOptionTextSelected]}>
+              Past
             </Text>
           </TouchableOpacity>
         </View>
@@ -243,10 +472,36 @@ const EditEventScreen: React.FC = () => {
         />
         
         {/* Save Event Button */}
-        <Pressable style={styles.createBtn} onPress={() => {}}>
-          <Text style={styles.createBtnText}>Save Event</Text>
+        <Pressable 
+          style={[styles.createBtn, saving && styles.createBtnDisabled]} 
+          onPress={saveEvent}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.createBtnText}>Save Changes</Text>
+          )}
         </Pressable>
       </ScrollView>
+
+      {/* Date Picker Modal */}
+      <DatePickerModal
+        visible={showDatePicker}
+        onClose={onDateCancel}
+        onConfirm={onDateConfirm}
+        initialDate={selectedDate}
+        title="Select Event Date"
+      />
+
+      {/* Time Picker Modal */}
+      <TimePickerModal
+        visible={showTimePicker}
+        onClose={onTimeCancel}
+        onConfirm={onTimeConfirm}
+        initialTime={selectedTime}
+        title="Select Event Time"
+      />
     </View>
   );
 };
@@ -261,6 +516,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
   },
   headerRow: {
     flexDirection: 'row',
@@ -340,6 +606,14 @@ const styles = StyleSheet.create({
     color: '#222',
     marginBottom: 0,
   },
+  inputText: {
+    fontSize: 15,
+    color: '#222',
+  },
+  placeholderText: {
+    fontSize: 15,
+    color: '#8BA18C',
+  },
   dropdownText: {
     fontSize: 15,
     color: '#222',
@@ -361,9 +635,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginBottom: 8,
+    flexWrap: 'wrap',
   },
   pickerOption: {
     flex: 1,
+    minWidth: '45%',
     backgroundColor: '#F3F5F2',
     borderRadius: 12,
     paddingVertical: 12,
@@ -422,6 +698,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 24,
     marginBottom: 16,
+  },
+  createBtnDisabled: {
+    backgroundColor: '#ccc',
   },
   createBtnText: {
     color: '#111',

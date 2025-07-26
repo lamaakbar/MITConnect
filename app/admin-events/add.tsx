@@ -11,12 +11,20 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Alert,
+    ActivityIndicator,
 } from 'react-native';
+import DatePickerModal from '../../components/DatePickerModal';
+import TimePickerModal from '../../components/TimePickerModal';
+import eventService from '../../services/EventService';
+import { Event } from '../../types/events';
 
 const EVENT_TYPES = ['Seminar', 'Workshop', 'Conference', 'Meetup'];
 
 const AddEventScreen: React.FC = () => {
   const router = useRouter();
+  
+  // Form state - completely admin-driven
   const [image, setImage] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [type, setType] = useState('MITC');
@@ -33,6 +41,13 @@ const AddEventScreen: React.FC = () => {
   const [requirements, setRequirements] = useState('');
   const [materials, setMaterials] = useState('');
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Date and Time Picker states
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedTime, setSelectedTime] = useState(new Date());
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -46,15 +61,122 @@ const AddEventScreen: React.FC = () => {
     }
   };
 
+  // Date Picker Functions
+  const openDatePicker = () => {
+    console.log('openDatePicker called - setting showDatePicker to true');
+    setShowDatePicker(true);
+  };
+
+  const onDateConfirm = (date: Date) => {
+    setSelectedDate(date);
+    const formattedDate = date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    setDate(formattedDate);
+    setShowDatePicker(false);
+    
+    // Auto-update status based on date
+    updateStatusBasedOnDate(date);
+  };
+
+  const onDateCancel = () => {
+    setShowDatePicker(false);
+  };
+
+  // Time Picker Functions
+  const openTimePicker = () => {
+    console.log('openTimePicker called - setting showTimePicker to true');
+    setShowTimePicker(true);
+  };
+
+  const onTimeConfirm = (time: Date) => {
+    setSelectedTime(time);
+    const formattedTime = time.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+    setTime(formattedTime);
+    setShowTimePicker(false);
+  };
+
+  const onTimeCancel = () => {
+    setShowTimePicker(false);
+  };
+
+  // Auto-update status based on event date
+  const updateStatusBasedOnDate = (eventDate: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+    
+    const eventDateOnly = new Date(eventDate);
+    eventDateOnly.setHours(0, 0, 0, 0);
+    
+    const newStatus = eventDateOnly >= today ? 'upcoming' : 'past';
+    setStatus(newStatus);
+  };
+
+  // Create event function
+  const createEvent = async () => {
+    if (!title || !date || !time || !location || !description) {
+      Alert.alert('Validation Error', 'Please fill in all required fields (Title, Date, Time, Location, Description)');
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      // Prepare event data for creation
+      const eventData: Omit<Event, 'id'> = {
+        title: title.trim(),
+        type: type as any,
+        category: category as any,
+        date: date,
+        time: time,
+        location: location.trim(),
+        description: description.trim(),
+        organizer: organizer.trim(),
+        maxCapacity: parseInt(maxCapacity) || 0,
+        status: status as any,
+        featured: featured,
+        tags: tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
+        requirements: requirements ? requirements.split(',').map(req => req.trim()).filter(req => req) : [],
+        materials: materials ? materials.split(',').map(mat => mat.trim()).filter(mat => mat) : [],
+        coverImage: image || undefined,
+        image: image ? { uri: image } : require('../../assets/images/splash-icon.png'),
+        registeredCount: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Create event in database using EventService
+      const createdEvent = await eventService.createEvent(eventData);
+      
+      if (createdEvent) {
+        Alert.alert('Success', 'Event created successfully!', [
+          { text: 'OK', onPress: () => router.push('/admin-events') }
+        ]);
+      } else {
+        Alert.alert('Error', 'Failed to create event. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating event:', error);
+      Alert.alert('Error', 'Failed to create event. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.headerRow}>
-          {/* Removed back arrow */}
           <Text style={styles.headerTitle}>Add New Event</Text>
-          <View style={{ width: 24 }} />
         </View>
+        
         {/* Image Upload */}
         <Text style={styles.label}>Event Cover Image</Text>
         <TouchableOpacity style={styles.imageUploadBox} onPress={pickImage} activeOpacity={0.8}>
@@ -68,15 +190,17 @@ const AddEventScreen: React.FC = () => {
             </View>
           )}
         </TouchableOpacity>
+        
         {/* Event Title */}
-        <Text style={styles.label}>Event Title</Text>
+        <Text style={styles.label}>Event Title *</Text>
         <TextInput
           style={styles.input}
-          placeholder="e.g.,  Data Science Bootcamp"
+          placeholder="e.g., Data Science Bootcamp"
           placeholderTextColor="#8BA18C"
           value={title}
           onChangeText={setTitle}
         />
+        
         {/* Event Type Input */}
         <Text style={styles.label}>Event Type</Text>
         <TextInput
@@ -86,35 +210,43 @@ const AddEventScreen: React.FC = () => {
           value={type}
           onChangeText={setType}
         />
+        
         {/* Event Date */}
-        <Text style={styles.label}>Event Date</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Select  date"
-          placeholderTextColor="#8BA18C"
-          value={date}
-          onChangeText={setDate}
-        />
+        <Text style={styles.label}>Event Date *</Text>
+        <TouchableOpacity 
+          style={styles.input} 
+          onPress={openDatePicker} 
+          activeOpacity={0.7}
+        >
+          <Text style={date ? styles.inputText : styles.placeholderText}>
+            {date || 'Select date'}
+          </Text>
+        </TouchableOpacity>
+        
         {/* Event Time */}
-        <Text style={styles.label}>Event Time</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g.,  09:00 AM – 11:00 AM"
-          placeholderTextColor="#8BA18C"
-          value={time}
-          onChangeText={setTime}
-        />
+        <Text style={styles.label}>Event Time *</Text>
+        <TouchableOpacity 
+          style={styles.input} 
+          onPress={openTimePicker} 
+          activeOpacity={0.7}
+        >
+          <Text style={time ? styles.inputText : styles.placeholderText}>
+            {time || 'Select time'}
+          </Text>
+        </TouchableOpacity>
+        
         {/* Location */}
-        <Text style={styles.label}>Location</Text>
+        <Text style={styles.label}>Location *</Text>
         <TextInput
           style={styles.input}
-          placeholder="e.g.,  SNB HQ Auditorium"
+          placeholder="e.g., SNB HQ Auditorium"
           placeholderTextColor="#8BA18C"
           value={location}
           onChangeText={setLocation}
         />
+        
         {/* Description */}
-        <Text style={styles.label}>Description</Text>
+        <Text style={styles.label}>Description *</Text>
         <TextInput
           style={[styles.input, { height: 70, textAlignVertical: 'top' }]}
           placeholder="Brief description of the event"
@@ -155,8 +287,8 @@ const AddEventScreen: React.FC = () => {
           keyboardType="numeric"
         />
         
-        {/* Status */}
-        <Text style={styles.label}>Status</Text>
+        {/* Status (Auto-updated based on date) */}
+        <Text style={styles.label}>Status (Auto-updated based on date)</Text>
         <View style={styles.pickerContainer}>
           <TouchableOpacity
             style={[styles.pickerOption, status === 'upcoming' && styles.pickerOptionSelected]}
@@ -180,6 +312,14 @@ const AddEventScreen: React.FC = () => {
           >
             <Text style={[styles.pickerOptionText, status === 'completed' && styles.pickerOptionTextSelected]}>
               Completed
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.pickerOption, status === 'past' && styles.pickerOptionSelected]}
+            onPress={() => setStatus('past')}
+          >
+            <Text style={[styles.pickerOptionText, status === 'past' && styles.pickerOptionTextSelected]}>
+              Past
             </Text>
           </TouchableOpacity>
         </View>
@@ -228,10 +368,36 @@ const AddEventScreen: React.FC = () => {
         />
         
         {/* Create Event Button */}
-        <Pressable style={styles.createBtn} onPress={() => {}}>
-          <Text style={styles.createBtnText}>Create Event</Text>
+        <Pressable 
+          style={[styles.createBtn, saving && styles.createBtnDisabled]} 
+          onPress={createEvent}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.createBtnText}>Create Event</Text>
+          )}
         </Pressable>
       </View>
+
+      {/* Date Picker Modal */}
+      <DatePickerModal
+        visible={showDatePicker}
+        onClose={onDateCancel}
+        onConfirm={onDateConfirm}
+        initialDate={selectedDate}
+        title="Select Event Date"
+      />
+
+      {/* Time Picker Modal */}
+      <TimePickerModal
+        visible={showTimePicker}
+        onClose={onTimeCancel}
+        onConfirm={onTimeConfirm}
+        initialTime={selectedTime}
+        title="Select Event Time"
+      />
     </ScrollView>
   );
 };
@@ -266,7 +432,6 @@ const styles = StyleSheet.create({
     color: '#222',
     flex: 1,
     textAlign: 'center',
-    marginLeft: -24,
   },
   label: {
     fontWeight: 'bold',
@@ -326,6 +491,14 @@ const styles = StyleSheet.create({
     color: '#222',
     marginBottom: 0,
   },
+  inputText: {
+    fontSize: 15,
+    color: '#222',
+  },
+  placeholderText: {
+    fontSize: 15,
+    color: '#8BA18C',
+  },
   dropdownText: {
     fontSize: 15,
     color: '#222',
@@ -347,9 +520,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginBottom: 8,
+    flexWrap: 'wrap',
   },
   pickerOption: {
     flex: 1,
+    minWidth: '45%',
     backgroundColor: '#F3F5F2',
     borderRadius: 12,
     paddingVertical: 12,
@@ -408,6 +583,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 24,
     marginBottom: 16,
+  },
+  createBtnDisabled: {
+    backgroundColor: '#ccc',
   },
   createBtnText: {
     color: '#111',

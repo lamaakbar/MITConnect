@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#eee',
-    height: 64,
+    height: 80, // Increased from 64 to make it higher
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 0,

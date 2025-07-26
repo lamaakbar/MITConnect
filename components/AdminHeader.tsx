@@ -39,7 +39,11 @@ export default function AdminHeader({
   const iconColor = useThemeColor({}, 'icon');
 
   const handleBackPress = () => {
-    router.push('/admin-home');
+    if (backDestination) {
+      router.push(backDestination);
+    } else {
+      router.push('/admin-home');
+    }
   };
 
   const toggleDarkMode = () => {
