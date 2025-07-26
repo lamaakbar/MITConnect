@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, 
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
 import RoleGuard from '../components/RoleGuard';
@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import AutoCarousel from '../components/AutoCarousel';
 import { useLocalSearchParams } from 'expo-router';
+import { fetchHighlights } from '../services/supabase';
 
 const portalLinks = [
   { key: 'events', label: 'Events', icon: <MaterialIcons name="event" size={28} color="#7B61FF" /> },
@@ -23,23 +24,6 @@ const portalLinks = [
   { key: 'inspire', label: 'Inspire Corner', icon: <Feather name="zap" size={28} color="#43C6AC" /> },
   { key: 'bookclub', label: 'Book Club', icon: <Ionicons name="book-outline" size={28} color="#FF8C42" /> },
   { key: 'checklist', label: 'Check List', icon: <Ionicons name="checkmark-done-circle-outline" size={28} color="#34C759" /> },
-];
-
-const featuredNews = [
-  {
-    id: '1',
-    image: require('../assets/images/tennis-poster.png'),
-    text: 'Winner of this week',
-    progress: 0.6,
-    eventId: '1', // Link to event id
-  },
-  {
-    id: '2',
-    image: require('../assets/images/partial-react-logo.png'),
-    text: 'Employee of the Month',
-    progress: 0.9,
-    eventId: '2',
-  },
 ];
 
 export default function TraineeHome() {
@@ -51,6 +35,9 @@ export default function TraineeHome() {
   const { user, logout } = useAuth();
   const [profileVisible, setProfileVisible] = useState(false);
   const insets = useSafeAreaInsets();
+
+  // Highlights state
+  const [highlightCards, setHighlightCards] = useState<any[]>([]);
 
   // Trainee Hub modal state
   const [showHub, setShowHub] = useState(false);
@@ -69,6 +56,13 @@ export default function TraineeHome() {
       console.log('Navigated from login, ignoring previous route state.');
     }
   }, [fromLogin]);
+
+  // Fetch highlights from Supabase
+  useEffect(() => {
+    fetchHighlights()
+      .then(setHighlightCards)
+      .catch((err) => console.error('Error loading highlights:', err));
+  }, []);
 
   // Get upcoming events (events with future dates)
   const upcomingEvents = useMemo(() => {
@@ -125,7 +119,7 @@ export default function TraineeHome() {
           </View> 
         </View>
         <ScrollView contentContainerStyle={[styles.scrollContent, {alignItems: 'center', justifyContent: 'center', flexGrow: 1}]} showsVerticalScrollIndicator={false}>
-          {featuredNews.length === 0 ? (
+          {highlightCards.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="star-outline" size={64} color="#ccc" />
               <Text style={styles.emptyStateTitle}>No Featured Content</Text>
@@ -137,22 +131,31 @@ export default function TraineeHome() {
             <>
               <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
               <AutoCarousel
-                data={featuredNews}
+                data={highlightCards}
                 cardWidth={320}
                 renderItem={({ item, index }) => (
                   <TouchableOpacity
                     activeOpacity={0.85}
-                    onPress={() => router.push({ pathname: '/feature-details' })}
+                    onPress={() => console.log('Clicked highlight:', item.title)}
                     style={{
                       borderRadius: 24,
                       overflow: 'hidden',
                       width: 320,
                       height: 180,
                       marginBottom: 18,
-                      marginRight: index !== featuredNews.length - 1 ? 16 : 0,
+                      marginRight: index !== highlightCards.length - 1 ? 16 : 0,
                     }}
                   >
-                    <Image source={item.image} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                    {item.image_url ? (
+                      <Image
+                        source={{ uri: item.image_url }}
+                        style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
+                      />
+                    ) : (
+                      <View style={{ width: '100%', height: '100%', backgroundColor: '#ccc', justifyContent: 'center', alignItems: 'center' }}>
+                        <Text>No Image</Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 )}
               />

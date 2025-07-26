@@ -137,4 +137,94 @@ export const ensureAuthenticatedSession = async () => {
     console.error('Error ensuring authenticated session:', error);
     return null;
   }
+};
+
+// Highlight management functions
+export const fetchHighlights = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('highlights')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching highlights:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in fetchHighlights:', error);
+    throw error;
+  }
+};
+
+export const addHighlight = async (title: string, image_url: string | null) => {
+  try {
+    const { data, error } = await supabase
+      .from('highlights')
+      .insert([
+        {
+          title,
+          image_url,
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding highlight:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in addHighlight:', error);
+    throw error;
+  }
+};
+
+export const updateHighlight = async (id: string, title: string, description: string, image_url: string | null) => {
+  try {
+    const { data, error } = await supabase
+      .from('highlights')
+      .update({
+        title,
+        description,
+        image_url,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating highlight:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in updateHighlight:', error);
+    throw error;
+  }
+};
+
+export const deleteHighlight = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from('highlights')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting highlight:', error);
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in deleteHighlight:', error);
+    throw error;
+  }
 }; 
