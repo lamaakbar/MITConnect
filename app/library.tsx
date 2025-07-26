@@ -8,10 +8,24 @@ import { useThemeColor } from '../hooks/useThemeColor';
 import { useUserContext } from '../components/UserContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { useAuth } from '../components/AuthContext';
+import { supabase } from '../services/supabase';
+import { useEffect, useState } from 'react';
+
+type Book = {
+  id: number;
+  title: string;
+  author: string;
+  description?: string;
+  cover_image_url?: string;
+  cover?: string;
+  genre?: string;
+  genreColor?: string;
+};
 
 export default function LibraryScreen() {
   const router = useRouter();
-  const { books } = useBooks();
+  // const { books } = useBooks();
   const { isDarkMode } = useTheme();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -21,6 +35,46 @@ export default function LibraryScreen() {
   const iconColor = useThemeColor({}, 'icon');
   const { userRole } = useUserContext();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+
+  const [books, setBooks] = useState<Book[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchUserBooks = async () => {
+      if (!user) return;
+      setLoading(true);
+      setError('');
+      try {
+        // 1. Get all book_ids linked to this user
+        const { data: userBooks, error: userBooksError } = await supabase
+          .from('user_books')
+          .select('book_id')
+          .eq('user_id', user.id);
+        if (userBooksError) throw userBooksError;
+        if (!userBooks || userBooks.length === 0) {
+          setBooks([]);
+          setLoading(false);
+          return;
+        }
+        const bookIds = userBooks.map(ub => ub.book_id);
+        // 2. Get the actual book details
+        const { data: booksData, error: booksError } = await supabase
+          .from('books')
+          .select('*')
+          .in('id', bookIds);
+        if (booksError) throw booksError;
+        setBooks(booksData || []);
+      } catch (err) {
+        setError('Failed to load books.');
+        setBooks([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUserBooks();
+  }, [user]);
 
   const darkBg = '#181C20';
   const darkCard = '#23272b';
@@ -58,17 +112,20 @@ export default function LibraryScreen() {
       
       <FlatList
         data={books}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item.id?.toString()}
         contentContainerStyle={styles.bookList}
         renderItem={({ item }) => (
-          <View style={[styles.bookCard, { backgroundColor: cardBackground }]}>
-            <Image source={{ uri: item.cover }} style={styles.bookCover} />
+          <View style={[styles.bookCard, { backgroundColor: cardBackground }]}> 
+            <Image source={{ uri: item.cover_image_url || item.cover }} style={styles.bookCover} />
             <View style={styles.bookInfo}>
               <Text style={[styles.bookTitle, { color: textColor }]}>{item.title}</Text>
               <Text style={[styles.bookAuthor, { color: secondaryTextColor }]}>{`By ${item.author}`}</Text>
-              <View style={[styles.genreChip, { backgroundColor: item.genreColor }]}>
-                <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{item.genre}</Text>
-              </View>
+              {/* Optionally display genre if available */}
+              {item.genre && (
+                <View style={[styles.genreChip, { backgroundColor: item.genreColor || '#A3C9A8' }]}> 
+                  <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{item.genre}</Text>
+                </View>
+              )}
             </View>
             <TouchableOpacity 
               style={styles.moreDetailsBtn}
@@ -79,10 +136,14 @@ export default function LibraryScreen() {
           </View>
         )}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="library-outline" size={64} color={secondaryTextColor} />
-            <Text style={[styles.emptyText, { color: secondaryTextColor }]}>No books available</Text>
-          </View>
+          loading ? (
+            <Text style={{ textAlign: 'center', color: secondaryTextColor, marginTop: 40 }}>Loading...</Text>
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="library-outline" size={64} color={secondaryTextColor} />
+              <Text style={[styles.emptyText, { color: secondaryTextColor }]}>{error || 'No books available'}</Text>
+            </View>
+          )
         }
       />
     </View>

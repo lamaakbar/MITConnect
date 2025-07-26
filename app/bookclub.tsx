@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -21,6 +21,21 @@ import { useThemeColor } from '../hooks/useThemeColor';
 import { useUserContext } from '../components/UserContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'react-native';
+import { useAuth } from '../components/AuthContext';
+import { supabase } from '../services/supabase';
+
+type BookOfMonth = {
+  id: number;
+  title: string;
+  author: string;
+  genre?: string;
+  genreColor?: string;
+  cover_image_url?: string;
+  cover?: string;
+  description?: string;
+  category?: string;
+};
+
 // Mock featured book data
 const FEATURED_BOOK = {
   id: '1',
@@ -32,26 +47,6 @@ const FEATURED_BOOK = {
   recommender: 'Nizar Naghi',
   description: 'A magical story about following your dreams and listening to your heart. This international bestseller tells the mystical story of Santiago, an Andalusian shepherd boy who yearns to travel in search of a worldly treasure as extravagant as any ever found.'
 };
-
-// Mock recent books
-const recentBooks = [
-  {
-    id: '2',
-    title: 'White Nights',
-    author: 'Fyodor Dostoevsky',
-    genre: 'Philosophical Fiction',
-    genreColor: '#A3C9A8',
-    cover: 'https://covers.openlibrary.org/b/id/11153223-L.jpg',
-  },
-  {
-    id: '3',
-    title: 'The Richest Man in Babylon',
-    author: 'George S. Clason',
-    genre: 'Finance',
-    genreColor: '#B5D6F6',
-    cover: 'https://covers.openlibrary.org/b/id/11153224-L.jpg',
-  },
-];
 
 export default function BookClubScreen() {
   const router = useRouter();
@@ -78,6 +73,56 @@ export default function BookClubScreen() {
   const darkText = '#F3F6FA';
   const darkSecondary = '#AEB6C1';
   const darkHighlight = '#43C6AC';
+  const { user } = useAuth();
+
+  const [booksOfMonth, setBooksOfMonth] = useState<BookOfMonth[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [recentSelections, setRecentSelections] = useState<BookOfMonth[]>([]);
+  const [loadingRecentSelections, setLoadingRecentSelections] = useState(true);
+
+  useEffect(() => {
+    const fetchBooksOfMonth = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const { data: booksData, error: booksError } = await supabase
+          .from('books')
+          .select('*')
+          .eq('category', 'book_of_the_month');
+        if (booksError) throw booksError;
+        setBooksOfMonth(booksData || []);
+      } catch (err) {
+        setError('Failed to load books of the month.');
+        setBooksOfMonth([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fetchRecentSelections = async () => {
+      setLoadingRecentSelections(true);
+      try {
+        const { data: booksData, error: booksError } = await supabase
+          .from('books')
+          .select('*')
+          .eq('category', 'library')
+          .order('created_at', { ascending: false })
+          .limit(2);
+        
+        if (booksError) throw booksError;
+        setRecentSelections(booksData || []);
+      } catch (err) {
+        console.error('Error fetching recent selections:', err);
+        setRecentSelections([]);
+      } finally {
+        setLoadingRecentSelections(false);
+      }
+    };
+
+    fetchBooksOfMonth();
+    fetchRecentSelections();
+  }, []);
 
   const openBookModal = (book: any) => {
     setSelectedBook(book);
@@ -129,115 +174,143 @@ export default function BookClubScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Featured Book Section */}
         <Text style={[styles.sectionTitle, { color: textColor }]}>
-          <Ionicons name="star" size={20} color="#1abc9c" /> Featured Book This Week
+          <Ionicons name="star" size={20} color="#1abc9c" /> Book of the Month
         </Text>
-        <View style={[styles.featuredCard, { backgroundColor: cardBackground }]}> {/* Themed card */}
-          <View style={{ flexDirection: 'row' }}>
-            <Image source={{ uri: FEATURED_BOOK.cover }} style={styles.featuredCover} />
-            <View style={{ flex: 1, marginLeft: 16 }}>
-              <View style={[styles.genreChip, { backgroundColor: isDarkMode ? '#7cae92' : '#A3C9A8' }]}>
-                <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{FEATURED_BOOK.genre}</Text>
-              </View>
-              <Text style={[styles.featuredTitle, { color: isDarkMode ? '#fff' : textColor }]}>{FEATURED_BOOK.title}</Text>
-              <Text style={[styles.featuredAuthor, { color: isDarkMode ? '#fff' : '#888' }]}>By {FEATURED_BOOK.author}</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                {[1,2,3,4,5].map(i => (
-                  <MaterialIcons
-                    key={i}
-                    name={i <= Math.round(FEATURED_BOOK.rating) ? 'star' : 'star-border'}
-                    size={18}
-                    color="#F4B400"
-                    style={{ marginRight: 2 }}
-                  />
-                ))}
-                <Text style={[styles.ratingText, { color: isDarkMode ? '#fff' : textColor }]}>{FEATURED_BOOK.rating}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                <Ionicons name="person" size={16} color={isDarkMode ? '#9BA1A6' : '#888'} style={{ marginRight: 4 }} />
-                <Text style={[styles.recommender, { color: isDarkMode ? '#fff' : '#888' }]}>{FEATURED_BOOK.recommender}</Text>
-              </View>
-            </View>
+        {loading ? (
+          <View style={[styles.featuredCard, { backgroundColor: cardBackground, alignItems: 'center', padding: 40 }]}>
+            <Text style={[styles.aboutText, { color: isDarkMode ? '#ccc' : '#444' }]}>Loading Book of the Month...</Text>
           </View>
-          {/* About This Book */}
-          <View style={[styles.aboutBox, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed about box */}
-            <Text style={[styles.aboutLabel, { color: textColor }]}>About This Book</Text>
-            <Text style={[styles.aboutText, { color: isDarkMode ? '#ccc' : '#444' }]}>{FEATURED_BOOK.description}</Text>
-          </View>
-          {/* Stats Row */}
-          <View style={styles.statsRow}>
-            <View style={[styles.statCardNewSmall, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed stat card */}
-              <Ionicons name="person-outline" size={30} color="#1abc9c" style={{ marginBottom: 4 }} />
-              <Text style={[styles.statNameBold, { color: textColor }]}>Nizar Naghi</Text>
-              <Text style={[styles.statLabelNewSmall, { color: isDarkMode ? '#aaa' : '#555' }]}>Recommended by</Text>
-            </View>
-            <View style={[styles.statCardNewSmall, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed stat card */}
-              <Ionicons name="book-outline" size={30} color="#2979ff" style={{ marginBottom: 4 }} />
-              <Text style={[styles.statNumberSmall, { color: textColor }]}>44</Text>
-              <Text style={[styles.statLabelNewSmall, { color: isDarkMode ? '#aaa' : '#555' }]}>Book</Text>
-            </View>
-            <View style={[styles.statCardNewSmall, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed stat card */}
-              <Ionicons name="star-outline" size={30} color="#FFA726" style={{ marginBottom: 4 }} />
-              <Text style={[styles.statNumberSmall, { color: textColor }]}>4.9</Text>
-              <Text style={[styles.statLabelNewSmall, { color: isDarkMode ? '#aaa' : '#555' }]}>Rating</Text>
-            </View>
-          </View>
-          {/* Rate This Book */}
-          <View style={[styles.rateBox, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed rate box */}
-            <Text style={[styles.rateLabel, { color: textColor }]}> <MaterialIcons name="star-border" size={18} color="#F4B400" /> Rate This Book </Text>
-            <View style={{ flexDirection: 'row', marginTop: 6 }}>
-              {[1,2,3,4,5].map(i => (
-                <TouchableOpacity key={i} onPress={() => setUserRating(i)}>
-                  <MaterialIcons
-                    name={i <= userRating ? 'star' : 'star-border'}
-                    size={28}
-                    color="#F4B400"
-                    style={{ marginRight: 2 }}
-                  />
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          {/* Main Comment Section */}
-          <View style={styles.commentSection}>
-            <Text style={[styles.commentTitle, { color: textColor }]}>Comments</Text>
-            <View style={styles.commentInputRow}>
-              <TextInput
-                style={[styles.commentInputArea, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9', color: textColor, borderColor: borderColor }]}
-                placeholder="Write a comment..."
-                placeholderTextColor={isDarkMode ? '#888' : '#aaa'}
-                value={mainCommentInput}
-                onChangeText={setMainCommentInput}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
+        ) : booksOfMonth.length > 0 ? (
+          <TouchableOpacity 
+            style={[styles.featuredCard, { backgroundColor: cardBackground }]}
+            onPress={() => router.push({ 
+              pathname: '/books-management/[id]/details', 
+              params: { id: booksOfMonth[0].id.toString() } 
+            })}
+            activeOpacity={0.9}
+          >
+            <View style={{ flexDirection: 'row' }}>
+              <Image 
+                source={{ uri: booksOfMonth[0].cover_image_url || booksOfMonth[0].cover || 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} 
+                style={styles.featuredCover} 
               />
-            </View>
-            <TouchableOpacity
-              style={[styles.commentPostBtn, { backgroundColor: isDarkMode ? '#23272b' : '#e6f0fe' }]}
-              onPress={() => {
-                if (mainCommentInput.trim()) {
-                  setMainComments([mainCommentInput.trim(), ...mainComments]);
-                  setMainCommentInput('');
-                }
-              }}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.commentPostBtnText, { color: isDarkMode ? '#43C6AC' : '#2196f3' }]}>Post Comment</Text>
-            </TouchableOpacity>
-            <Text style={[styles.commentSubtitle, { color: textColor }]}>Recent Comments</Text>
-            <View style={styles.commentList}>
-              {mainComments.length === 0 ? (
-                <Text style={[styles.noComments, { color: isDarkMode ? '#aaa' : '#888' }]}>No comments yet. Be the first to comment!</Text>
-              ) : (
-                mainComments.map((c, idx) => (
-                  <View key={idx} style={[styles.commentBubble, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}> {/* Themed bubble */}
-                    <Text style={[styles.commentText, { color: textColor }]}>{c}</Text>
+              <View style={{ flex: 1, marginLeft: 16 }}>
+                {booksOfMonth[0].genre && (
+                  <View style={[styles.genreChip, { backgroundColor: booksOfMonth[0].genreColor || '#A3C9A8' }]}>
+                    <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{booksOfMonth[0].genre}</Text>
                   </View>
-                ))
-              )}
+                )}
+                <Text style={[styles.featuredTitle, { color: isDarkMode ? '#fff' : textColor }]}>{booksOfMonth[0].title}</Text>
+                <Text style={[styles.featuredAuthor, { color: isDarkMode ? '#fff' : '#888' }]}>By {booksOfMonth[0].author}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                  {[1,2,3,4,5].map(i => (
+                    <MaterialIcons
+                      key={i}
+                      name={i <= 5 ? 'star' : 'star-border'}
+                      size={18}
+                      color="#F4B400"
+                      style={{ marginRight: 2 }}
+                    />
+                  ))}
+                  <Text style={[styles.ratingText, { color: isDarkMode ? '#fff' : textColor }]}>4.9</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                  <Ionicons name="person" size={16} color={isDarkMode ? '#9BA1A6' : '#888'} style={{ marginRight: 4 }} />
+                  <Text style={[styles.recommender, { color: isDarkMode ? '#fff' : '#888' }]}>Nizar Naghi</Text>
+                </View>
+              </View>
             </View>
+            {/* About This Book */}
+            {booksOfMonth[0].description && (
+              <View style={[styles.aboutBox, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}>
+                <Text style={[styles.aboutLabel, { color: textColor }]}>About This Book</Text>
+                <Text style={[styles.aboutText, { color: isDarkMode ? '#ccc' : '#444' }]}>{booksOfMonth[0].description}</Text>
+              </View>
+            )}
+            {/* Stats Row */}
+            <View style={styles.statsRow}>
+              <View style={[styles.statCardNewSmall, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}>
+                <Ionicons name="person-outline" size={30} color="#1abc9c" style={{ marginBottom: 4 }} />
+                <Text style={[styles.statNameBold, { color: textColor }]}>Nizar Naghi</Text>
+                <Text style={[styles.statLabelNewSmall, { color: isDarkMode ? '#aaa' : '#555' }]}>Recommended by</Text>
+              </View>
+              <View style={[styles.statCardNewSmall, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}>
+                <Ionicons name="book-outline" size={30} color="#2979ff" style={{ marginBottom: 4 }} />
+                <Text style={[styles.statNumberSmall, { color: textColor }]}>44</Text>
+                <Text style={[styles.statLabelNewSmall, { color: isDarkMode ? '#aaa' : '#555' }]}>Book</Text>
+              </View>
+              <View style={[styles.statCardNewSmall, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}>
+                <Ionicons name="star-outline" size={30} color="#FFA726" style={{ marginBottom: 4 }} />
+                <Text style={[styles.statNumberSmall, { color: textColor }]}>4.9</Text>
+                <Text style={[styles.statLabelNewSmall, { color: isDarkMode ? '#aaa' : '#555' }]}>Rating</Text>
+              </View>
+            </View>
+            {/* Rate This Book */}
+            <View style={[styles.rateBox, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}>
+              <Text style={[styles.rateLabel, { color: textColor }]}> <MaterialIcons name="star-border" size={18} color="#F4B400" /> Rate This Book </Text>
+              <View style={{ flexDirection: 'row', marginTop: 6 }}>
+                {[1,2,3,4,5].map(i => (
+                  <TouchableOpacity key={i} onPress={() => setUserRating(i)}>
+                    <MaterialIcons
+                      name={i <= userRating ? 'star' : 'star-border'}
+                      size={28}
+                      color="#F4B400"
+                      style={{ marginRight: 2 }}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            {/* Main Comment Section */}
+            <View style={styles.commentSection}>
+              <Text style={[styles.commentTitle, { color: textColor }]}>Comments</Text>
+              <View style={styles.commentInputRow}>
+                <TextInput
+                  style={[styles.commentInputArea, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9', color: textColor, borderColor: borderColor }]}
+                  placeholder="Write a comment..."
+                  placeholderTextColor={isDarkMode ? '#888' : '#aaa'}
+                  value={mainCommentInput}
+                  onChangeText={setMainCommentInput}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
+              <TouchableOpacity
+                style={[styles.commentPostBtn, { backgroundColor: isDarkMode ? '#23272b' : '#e6f0fe' }]}
+                onPress={() => {
+                  if (mainCommentInput.trim()) {
+                    setMainComments([mainCommentInput.trim(), ...mainComments]);
+                    setMainCommentInput('');
+                  }
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.commentPostBtnText, { color: isDarkMode ? '#43C6AC' : '#2196f3' }]}>Post Comment</Text>
+              </TouchableOpacity>
+              <Text style={[styles.commentSubtitle, { color: textColor }]}>Recent Comments</Text>
+              <View style={styles.commentList}>
+                {mainComments.length === 0 ? (
+                  <Text style={[styles.noComments, { color: isDarkMode ? '#aaa' : '#888' }]}>No comments yet. Be the first to comment!</Text>
+                ) : (
+                  mainComments.map((c, idx) => (
+                    <View key={idx} style={[styles.commentBubble, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}>
+                      <Text style={[styles.commentText, { color: textColor }]}>{c}</Text>
+                    </View>
+                  ))
+                )}
+              </View>
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <View style={[styles.featuredCard, { backgroundColor: cardBackground, alignItems: 'center', padding: 40 }]}>
+            <Ionicons name="book-outline" size={64} color={secondaryTextColor} />
+            <Text style={[styles.aboutLabel, { color: textColor, marginTop: 16 }]}>No Book of the Month</Text>
+            <Text style={[styles.aboutText, { color: isDarkMode ? '#ccc' : '#444', textAlign: 'center' }]}>
+              No book has been set as Book of the Month yet. Check back later for exciting reads!
+            </Text>
           </View>
-        </View>
+        )}
         {/* Recent Selections */}
         <View style={styles.recentHeaderRow}>
           <Text style={[styles.sectionTitle, { color: textColor }]}> <Feather name="clock" size={16} color="#3AC569" /> Recent Selections </Text>
@@ -252,35 +325,55 @@ export default function BookClubScreen() {
             <Text style={[styles.goLibraryBtnTextSmall, { color: isDarkMode ? '#43C6AC' : '#2196f3' }]}>Go to MITC Library</Text>
           </TouchableOpacity>
         </View>
-        <FlatList
-          data={recentBooks}
-          keyExtractor={item => item.id}
-          scrollEnabled={false}
-          renderItem={({ item }) => (
-            <View style={[styles.recentCard, { backgroundColor: cardBackground }]}> {/* Themed card */}
-              <Image source={{ uri: item.cover }} style={styles.recentCover} />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={[styles.recentTitle, { color: textColor }]}>{item.title}</Text>
-                <Text style={[styles.recentAuthor, { color: isDarkMode ? '#fff' : '#888' }]}>By {item.author}</Text>
-                <View style={[styles.genreChip, { alignSelf: 'flex-start', marginTop: 4, backgroundColor: item.genreColor }]}>
-                  <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{item.genre}</Text>
-                </View>
-              </View>
+        {loadingRecentSelections ? (
+          <View style={[styles.featuredCard, { backgroundColor: cardBackground, alignItems: 'center', padding: 20 }]}>
+            <Text style={[styles.aboutText, { color: isDarkMode ? '#ccc' : '#444' }]}>Loading recent selections...</Text>
+          </View>
+        ) : recentSelections.length > 0 ? (
+          <FlatList
+            data={recentSelections}
+            keyExtractor={item => item.id.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 18 }}
+            renderItem={({ item }) => (
               <TouchableOpacity
-                style={{ alignSelf: 'center' }}
-                onPress={() => router.push({ pathname: '/library/[id]/details', params: { id: item.id } })}
-                activeOpacity={0.7}
+                style={[styles.recentBookCard, { backgroundColor: cardBackground }]}
+                onPress={() => router.push({ 
+                  pathname: '/books-management/[id]/details', 
+                  params: { id: item.id.toString() } 
+                })}
+                activeOpacity={0.85}
               >
-                <Text style={[styles.moreDetails, { color: isDarkMode ? '#43C6AC' : '#2196f3' }]}>More Details</Text>
+                <Image 
+                  source={{ uri: item.cover_image_url || item.cover || 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} 
+                  style={styles.recentBookCover} 
+                />
+                <View style={styles.recentBookInfo}>
+                  <Text style={[styles.recentBookTitle, { color: textColor }]} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                  <Text style={[styles.recentBookAuthor, { color: secondaryTextColor }]} numberOfLines={1}>
+                    By {item.author}
+                  </Text>
+                  {item.genre && (
+                    <View style={[styles.genreChip, { backgroundColor: item.genreColor || '#A3C9A8' }]}>
+                      <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{item.genre}</Text>
+                    </View>
+                  )}
+                </View>
               </TouchableOpacity>
-            </View>
-          )}
-          ListEmptyComponent={
-            <Text style={{ color: isDarkMode ? '#aaa' : '#888', textAlign: 'center', marginTop: 16 }}>
-              No recent selections.
+            )}
+          />
+        ) : (
+          <View style={[styles.featuredCard, { backgroundColor: cardBackground, alignItems: 'center', padding: 20 }]}>
+            <Ionicons name="book-outline" size={48} color={secondaryTextColor} />
+            <Text style={[styles.aboutLabel, { color: textColor, marginTop: 16 }]}>No Recent Selections</Text>
+            <Text style={[styles.aboutText, { color: isDarkMode ? '#ccc' : '#444', textAlign: 'center' }]}>
+              No recent library books available. Check back later for new selections!
             </Text>
-          }
-        />
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -526,39 +619,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  recentCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
+  recentBookCard: {
+    width: 120,
+    height: 180,
     borderRadius: 12,
-    padding: 12,
-    marginHorizontal: 16,
-    marginBottom: 12,
+    marginRight: 12,
     shadowColor: '#000',
     shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 1,
   },
-  recentCover: {
-    width: 60,
-    height: 90,
-    borderRadius: 8,
+  recentBookCover: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
     backgroundColor: '#eee',
   },
-  recentTitle: {
-    fontSize: 16,
+  recentBookInfo: {
+    padding: 8,
+    flex: 1,
+  },
+  recentBookTitle: {
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#222',
     marginBottom: 2,
   },
-  recentAuthor: {
-    fontSize: 13,
+  recentBookAuthor: {
+    fontSize: 12,
     color: '#888',
-    marginBottom: 4,
-  },
-  moreDetails: {
-    fontSize: 13,
-    color: '#2196f3',
-    fontWeight: '600',
   },
   bottomNav: {
     flexDirection: 'row',
