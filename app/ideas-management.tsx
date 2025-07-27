@@ -11,7 +11,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IdeasService, type Idea as DatabaseIdea } from '../services/IdeasService';
 import { useUserContext } from '../components/UserContext';
 import SharedIdeasService from '../services/SharedIdeasService';
-import uuid from 'react-native-uuid';
+// Simple UUID generator
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
 
 // Idea status types
 const IDEA_STATUS = {
@@ -243,7 +250,7 @@ export default function IdeasManagement() {
   const handleUpdateStatus = async (id: string, status: 'Pending' | 'In Progress' | 'Approved' | 'Rejected') => {
     setActionLoading(id + '-status');
     try {
-             const { error } = await IdeasService.updateIdeaStatus(id, status, uuid.v4() as string);
+             const { error } = await IdeasService.updateIdeaStatus(id, status, generateUUID());
       
       if (error) {
         Alert.alert('Error', 'Failed to update status. Please try again.');

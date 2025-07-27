@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, SafeAreaView, Platform, Modal, Pressable, TouchableNativeFeedback } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, SafeAreaView, Platform, Modal, Pressable, TouchableNativeFeedback, BackHandler } from 'react-native';
 import { Ionicons, AntDesign } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
@@ -8,8 +8,9 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation, useFocusEffect } from 'expo-router';
 import { supabase } from '../services/supabase';
+import { useCallback } from 'react';
 
 const DEPARTMENTS = [
   'IT Services',
@@ -387,6 +388,7 @@ const iosStyles = StyleSheet.create({
 
 export default function TraineeHub() {
   const router = useRouter();
+  const navigation = useNavigation();
   const [tab, setTab] = useState<'Departments' | 'Registration' | 'Dashboard'>('Departments');
   const [overallFrom, setOverallFrom] = useState('');
   const [overallTo, setOverallTo] = useState('');
@@ -496,6 +498,59 @@ export default function TraineeHub() {
       fetchUserPlan();
     }
   }, [tab]);
+
+  // Disable swipe gestures for trainee security - only allow arrow back navigation
+  useEffect(() => {
+    navigation.setOptions({
+      gestureEnabled: false, // Disable swipe to go back
+      swipeEnabled: false,   // Additional swipe protection  
+      animationEnabled: false, // Disable screen transition animations
+      headerBackVisible: true, // Keep the back arrow visible
+      headerLeft: undefined, // Remove any custom header left components
+      ...(Platform.OS === 'ios' && {
+        gestureResponseDistance: 0, // iOS specific: disable edge swipe gesture
+        gestureDirection: 'vertical', // Change gesture direction to prevent horizontal swipes
+      }),
+      ...(Platform.OS === 'android' && {
+        gestureEnabled: false, // Android specific gesture disable
+      }),
+    });
+  }, [navigation]);
+
+  // Disable hardware back button for trainee security - only UI back arrow allowed
+  useFocusEffect(
+    useCallback(() => {
+      // Prevent hardware back button on Android - trainee must use UI back arrow
+      const handleBackPress = () => {
+        // Block hardware back button completely for trainee security
+        return true; // Returning true prevents the default back action
+      };
+
+      // Add hardware back button listener for Android
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+
+      // For web platform, prevent browser back navigation
+      if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+        const handlePopState = (event: Event) => {
+          event.preventDefault();
+          return false;
+        };
+        
+        window.addEventListener('popstate', handlePopState);
+        
+        return () => {
+          backHandler.remove();
+          if (typeof window.removeEventListener === 'function') {
+            window.removeEventListener('popstate', handlePopState);
+          }
+        };
+      }
+      
+      return () => {
+        backHandler.remove();
+      };
+    }, [])
+  );
 
   const toggleWeek = (idx: number) => {
     setExpandedWeeks(expanded =>

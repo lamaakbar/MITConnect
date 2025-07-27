@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platform, Animated, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platform, Animated, StatusBar, BackHandler } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation, useFocusEffect } from 'expo-router';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
 import { useUserContext } from '../components/UserContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCallback, useEffect } from 'react';
 
 const CHECKLIST_ITEMS = [
   'Contract',
@@ -19,6 +20,7 @@ const CHECKLIST_ITEMS = [
 
 export default function TraineeChecklist() {
   const router = useRouter();
+  const navigation = useNavigation();
   const [checked, setChecked] = useState(Array(CHECKLIST_ITEMS.length).fill(false));
   const [scaleAnimations] = useState(() => 
     CHECKLIST_ITEMS.map(() => new Animated.Value(1))
@@ -141,6 +143,59 @@ export default function TraineeChecklist() {
   const darkText = '#F3F6FA';
   const darkSecondary = '#AEB6C1';
   const darkHighlight = '#43C6AC';
+
+  // Disable swipe gestures for trainee security - only allow arrow back navigation
+  useEffect(() => {
+    navigation.setOptions({
+      gestureEnabled: false, // Disable swipe to go back
+      swipeEnabled: false,   // Additional swipe protection  
+      animationEnabled: false, // Disable screen transition animations
+      headerBackVisible: true, // Keep the back arrow visible
+      headerLeft: undefined, // Remove any custom header left components
+      ...(Platform.OS === 'ios' && {
+        gestureResponseDistance: 0, // iOS specific: disable edge swipe gesture
+        gestureDirection: 'vertical', // Change gesture direction to prevent horizontal swipes
+      }),
+      ...(Platform.OS === 'android' && {
+        gestureEnabled: false, // Android specific gesture disable
+      }),
+    });
+  }, [navigation]);
+
+  // Disable hardware back button for trainee security - only UI back arrow allowed
+  useFocusEffect(
+    useCallback(() => {
+      // Prevent hardware back button on Android - trainee must use UI back arrow
+      const handleBackPress = () => {
+        // Block hardware back button completely for trainee security
+        return true; // Returning true prevents the default back action
+      };
+
+      // Add hardware back button listener for Android
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+
+      // For web platform, prevent browser back navigation
+      if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+        const handlePopState = (event: Event) => {
+          event.preventDefault();
+          return false;
+        };
+        
+        window.addEventListener('popstate', handlePopState);
+        
+        return () => {
+          backHandler.remove();
+          if (typeof window.removeEventListener === 'function') {
+            window.removeEventListener('popstate', handlePopState);
+          }
+        };
+      }
+      
+      return () => {
+        backHandler.remove();
+      };
+    }, [])
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: userRole === 'trainee' && isDarkMode ? darkBg : backgroundColor }}>
