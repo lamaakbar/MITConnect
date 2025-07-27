@@ -696,18 +696,7 @@ export default function TraineeHub() {
         <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
           MIT<Text style={{ color: darkHighlight }}>Connect</Text>
         </Text>
-        <TouchableOpacity 
-          onPress={() => router.push('/library')} 
-          style={{ 
-            padding: 8, 
-            backgroundColor: darkHighlight, 
-            borderRadius: 8,
-            marginLeft: 8,
-            ...Platform.select({ android: { marginTop: 8 } })
-          }}
-        >
-          <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Library</Text>
-        </TouchableOpacity>
+        <View style={{ width: 32 }} />
       </View>
       <View style={[styles.tabRow, { backgroundColor: isDarkMode ? darkTab : '#F2F2F7' }] }>
         {['Departments', 'Registration', 'Dashboard'].map(t => (

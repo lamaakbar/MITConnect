@@ -245,7 +245,7 @@ export default function LibraryScreen() {
         renderItem={({ item }) => (
           <TouchableOpacity 
             style={[styles.bookCard, { backgroundColor: cardBackground }]}
-            onPress={() => router.push({ pathname: '/book-details', params: { id: item.id } })}
+            onPress={() => router.push(`/library/${item.id}/details`)}
             activeOpacity={0.7}
           > 
             <View style={styles.bookCoverContainer}>
