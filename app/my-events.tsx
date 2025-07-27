@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
+import { useUserContext } from '../components/UserContext';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import EventsTabBar from '../components/EventsTabBar';
 
 const TABS = ['All', 'Upcoming', 'Past'];
 
@@ -226,7 +226,6 @@ export default function MyEventsScreen() {
         />
       )}
 
-      <EventsTabBar />
     </View>
   );
 }

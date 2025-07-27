@@ -102,6 +102,7 @@ export default function InspirerCornerScreen() {
     i.status === 'Approved' || i.submitterId === userId
   );
 
+  const { userRole } = useUserContext();
   const { isDarkMode } = useTheme();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -167,6 +168,11 @@ export default function InspirerCornerScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
+            {userRole === 'employee' && (
+              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <Ionicons name="arrow-back" size={24} color={primaryText} />
+              </TouchableOpacity>
+            )}
             <View style={styles.iconContainer}>
               <Ionicons name="bulb" size={24} color="#FF9500" />
             </View>
@@ -392,6 +398,10 @@ const styles = StyleSheet.create({
      marginBottom: 12,
      flexWrap: 'wrap',
    },
+  backButton: {
+    padding: 8,
+    marginRight: 12,
+  },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -508,8 +518,8 @@ const styles = StyleSheet.create({
      fontWeight: '600',
      marginLeft: 4,
    },
-  ideaTitle: { fontSize: 17, fontWeight: 'bold', marginBottom: 2, color: '#222' },
-  ideaDescription: { fontSize: 14, color: '#444', marginBottom: 10 },
+  ideaTitle: { fontSize: 17, fontWeight: 'bold', marginBottom: 2 },
+  ideaDescription: { fontSize: 14, marginBottom: 10 },
      votingContainer: {
      marginBottom: 12,
      paddingVertical: 12,
