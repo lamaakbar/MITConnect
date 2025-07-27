@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView, ScrollView as RNScrollView, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView, ScrollView as RNScrollView, Alert, Modal, TextInput, BackHandler, Platform } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, usePathname } from 'expo-router';
-import { useState, useMemo, useEffect } from 'react';
+import { useRouter, usePathname, useFocusEffect, useNavigation } from 'expo-router';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
 import RoleGuard from '../components/RoleGuard';
@@ -61,6 +61,7 @@ const featuredNews = [
 export default function TraineeHome() {
   const router = useRouter();
   const pathname = usePathname();
+  const navigation = useNavigation();
   const { fromLogin } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState('home');
   const { events, registered } = useEventContext();
@@ -86,6 +87,24 @@ export default function TraineeHome() {
   // Debug logging
   console.log('TraineeHome: Current userRole:', userRole, 'isInitialized:', isInitialized);
 
+  // Disable swipe gestures for trainee security - only allow arrow back navigation
+  useEffect(() => {
+    navigation.setOptions({
+      gestureEnabled: false, // Disable swipe to go back
+      swipeEnabled: false,   // Additional swipe protection  
+      animationEnabled: false, // Disable screen transition animations
+      headerBackVisible: true, // Keep the back arrow visible
+      headerLeft: undefined, // Remove any custom header left components
+      ...(Platform.OS === 'ios' && {
+        gestureResponseDistance: 0, // iOS specific: disable edge swipe gesture
+        gestureDirection: 'vertical', // Change gesture direction to prevent horizontal swipes
+      }),
+      ...(Platform.OS === 'android' && {
+        gestureEnabled: false, // Android specific gesture disable
+      }),
+    });
+  }, [navigation]);
+
   // Handle fromLogin navigation
   useEffect(() => {
     if (fromLogin) {
@@ -94,6 +113,41 @@ export default function TraineeHome() {
       console.log('Navigated from login, ignoring previous route state.');
     }
   }, [fromLogin]);
+
+  // Disable hardware back button for trainee security - only UI back arrow allowed
+  useFocusEffect(
+    useCallback(() => {
+      // Prevent hardware back button on Android - trainee must use UI back arrow
+      const handleBackPress = () => {
+        // Block hardware back button completely for trainee security
+        return true; // Returning true prevents the default back action
+      };
+
+      // Add hardware back button listener for Android
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+
+      // For web platform, prevent browser back navigation
+      if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+        const handlePopState = (event: Event) => {
+          event.preventDefault();
+          return false;
+        };
+        
+        window.addEventListener('popstate', handlePopState);
+        
+        return () => {
+          backHandler.remove();
+          if (typeof window.removeEventListener === 'function') {
+            window.removeEventListener('popstate', handlePopState);
+          }
+        };
+      }
+      
+      return () => {
+        backHandler.remove();
+      };
+    }, [])
+  );
 
   // Fetch highlights from Supabase
   useEffect(() => {
@@ -508,48 +562,58 @@ export default function TraineeHome() {
             </View>
           )}
         </ScrollView>
-        <View style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          backgroundColor: userRole === 'trainee' && isDarkMode ? '#23272b' : '#fff',
-          borderTopWidth: 1,
-          borderTopColor: userRole === 'trainee' && isDarkMode ? '#2D333B' : '#F2F2F7',
-          paddingVertical: 16, // Slightly bigger
-          minWidth: 400,
-          paddingHorizontal: 12,
-        }}>
-          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { 
-            setActiveTab('home'); 
-            if (pathname !== '/trainee-home') {
-              router.push('/trainee-home'); 
-            }
-          }}>
-            <Ionicons name="home" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'home' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'home' ? '#43C6AC' : '#bbb')} />
+        <View style={[styles.tabBar, { backgroundColor: isDarkMode ? '#23272b' : '#fff', borderTopColor: isDarkMode ? '#2D333B' : '#eee' }]}>
+          <TouchableOpacity 
+            style={styles.tabBtn} 
+            onPress={() => { 
+              setActiveTab('home'); 
+              if (pathname !== '/trainee-home') {
+                router.push('/trainee-home'); 
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="home" size={22} color={activeTab === 'home' ? '#43C6AC' : (isDarkMode ? '#AEB6C1' : '#222')} />
+            <Text style={[styles.tabLabel, { color: isDarkMode ? '#AEB6C1' : '#888' }]}>Home</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { 
-            setActiveTab('hub'); 
-            if (pathname !== '/trainee-hub') {
-              router.push('/trainee-hub'); 
-            }
-          }}>
-            <MaterialIcons name="dashboard" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'hub' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'hub' ? '#43C6AC' : '#bbb')} />
+          <TouchableOpacity 
+            style={styles.tabBtn} 
+            onPress={() => { 
+              setActiveTab('events'); 
+              if (pathname !== '/events?noHeader=1') {
+                router.push('/events?noHeader=1'); 
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="event" size={22} color={activeTab === 'events' ? '#43C6AC' : (isDarkMode ? '#AEB6C1' : '#222')} />
+            <Text style={[styles.tabLabel, { color: isDarkMode ? '#AEB6C1' : '#888' }]}>Events</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { 
-            setActiveTab('bookclub'); 
-            if (pathname !== '/bookclub') {
-              router.push('/bookclub'); 
-            }
-          }}>
-            <Ionicons name="book-outline" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'bookclub' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'bookclub' ? '#43C6AC' : '#bbb')} />
+          <TouchableOpacity 
+            style={styles.tabBtn} 
+            onPress={() => { 
+              setActiveTab('hub'); 
+              if (pathname !== '/trainee-hub') {
+                router.push('/trainee-hub'); 
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="dashboard" size={22} color={activeTab === 'hub' ? '#43C6AC' : (isDarkMode ? '#AEB6C1' : '#222')} />
+            <Text style={[styles.tabLabel, { color: isDarkMode ? '#AEB6C1' : '#888' }]}>Hub</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { 
-            setActiveTab('checklist'); 
-            if (pathname !== '/trainee-checklist') {
-              router.push('/trainee-checklist'); 
-            }
-          }}>
-            <Ionicons name="checkmark-done-circle-outline" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'checklist' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'checklist' ? '#43C6AC' : '#bbb')} />
+          <TouchableOpacity 
+            style={styles.tabBtn} 
+            onPress={() => { 
+              setActiveTab('checklist'); 
+              if (pathname !== '/trainee-checklist') {
+                router.push('/trainee-checklist'); 
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="checkmark-done-circle-outline" size={22} color={activeTab === 'checklist' ? '#43C6AC' : (isDarkMode ? '#AEB6C1' : '#222')} />
+            <Text style={[styles.tabLabel, { color: isDarkMode ? '#AEB6C1' : '#888' }]}>Checklist</Text>
           </TouchableOpacity>
         </View>
         <ProfileModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
@@ -1009,5 +1073,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 8,
+    paddingVertical: 12,
+    paddingBottom: 20,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  tabBtn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    marginTop: 2,
   },
 }); 
