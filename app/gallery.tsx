@@ -254,6 +254,14 @@ export default function GalleryScreen() {
   );
 
   const handleBack = () => {
+    // If we're in album view, go back to main gallery
+    if (selectedAlbum) {
+      setSelectedAlbum(null);
+      setAlbumPhotos([]);
+      return;
+    }
+    
+    // If we're in main gallery view, go to home
     if (window?.history?.length > 1) {
       router.back();
     } else {
