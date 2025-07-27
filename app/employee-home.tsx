@@ -16,6 +16,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '../components/AuthContext';
 import { fetchHighlights } from '../services/supabase';
 import { supabase } from '../services/supabase';
+import { getGenreColor } from '../constants/Genres';
 
 // BookOfMonth type definition
 // (copied from app/bookclub.tsx)
@@ -55,6 +56,8 @@ export default function EmployeeHome() {
 
   const [bookOfMonth, setBookOfMonth] = useState<BookOfMonth | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ratings, setRatings] = useState<any[]>([]);
+  const [averageRating, setAverageRating] = useState(0);
 
   // Handle fromLogin navigation
   useEffect(() => {
@@ -203,6 +206,41 @@ export default function EmployeeHome() {
     fetchBookOfMonth();
   }, []);
 
+  // Fetch ratings for book of the month
+  const fetchRatings = async () => {
+    try {
+      if (bookOfMonth) {
+        const { data, error } = await supabase
+          .from('ratings')
+          .select('*')
+          .eq('book_id', bookOfMonth.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        setRatings(data || []);
+        
+        // Calculate average rating
+        if (data && data.length > 0) {
+          const avg = data.reduce((sum, r) => sum + r.rating, 0) / data.length;
+          setAverageRating(avg);
+        } else {
+          setAverageRating(0);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching ratings:', error);
+      setAverageRating(0);
+    }
+  };
+
+  // Fetch ratings when book of the month changes
+  useEffect(() => {
+    if (bookOfMonth) {
+      fetchRatings();
+    }
+  }, [bookOfMonth]);
+
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -248,6 +286,9 @@ export default function EmployeeHome() {
         <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} /> 
         <Text style={[styles.appName, { color: textColor }]}><Text style={{ color: textColor }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text> 
         <View style={styles.headerIcons}> 
+          <TouchableOpacity onPress={() => router.push('/library')} style={styles.headerIcon}> 
+            <Ionicons name="library-outline" size={22} color={iconColor} /> 
+          </TouchableOpacity> 
           <TouchableOpacity onPress={toggleTheme} style={styles.headerIcon}> 
             <Feather name={isDarkMode ? 'sun' : 'moon'} size={22} color={iconColor} /> 
           </TouchableOpacity> 
@@ -425,7 +466,7 @@ export default function EmployeeHome() {
               </View>
               <View style={{ flex: 1, marginLeft: 16 }}>
                 {bookOfMonth.genre && (
-                  <View style={[styles.genreChip, { backgroundColor: bookOfMonth.genreColor || '#A3C9A8' }]}>
+                  <View style={[styles.genreChip, { backgroundColor: getGenreColor(bookOfMonth.genre) }]}>
                     <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{bookOfMonth.genre}</Text>
                   </View>
                 )}
@@ -435,17 +476,15 @@ export default function EmployeeHome() {
                   {[1,2,3,4,5].map(i => (
                     <MaterialIcons
                       key={i}
-                      name={i <= 5 ? 'star' : 'star-border'}
+                      name={i <= averageRating ? 'star' : 'star-border'}
                       size={20}
                       color="#F4B400"
                       style={{ marginRight: 2 }}
                     />
                   ))}
-                  <Text style={[styles.ratingText, { color: textColor }]}>4.9</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                  <Ionicons name="person" size={16} color={secondaryTextColor} style={{ marginRight: 4 }} />
-                  <Text style={[styles.recommender, { color: secondaryTextColor }]}>Nizar Naghi</Text>
+                  <Text style={[styles.ratingText, { color: textColor, fontSize: 12 }]}>
+                    {averageRating > 0 ? averageRating.toFixed(1) : 'No ratings'} {ratings.length > 0 && `(${ratings.length} ratings)`}
+                  </Text>
                 </View>
                 {bookOfMonth.description && (
                   <Text style={[styles.bookDescription, { color: isDarkMode ? '#ccc' : '#666' }]} numberOfLines={2}>

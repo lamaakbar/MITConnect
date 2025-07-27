@@ -1,10 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ActivityIndicator, ScrollView, StatusBar } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Image, 
+  TouchableOpacity, 
+  ActivityIndicator, 
+  ScrollView, 
+  StatusBar,
+  TextInput,
+  Alert
+} from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { supabase } from '../../../services/supabase';
+import { getGenreColor } from '../../../constants/Genres';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Book = {
@@ -19,6 +31,24 @@ type Book = {
   category?: string;
 };
 
+type Rating = {
+  id: number;
+  user_id: string;
+  book_id: number;
+  rating: number;
+  created_at: string;
+  user_name?: string;
+};
+
+type Comment = {
+  id: number;
+  user_id: string;
+  book_id: number;
+  content: string;
+  created_at: string;
+  user_name?: string;
+};
+
 export default function BookDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
@@ -26,179 +56,266 @@ export default function BookDetailsScreen() {
   const isDarkMode = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
   
-  // Function to fetch real book cover from OpenLibrary
-  const fetchBookCover = async (title: string, author: string): Promise<string | null> => {
-    try {
-      // Try multiple search strategies
-      const searchStrategies = [
-        // Strategy 1: Title + Author
-        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author || '')}&limit=5`,
-        // Strategy 2: Title only
-        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=5`,
-        // Strategy 3: Simplified title (remove special characters)
-        `https://openlibrary.org/search.json?title=${encodeURIComponent(title.replace(/[^\w\s]/g, ' ').trim())}&limit=5`
-      ];
-      
-      for (let i = 0; i < searchStrategies.length; i++) {
-        const searchUrl = searchStrategies[i];
-        console.log(`🔍 Details search strategy ${i + 1} for:`, title, 'URL:', searchUrl);
-        
-        const response = await fetch(searchUrl);
-        const data = await response.json();
-        
-        if (data.docs && data.docs.length > 0) {
-          // Find the best match
-          const bestMatch = data.docs.find((book: any) => book.cover_i) || data.docs[0];
-          
-          if (bestMatch.cover_i) {
-            const coverUrl = `https://covers.openlibrary.org/b/id/${bestMatch.cover_i}-L.jpg`;
-            console.log('✅ Details found cover for:', title, 'URL:', coverUrl);
-            return coverUrl;
-          }
-        }
-      }
-      
-      console.log('❌ Details no cover found for:', title);
-      return null;
-    } catch (error) {
-      console.log('❌ Details error fetching cover for:', title, error);
-      return null;
-    }
-  };
-  
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
   const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const darkCard = isDarkMode ? '#23272b' : '#fff';
+  const darkBorder = isDarkMode ? '#2D333B' : '#eee';
+  const darkText = isDarkMode ? '#fff' : '#222';
   const borderColor = isDarkMode ? '#2A2A2A' : '#eee';
-  const iconColor = useThemeColor({}, 'icon');
+  const darkHighlight = '#43C6AC';
+  const iconColor = isDarkMode ? '#fff' : '#222';
 
   const [book, setBook] = useState<Book | null>(null);
+  const [ratings, setRatings] = useState<Rating[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userRating, setUserRating] = useState(0);
+  const [newComment, setNewComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const fetchBook = async () => {
-      if (!id) {
-        setError('No book ID provided');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError('');
+  // Function to fetch real book cover from OpenLibrary
+  const fetchBookCover = async (title: string, author: string): Promise<string | null> => {
+    try {
+      const searchStrategies = [
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author || '')}&limit=5`,
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&limit=5`,
+        `https://openlibrary.org/search.json?title=${encodeURIComponent(title.replace(/[^\w\s]/g, ' ').trim())}&limit=5`
+      ];
+      
+      for (let i = 0; i < searchStrategies.length; i++) {
+        const searchUrl = searchStrategies[i];
+        const response = await fetch(searchUrl);
+        const data = await response.json();
         
-        const { data: bookData, error: bookError } = await supabase
-          .from('books')
-          .select('*')
-          .eq('id', parseInt(id as string))
-          .single();
-
-        if (bookError) {
-          if (bookError.code === 'PGRST116') {
-            setError('Book not found');
-          } else {
-            setError('Failed to load book details');
+        if (data.docs && data.docs.length > 0) {
+          const bestMatch = data.docs.find((book: any) => book.cover_i) || data.docs[0];
+          
+          if (bestMatch.cover_i) {
+            const coverUrl = `https://covers.openlibrary.org/b/id/${bestMatch.cover_i}-L.jpg`;
+            return coverUrl;
           }
-          setBook(null);
-        } else {
-          console.log('📚 Details raw book data:', bookData);
-          
-          // Process the book cover image
-          let processedBook = { ...bookData };
-          
-          // Check if the book has a local file URI (which won't work)
-          const hasLocalFileUri = bookData.cover_image_url && 
-            (bookData.cover_image_url.startsWith('file://') || 
-             bookData.cover_image_url.match(/^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}\.(jpg|png|jpeg)$/i));
-          
-          if (hasLocalFileUri) {
-            console.log('🔍 Details fetching real cover for book:', bookData.title);
-            
-            // Fetch the actual book cover from OpenLibrary API
-            const realCoverUrl = await fetchBookCover(bookData.title, bookData.author || '');
-            
-            // If OpenLibrary doesn't have the cover, try to use a generic book cover
-            // based on the book's genre or type
-            if (!realCoverUrl) {
-              console.log('⚠️ Details OpenLibrary failed, using genre-based cover for:', bookData.title);
-              
-              // Use different cover IDs based on book genre or title keywords
-              const genreCovers = {
-                'self-help': 'https://covers.openlibrary.org/b/id/7222246-L.jpg',
-                'philosophy': 'https://covers.openlibrary.org/b/id/7222247-L.jpg',
-                'fiction': 'https://covers.openlibrary.org/b/id/7222248-L.jpg',
-                'business': 'https://covers.openlibrary.org/b/id/7222249-L.jpg',
-                'default': 'https://covers.openlibrary.org/b/id/7222250-L.jpg'
-              };
-              
-              // Determine genre based on title keywords
-              const titleLower = bookData.title.toLowerCase();
-              let selectedCover = genreCovers.default;
-              
-              if (titleLower.includes('think') || titleLower.includes('believe') || titleLower.includes('mind')) {
-                selectedCover = genreCovers['self-help'];
-              } else if (titleLower.includes('philosophy') || titleLower.includes('wisdom')) {
-                selectedCover = genreCovers.philosophy;
-              } else if (titleLower.includes('business') || titleLower.includes('success')) {
-                selectedCover = genreCovers.business;
-              }
-              
-              processedBook.cover_image_url = selectedCover;
-            } else {
-              processedBook.cover_image_url = realCoverUrl;
-            }
-          }
-          
-          console.log('📚 Details final processed book:', processedBook);
-          setBook(processedBook);
         }
-      } catch (err) {
-        console.error('Error fetching book:', err);
-        setError('Failed to load book details');
-        setBook(null);
-      } finally {
-        setLoading(false);
       }
-    };
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching book cover:', error);
+      return null;
+    }
+  };
 
-    fetchBook();
+  const fetchBookDetails = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('books')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        // Check if the book has a local file URI (which won't work)
+        const hasLocalFileUri = data.cover_image_url && 
+          (data.cover_image_url.startsWith('file://') || 
+           data.cover_image_url.match(/^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}\.(jpg|png|jpeg)$/i));
+        
+        if (hasLocalFileUri) {
+          console.log('🔍 Fetching real cover for book:', data.title);
+          
+          // Fetch the actual book cover from OpenLibrary API
+          const realCoverUrl = await fetchBookCover(data.title, data.author || '');
+          
+          if (realCoverUrl) {
+            data.cover_image_url = realCoverUrl;
+          }
+        }
+        
+        setBook(data);
+      }
+    } catch (error) {
+      console.error('Error fetching book details:', error);
+      setError('Failed to load book details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRatings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('ratings')
+        .select(`
+          *,
+          users:user_id(name)
+        `)
+        .eq('book_id', id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      const processedRatings = data.map((rating: any) => ({
+        ...rating,
+        user_name: rating.users?.name || 'Anonymous'
+      }));
+      
+      setRatings(processedRatings);
+    } catch (error) {
+      console.error('Error fetching ratings:', error);
+    }
+  };
+
+  const fetchComments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .select(`
+          *,
+          users:user_id(name)
+        `)
+        .eq('book_id', id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      const processedComments = data.map((comment: any) => ({
+        ...comment,
+        user_name: comment.users?.name || 'Anonymous'
+      }));
+      
+      setComments(processedComments);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  };
+
+  const getCurrentUser = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      
+      if (user) {
+        // Get user's existing rating
+        const { data: userRatingData } = await supabase
+          .from('ratings')
+          .select('rating')
+          .eq('book_id', id)
+          .eq('user_id', user.id)
+          .single();
+        
+        if (userRatingData) {
+          setUserRating(userRatingData.rating);
+        }
+      }
+    } catch (error) {
+      console.error('Error getting user:', error);
+    }
+  };
+
+  const submitRating = async (rating: number) => {
+    if (!user) {
+      Alert.alert('Error', 'Please log in to rate this book');
+      return;
+    }
+    
+    try {
+      setSubmitting(true);
+      
+      const { error } = await supabase
+        .from('ratings')
+        .upsert({
+          user_id: user.id,
+          book_id: parseInt(id as string),
+          rating: rating
+        });
+      
+      if (error) throw error;
+      
+      setUserRating(rating);
+      await fetchRatings();
+      Alert.alert('Success', 'Rating submitted successfully!');
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      Alert.alert('Error', 'Failed to submit rating');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitComment = async () => {
+    if (!user) {
+      Alert.alert('Error', 'Please log in to comment');
+      return;
+    }
+    
+    if (!newComment.trim()) {
+      Alert.alert('Error', 'Please enter a comment');
+      return;
+    }
+    
+    try {
+      setSubmitting(true);
+      
+      const { error } = await supabase
+        .from('comments')
+        .insert({
+          user_id: user.id,
+          book_id: parseInt(id as string),
+          content: newComment.trim()
+        });
+      
+      if (error) throw error;
+      
+      setNewComment('');
+      await fetchComments();
+      Alert.alert('Success', 'Comment submitted successfully!');
+    } catch (error) {
+      console.error('Error submitting comment:', error);
+      Alert.alert('Error', 'Failed to submit comment');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const averageRating = ratings.length > 0 
+    ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length 
+    : 0;
+
+  useEffect(() => {
+    if (id) {
+      Promise.all([
+        fetchBookDetails(),
+        fetchRatings(),
+        fetchComments(),
+        getCurrentUser()
+      ]);
+    }
   }, [id]);
 
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3CB371" />
-          <Text style={[styles.loadingText, { color: secondaryTextColor }]}>
-            Loading book details...
-          </Text>
+          <ActivityIndicator size="large" color={darkHighlight} />
+          <Text style={[styles.loadingText, { color: textColor }]}>Loading book details...</Text>
         </View>
       </View>
     );
   }
 
-  if (error || !book) {
+  if (!book) {
     return (
       <View style={[styles.container, { backgroundColor }]}>
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={64} color="#E74C3C" />
-          <Text style={[styles.errorTitle, { color: textColor }]}>
+          <Ionicons name="alert-circle-outline" size={64} color="#e74c3c" />
+          <Text style={[styles.errorText, { color: textColor }]}>
             {error || 'Book not found'}
           </Text>
-          <Text style={[styles.errorMessage, { color: secondaryTextColor }]}>
-            The book you're looking for doesn't exist or has been removed.
-          </Text>
-          <TouchableOpacity 
-            style={[styles.errorBackButton, { backgroundColor: '#3CB371' }]}
-            onPress={() => router.push('/books-management')}
-          >
-            <Text style={[styles.errorBackButtonText, { color: '#fff' }]}>
-              Back to Books
-            </Text>
-          </TouchableOpacity>
         </View>
       </View>
     );
@@ -208,103 +325,193 @@ export default function BookDetailsScreen() {
     <View style={[styles.container, { backgroundColor }]}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       
-      {/* Full Header with MITConnect Branding */}
-      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={textColor} />
+      {/* Header */}
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 18,
+        paddingTop: insets.top + 10,
+        paddingBottom: 6,
+        backgroundColor: isDarkMode ? darkCard : cardBackground,
+        borderBottomWidth: 1,
+        borderBottomColor: isDarkMode ? darkBorder : borderColor,
+      }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+          <Ionicons name="arrow-back" size={24} color={iconColor} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: textColor }]}>
-          MIT<Text style={{ color: '#3CB371' }}>Connect</Text>
+        <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
+          MIT<Text style={{ color: darkHighlight }}>Connect</Text>
         </Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity 
+          onPress={() => router.push('/library')} 
+          style={{ 
+            padding: 8, 
+            backgroundColor: darkHighlight, 
+            borderRadius: 8,
+            marginLeft: 8
+          }}
+        >
+          <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Library</Text>
+        </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        style={{ flex: 1 }} 
-        contentContainerStyle={{ paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Book Details Card - Matching Book Club Layout */}
-        <View style={[styles.featuredCard, { backgroundColor: cardBackground }]}>
-          <View style={{ flexDirection: 'row' }}>
-            <Image 
-              source={{ uri: book.cover_image_url || book.cover || 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} 
-              style={styles.featuredCover}
-              onError={(error) => {
-                console.log('❌ Details book image error for:', book.title, error.nativeEvent.error);
-              }}
-              onLoad={() => console.log('✅ Details book image loaded successfully for:', book.title)}
-            />
-            <View style={{ flex: 1, marginLeft: 16 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Book Information Section */}
+        <View style={{ padding: 18 }}>
+          <View style={{ flexDirection: 'row', marginBottom: 20 }}>
+            <View style={{ width: 120, height: 180, borderRadius: 12, overflow: 'hidden', marginRight: 16 }}>
+              <Image 
+                source={{ uri: book.cover_image_url || 'https://covers.openlibrary.org/b/id/7222246-L.jpg' }} 
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+                onError={(error) => console.log('❌ Book image error:', error.nativeEvent.error)}
+                onLoad={() => console.log('✅ Book image loaded successfully')}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.featuredTitle, { color: textColor, fontSize: 24, fontWeight: '700', marginBottom: 8 }]}>{book.title}</Text>
+              <Text style={[styles.featuredAuthor, { color: secondaryTextColor, fontSize: 16, marginBottom: 12 }]}>By {book.author}</Text>
+              
               {book.genre && (
-                <View style={[styles.genreChip, { backgroundColor: book.genre_color || '#A3C9A8' }]}>
+                <View style={[styles.genreChip, { backgroundColor: book.genre_color || '#A3C9A8', marginBottom: 12 }]}>
                   <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{book.genre}</Text>
                 </View>
               )}
-              <Text style={[styles.featuredTitle, { color: isDarkMode ? '#fff' : textColor }]}>{book.title}</Text>
-              <Text style={[styles.featuredAuthor, { color: isDarkMode ? '#fff' : '#888' }]}>By {book.author}</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+              
+              {/* Average Rating Display */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 {[1,2,3,4,5].map(i => (
                   <MaterialIcons
                     key={i}
-                    name={i <= 5 ? 'star' : 'star-border'}
-                    size={18}
+                    name={i <= averageRating ? 'star' : 'star-border'}
+                    size={20}
                     color="#F4B400"
                     style={{ marginRight: 2 }}
                   />
                 ))}
-                <Text style={[styles.ratingText, { color: isDarkMode ? '#fff' : textColor }]}>4.9</Text>
+                <Text style={[styles.ratingText, { color: textColor, marginLeft: 8, fontSize: 16 }]}>
+                  {averageRating.toFixed(1)} ({ratings.length} ratings)
+                </Text>
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                <Ionicons name="person" size={16} color={isDarkMode ? '#9BA1A6' : '#888'} style={{ marginRight: 4 }} />
-                <Text style={[styles.recommender, { color: isDarkMode ? '#fff' : '#888' }]}>Nizar Naghi</Text>
-              </View>
+              
+
             </View>
           </View>
           
           {/* About This Book */}
           {book.description && (
-            <View style={[styles.aboutBox, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}>
+            <View style={[styles.aboutBox, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9', marginBottom: 24 }]}>
               <Text style={[styles.aboutLabel, { color: textColor }]}>About This Book</Text>
               <Text style={[styles.aboutText, { color: isDarkMode ? '#ccc' : '#444' }]}>{book.description}</Text>
             </View>
           )}
-          
-          {/* Stats Row */}
-          <View style={styles.statsRow}>
-            <View style={[styles.statCardNewSmall, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}>
-              <Ionicons name="person-outline" size={30} color="#1abc9c" style={{ marginBottom: 4 }} />
-              <Text style={[styles.statNameBold, { color: textColor }]}>Nizar Naghi</Text>
-              <Text style={[styles.statLabelNewSmall, { color: isDarkMode ? '#aaa' : '#555' }]}>Recommended by</Text>
-            </View>
-            <View style={[styles.statCardNewSmall, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}>
-              <Ionicons name="book-outline" size={30} color="#2979ff" style={{ marginBottom: 4 }} />
-              <Text style={[styles.statNumberSmall, { color: textColor }]}>44</Text>
-              <Text style={[styles.statLabelNewSmall, { color: isDarkMode ? '#aaa' : '#555' }]}>Book</Text>
-            </View>
-            <View style={[styles.statCardNewSmall, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}>
-              <Ionicons name="star-outline" size={30} color="#FFA726" style={{ marginBottom: 4 }} />
-              <Text style={[styles.statNumberSmall, { color: textColor }]}>4.9</Text>
-              <Text style={[styles.statLabelNewSmall, { color: isDarkMode ? '#aaa' : '#555' }]}>Rating</Text>
-            </View>
-          </View>
-          
-          {/* Rate This Book */}
+        </View>
+
+        {/* User Rating Section */}
+        <View style={{ paddingHorizontal: 18, marginBottom: 24 }}>
           <View style={[styles.rateBox, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}>
-            <Text style={[styles.rateLabel, { color: textColor }]}>
-              <MaterialIcons name="star-border" size={18} color="#F4B400" /> Rate This Book
+            <Text style={[styles.rateLabel, { color: textColor, fontSize: 18, fontWeight: '600', marginBottom: 12 }]}>
+              <MaterialIcons name="star-border" size={20} color="#F4B400" /> Rate This Book
             </Text>
-            <View style={{ flexDirection: 'row', marginTop: 6 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 8 }}>
               {[1,2,3,4,5].map(i => (
-                <TouchableOpacity key={i}>
+                <TouchableOpacity key={i} onPress={() => submitRating(i)} disabled={submitting}>
                   <MaterialIcons
-                    name="star-border"
-                    size={28}
+                    name={i <= userRating ? 'star' : 'star-border'}
+                    size={32}
                     color="#F4B400"
-                    style={{ marginRight: 2 }}
+                    style={{ marginHorizontal: 4 }}
                   />
                 </TouchableOpacity>
               ))}
+            </View>
+            {userRating > 0 && (
+              <Text style={[styles.ratingText, { color: isDarkMode ? '#aaa' : '#555', textAlign: 'center', fontSize: 14 }]}>
+                You rated this book {userRating} star{userRating > 1 ? 's' : ''}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Comments Section */}
+        <View style={{ paddingHorizontal: 18 }}>
+          <View style={styles.commentSection}>
+            <Text style={[styles.commentTitle, { color: textColor, fontSize: 18, fontWeight: '600', marginBottom: 16 }]}>
+              Comments ({comments.length})
+            </Text>
+            
+            {user && (
+              <>
+                <View style={styles.commentInputRow}>
+                  <TextInput
+                    style={[styles.commentInputArea, { 
+                      backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9', 
+                      color: textColor, 
+                      borderColor: borderColor,
+                      minHeight: 80,
+                      padding: 12
+                    }]}
+                    placeholder="Write a comment..."
+                    placeholderTextColor={isDarkMode ? '#888' : '#aaa'}
+                    value={newComment}
+                    onChangeText={setNewComment}
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                  />
+                </View>
+                <TouchableOpacity
+                  style={[styles.commentPostBtn, { 
+                    backgroundColor: isDarkMode ? '#23272b' : '#e6f0fe',
+                    paddingVertical: 12,
+                    paddingHorizontal: 20,
+                    borderRadius: 8,
+                    marginTop: 8,
+                    marginBottom: 16
+                  }]}
+                  onPress={submitComment}
+                  disabled={submitting || !newComment.trim()}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.commentPostBtnText, { 
+                    color: isDarkMode ? '#43C6AC' : '#2196f3',
+                    textAlign: 'center',
+                    fontWeight: '600'
+                  }]}>
+                    {submitting ? 'Posting...' : 'Post Comment'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+            
+            <Text style={[styles.commentSubtitle, { color: textColor, marginBottom: 12 }]}>Recent Comments</Text>
+            <View style={styles.commentList}>
+              {comments.length === 0 ? (
+                <Text style={[styles.noComments, { color: isDarkMode ? '#aaa' : '#888' }]}>
+                  No comments yet. Be the first to comment!
+                </Text>
+              ) : (
+                comments.map((comment, idx) => (
+                  <View key={idx} style={[styles.commentBubble, { 
+                    backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9',
+                    marginBottom: 12,
+                    padding: 16
+                  }]}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <Text style={[styles.commentAuthor, { color: textColor, fontWeight: '600' }]}>
+                        {comment.user_name}
+                      </Text>
+                      <Text style={[styles.commentDate, { color: isDarkMode ? '#aaa' : '#888', fontSize: 12 }]}>
+                        {new Date(comment.created_at).toLocaleDateString()}
+                      </Text>
+                    </View>
+                    <Text style={[styles.commentText, { color: textColor, lineHeight: 20 }]}>
+                      {comment.content}
+                    </Text>
+                  </View>
+                ))
+              )}
             </View>
           </View>
         </View>
@@ -316,22 +523,6 @@ export default function BookDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    letterSpacing: 0.5,
   },
   loadingContainer: {
     flex: 1,
@@ -346,86 +537,33 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
   },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  errorText: {
     marginTop: 16,
-    marginBottom: 8,
-  },
-  errorMessage: {
     fontSize: 16,
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  errorBackButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  errorBackButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  featuredCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    marginHorizontal: 16,
-    marginTop: 20,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  featuredCover: {
-    width: 110,
-    height: 160,
-    borderRadius: 12,
-    backgroundColor: '#eee',
-  },
-  genreChip: {
-    alignSelf: 'flex-start',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-    backgroundColor: '#A3C9A8',
-    marginBottom: 6,
-  },
-  genreText: {
-    fontSize: 12,
-    color: '#222',
-    fontWeight: '500',
   },
   featuredTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#222',
-    marginBottom: 2,
-    marginTop: 2,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   featuredAuthor: {
-    fontSize: 15,
-    color: '#888',
+    fontSize: 14,
     marginBottom: 8,
   },
   ratingText: {
-    fontSize: 15,
-    color: '#222',
-    marginLeft: 6,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   recommender: {
     fontSize: 13,
-    color: '#888',
   },
   aboutBox: {
-    backgroundColor: '#f6f7f9',
-    borderRadius: 12,
-    padding: 16,
     marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
   },
   aboutLabel: {
     fontSize: 16,
@@ -435,44 +573,105 @@ const styles = StyleSheet.create({
   aboutText: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#444',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-  },
-  statCardNewSmall: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: '#f6f7f9',
-    borderRadius: 12,
-    padding: 12,
-    marginHorizontal: 4,
-  },
-  statNameBold: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  statNumberSmall: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  statLabelNewSmall: {
-    fontSize: 10,
-    color: '#555',
   },
   rateBox: {
     backgroundColor: '#f6f7f9',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 12,
   },
   rateLabel: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#222',
+    marginBottom: 4,
+  },
+  commentSection: {
+    marginTop: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  commentTitle: {
+    fontWeight: 'bold',
+    fontSize: 15,
+    color: '#222',
+    marginBottom: 8,
+  },
+  commentInputRow: {
+    marginBottom: 8,
+  },
+  commentInputArea: {
+    backgroundColor: '#f6f7f9',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#222',
+    borderWidth: 1,
+    borderColor: '#eee',
+    minHeight: 60,
+    maxHeight: 120,
+    width: '100%',
+    marginBottom: 8,
+  },
+  commentPostBtn: {
+    backgroundColor: '#e6f0fe',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginBottom: 10,
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
+  },
+  commentPostBtnText: {
+    color: '#2196f3',
     fontSize: 16,
     fontWeight: '600',
+  },
+  commentSubtitle: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#222',
     marginBottom: 8,
+  },
+  commentList: {
+    marginTop: 4,
+  },
+  commentBubble: {
+    backgroundColor: '#f6f7f9',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  commentAuthor: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  commentDate: {
+    fontSize: 12,
+  },
+  commentText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  noComments: {
+    fontSize: 14,
+    color: '#888',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  genreChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  genreText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
 }); 

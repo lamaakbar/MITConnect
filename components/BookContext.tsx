@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Text } from 'react-native';
 import { supabase } from '../services/supabase';
+import { getGenreColor } from '../constants/Genres';
 
 export type Book = {
   id: string;
@@ -136,7 +137,7 @@ export function BookProvider({ children }: { children: ReactNode }) {
             title: book.title,
             author: book.author,
             genre: book.genre || '',
-            genreColor: book.genre_color || '#A3C9A8',
+            genreColor: getGenreColor(book.genre || ''),
             cover: processedCover,
             description: book.description,
             category: book.category || 'library',
@@ -232,7 +233,7 @@ export function BookProvider({ children }: { children: ReactNode }) {
             author: book.author,
             description: book.description,
             genre: book.genre,
-            genre_color: book.genreColor,
+            genre_color: getGenreColor(book.genre),
             cover_image_url: imageUrl,
             category: book.category || 'library',
           },
@@ -302,30 +303,70 @@ export function BookProvider({ children }: { children: ReactNode }) {
 
   const removeBook = async (id: string) => {
     try {
-      // Delete from user_books first (due to foreign key constraint)
-      const { error: userBooksError } = await supabase
-        .from('user_books')
-        .delete()
-        .eq('book_id', parseInt(id));
+      console.log('🗑️ Starting book deletion for ID:', id);
       
-      if (userBooksError) {
-        console.error('Error deleting user_books:', userBooksError);
-        throw userBooksError;
+      const bookId = parseInt(id);
+      
+      // Try to use the stored procedure first (if it exists)
+      let deletionSuccessful = false;
+      
+      try {
+        console.log('🚀 Attempting to delete book using stored procedure...');
+        const { error: sqlError } = await supabase.rpc('safe_delete_book', {
+          book_id: bookId
+        });
+        
+        if (sqlError) {
+          console.log('⚠️ Stored procedure not available, using manual deletion...');
+        } else {
+          console.log('✅ Book deleted successfully using stored procedure');
+          deletionSuccessful = true;
+        }
+      } catch (error) {
+        console.log('⚠️ Stored procedure failed, using manual deletion...');
       }
       
-      // Then delete the book from books table
-      const { error: bookError } = await supabase
-        .from('books')
-        .delete()
-        .eq('id', parseInt(id));
-      
-      if (bookError) {
-        console.error('Error deleting book:', bookError);
-        throw bookError;
+      // If stored procedure didn't work, use manual deletion
+      if (!deletionSuccessful) {
+        console.log('🔄 Using manual deletion...');
+        
+        // Delete from all possible related tables
+        const relatedTables = ['ratings', 'comments', 'user_books'];
+        
+        for (const table of relatedTables) {
+          try {
+            const { error } = await supabase
+              .from(table)
+              .delete()
+              .eq('book_id', bookId);
+            
+            if (error) {
+              console.log(`⚠️ Could not delete from ${table}:`, error.message);
+            } else {
+              console.log(`✅ Deleted from ${table}`);
+            }
+          } catch (tableError) {
+            console.log(`⚠️ Table ${table} may not exist or error occurred:`, tableError);
+          }
+        }
+        
+        // Try to delete the book
+        const { error: bookError } = await supabase
+          .from('books')
+          .delete()
+          .eq('id', bookId);
+        
+        if (bookError) {
+          console.error('Error deleting book:', bookError);
+          throw bookError;
+        }
+        
+        console.log('✅ Book deleted successfully using manual deletion');
       }
       
-      // Refresh the books list from Supabase to get the latest data
+      // Refresh the books list
       await fetchBooks();
+      
     } catch (error) {
       console.error('Error removing book:', error);
       throw error;
