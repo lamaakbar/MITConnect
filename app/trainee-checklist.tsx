@@ -49,6 +49,7 @@ export default function TraineeChecklist() {
   
   // File upload state (single file)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [userHasUploadedFile, setUserHasUploadedFile] = useState(false);
   
   // File viewer state  
   const [viewingFile, setViewingFile] = useState<any>(null);
@@ -212,7 +213,7 @@ export default function TraineeChecklist() {
       const feedbackInput: CreateFeedbackInput = {
         feedback_text: feedbackText.trim(),
         rating: finalRating,
-        file: selectedFile || undefined,
+        file: (!userHasUploadedFile && selectedFile) ? selectedFile : undefined,
         // trainee_name will be automatically derived from user profile in the service
       };
 
@@ -232,6 +233,11 @@ export default function TraineeChecklist() {
         setUserFeedbackCount(prev => prev + 1);
         if (userFeedbackCount === 0) {
           setFirstFeedbackRating(finalRating);
+        }
+        
+        // If a file was uploaded with this feedback, mark user as having uploaded
+        if (data.file_name && data.file_path) {
+          setUserHasUploadedFile(true);
         }
         
         // Reset form
@@ -448,6 +454,10 @@ export default function TraineeChecklist() {
           if (userData.length > 0) {
             // Set the first feedback's rating for the second feedback form
             setFirstFeedbackRating(userData[0].rating);
+            
+            // Check if user has already uploaded a file in any feedback
+            const hasFile = userData.some(feedback => feedback.file_name && feedback.file_path);
+            setUserHasUploadedFile(hasFile);
           }
         }
       } catch (error) {
@@ -837,103 +847,134 @@ export default function TraineeChecklist() {
                   onChangeText={setFeedbackText}
                 />
 
-                {/* File Upload Section */}
-                <View style={{ marginBottom: 16 }}>
-                  <Text style={{
-                    fontSize: 14,
-                    fontWeight: '500',
-                    color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
-                    marginBottom: 8
-                  }}>
-                    Upload Plan File (Optional):
-                  </Text>
-                  
-                  {!selectedFile ? (
-                    /* File Upload Button */
-                    <TouchableOpacity
-                      style={{
-                        backgroundColor: userRole === 'trainee' && isDarkMode ? darkBorder : '#F0F0F0',
-                        borderRadius: 12,
-                        padding: 16,
-                        borderWidth: 2,
-                        borderColor: userRole === 'trainee' && isDarkMode ? darkBorder : '#E5E5EA',
-                        borderStyle: 'dashed',
-                        alignItems: 'center',
-                      }}
-                      onPress={pickFile}
-                    >
-                      <Ionicons 
-                        name="cloud-upload-outline" 
-                        size={32} 
-                        color={userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93'} 
-                      />
-                      <Text style={{
-                        fontSize: 14,
-                        color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93',
-                        marginTop: 8,
-                        textAlign: 'center'
-                      }}>
-                        Tap to upload file (PDF, Word, Images)
-                      </Text>
-                      <Text style={{
-                        fontSize: 12,
-                        color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93',
-                        marginTop: 4,
-                        textAlign: 'center'
-                      }}>
-                        Max 50MB per file
-                      </Text>
-                    </TouchableOpacity>
-                  ) : (
-                    /* Selected File Display */
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: userRole === 'trainee' && isDarkMode ? darkBg : '#F8F8F8',
-                        borderRadius: 12,
-                        padding: 12,
-                        borderWidth: 1,
-                        borderColor: userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759'
-                      }}
-                    >
-                      <Ionicons 
-                        name={
-                          selectedFile.type.startsWith('image/') ? 'image-outline' :
-                          selectedFile.type === 'application/pdf' ? 'document-text-outline' :
-                          'document-outline'
-                        }
-                        size={24} 
-                        color={userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759'} 
-                      />
-                      <View style={{ flex: 1, marginLeft: 12 }}>
+                {/* File Upload Section - Only show if user hasn't uploaded a file yet */}
+                {!userHasUploadedFile && (
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{
+                      fontSize: 14,
+                      fontWeight: '500',
+                      color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+                      marginBottom: 8
+                    }}>
+                      Upload Plan File (Optional):
+                    </Text>
+                    
+                    {!selectedFile ? (
+                      /* File Upload Button */
+                      <TouchableOpacity
+                        style={{
+                          backgroundColor: userRole === 'trainee' && isDarkMode ? darkBorder : '#F0F0F0',
+                          borderRadius: 12,
+                          padding: 16,
+                          borderWidth: 2,
+                          borderColor: userRole === 'trainee' && isDarkMode ? darkBorder : '#E5E5EA',
+                          borderStyle: 'dashed',
+                          alignItems: 'center',
+                        }}
+                        onPress={pickFile}
+                      >
+                        <Ionicons 
+                          name="cloud-upload-outline" 
+                          size={32} 
+                          color={userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93'} 
+                        />
                         <Text style={{
                           fontSize: 14,
-                          fontWeight: '500',
-                          color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E'
+                          color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93',
+                          marginTop: 8,
+                          textAlign: 'center'
                         }}>
-                          {selectedFile.name}
+                          Tap to upload file (PDF, Word, Images)
                         </Text>
                         <Text style={{
                           fontSize: 12,
-                          color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93'
+                          color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93',
+                          marginTop: 4,
+                          textAlign: 'center'
                         }}>
-                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          Max 50MB per file • One file per trainee
                         </Text>
-                      </View>
-                      <TouchableOpacity
-                        onPress={removeFile}
+                      </TouchableOpacity>
+                    ) : (
+                      /* Selected File Display */
+                      <View
                         style={{
-                          padding: 8,
-                          borderRadius: 16,
-                          backgroundColor: '#FF3B30'
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: userRole === 'trainee' && isDarkMode ? darkBg : '#F8F8F8',
+                          borderRadius: 12,
+                          padding: 12,
+                          borderWidth: 1,
+                          borderColor: userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759'
                         }}
                       >
-                        <Ionicons name="close" size={16} color="#fff" />
-                      </TouchableOpacity>
+                        <Ionicons 
+                          name={
+                            selectedFile.type.startsWith('image/') ? 'image-outline' :
+                            selectedFile.type === 'application/pdf' ? 'document-text-outline' :
+                            'document-outline'
+                          }
+                          size={24} 
+                          color={userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759'} 
+                        />
+                        <View style={{ flex: 1, marginLeft: 12 }}>
+                          <Text style={{
+                            fontSize: 14,
+                            fontWeight: '500',
+                            color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E'
+                          }}>
+                            {selectedFile.name}
+                          </Text>
+                          <Text style={{
+                            fontSize: 12,
+                            color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93'
+                          }}>
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={removeFile}
+                          style={{
+                            padding: 8,
+                            borderRadius: 16,
+                            backgroundColor: '#FF3B30'
+                          }}
+                        >
+                          <Ionicons name="close" size={16} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* File Upload Restriction Notice */}
+                {userHasUploadedFile && (
+                  <View style={{
+                    backgroundColor: userRole === 'trainee' && isDarkMode ? '#1A1A1A' : '#F0F8FF',
+                    borderRadius: 12,
+                    padding: 12,
+                    marginBottom: 16,
+                    borderLeftWidth: 4,
+                    borderLeftColor: '#007AFF'
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Ionicons 
+                        name="information-circle" 
+                        size={16} 
+                        color="#007AFF" 
+                        style={{ marginRight: 8 }}
+                      />
+                      <Text style={{
+                        fontSize: 14,
+                        color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+                        fontWeight: '500',
+                        flex: 1
+                      }}>
+                        You have already uploaded a plan file. Each trainee can upload only one file total.
+                      </Text>
                     </View>
-                  )}
-                </View>
+                  </View>
+                )}
 
                 {/* Submit Button */}
                 <TouchableOpacity
@@ -1061,15 +1102,30 @@ export default function TraineeChecklist() {
                         setFeedbackLoadError(null);
                         
                         try {
-                          const { data, error } = await FeedbackService.getAllFeedback();
+                          // Get all feedbacks for display
+                          const { data: allData, error: allError } = await FeedbackService.getAllFeedback();
                           
-                          if (error) {
-                            setFeedbackLoadError(error);
+                          if (allError) {
+                            setFeedbackLoadError(allError);
                             return;
                           }
                           
-                          if (data) {
-                            setSubmittedFeedbacks(data);
+                          // Get current user's feedbacks for count and rating check
+                          const { data: userData, error: userError } = await FeedbackService.getUserFeedback();
+                          
+                          if (allData) {
+                            setSubmittedFeedbacks(allData);
+                          }
+                          
+                          if (userData) {
+                            setUserFeedbackCount(userData.length);
+                            if (userData.length > 0) {
+                              setFirstFeedbackRating(userData[0].rating);
+                              
+                              // Check if user has already uploaded a file in any feedback
+                              const hasFile = userData.some(feedback => feedback.file_name && feedback.file_path);
+                              setUserHasUploadedFile(hasFile);
+                            }
                           }
                         } catch (error) {
                           setFeedbackLoadError('Failed to load feedback data');
