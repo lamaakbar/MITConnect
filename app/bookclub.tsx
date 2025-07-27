@@ -510,8 +510,7 @@ export default function BookClubScreen() {
           style={{ 
             padding: 8, 
             backgroundColor: darkHighlight, 
-            borderRadius: 8,
-            marginLeft: 8
+            borderRadius: 8
           }}
         >
           <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Library</Text>

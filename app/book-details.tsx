@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
   FlatList
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
@@ -54,7 +54,7 @@ export default function BookDetails() {
   const params = useLocalSearchParams();
   const bookId = params.id ? parseInt(params.id as string) : null;
   
-  const { isDarkMode } = useTheme();
+  const { isDarkMode, toggleTheme } = useTheme();
   const { userRole } = useUserContext();
   const insets = useSafeAreaInsets();
   
@@ -281,143 +281,168 @@ export default function BookDetails() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 18,
+        paddingTop: insets.top + 10,
+        paddingBottom: 6,
+        backgroundColor: isDarkMode ? '#23272b' : cardBackground,
+        borderBottomWidth: 1,
+        borderBottomColor: isDarkMode ? '#2D333B' : borderColor,
+      }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
           <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: textColor }]}>Book Details</Text>
-        <View style={styles.headerSpacer} />
+        <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? '#fff' : textColor }}>
+          MIT<Text style={{ color: '#43C6AC' }}>Connect</Text>
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={toggleTheme} style={{ padding: 4, marginRight: 8 }}>
+            <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={24} color={textColor} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => router.push('/book-details')} 
+            style={{ 
+              padding: 8, 
+              backgroundColor: '#43C6AC', 
+              borderRadius: 8
+            }}
+          >
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Details</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Book Info */}
-        <View style={[styles.bookSection, { backgroundColor: cardBackground }]}>
-          <View style={styles.bookHeader}>
-            <Image 
-              source={{ uri: book.cover_image_url || 'https://via.placeholder.com/150x200' }} 
-              style={styles.bookCover}
-              resizeMode="cover"
-            />
-            <View style={styles.bookInfo}>
-              <Text style={[styles.bookTitle, { color: textColor }]}>{book.title}</Text>
-              <Text style={[styles.bookAuthor, { color: secondaryTextColor }]}>By {book.author}</Text>
-              {book.genre && (
-                <View style={[styles.genreChip, { backgroundColor: getGenreColor(book.genre) }]}>
-                  <Text style={styles.genreText}>{book.genre}</Text>
-                </View>
-              )}
-              <View style={styles.ratingContainer}>
-                <View style={styles.stars}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <TouchableOpacity
-                      key={star}
-                      onPress={() => submitRating(star)}
-                      disabled={submitting}
-                    >
-                      <Ionicons 
-                        name={star <= averageRating ? "star" : "star-outline"} 
-                        size={20} 
-                        color={star <= averageRating ? "#FFD700" : secondaryTextColor} 
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
+        {loading ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+            <ActivityIndicator size="large" color="#43C6AC" />
+            <Text style={{ color: isDarkMode ? '#ccc' : '#444', marginTop: 16 }}>Loading Book Details...</Text>
+          </View>
+        ) : book ? (
+          <>
+            {/* User Rating Section */}
+            <View style={{ paddingHorizontal: 18, marginTop: 20, marginBottom: 24 }}>
+              <View style={{ backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9', padding: 16, borderRadius: 12 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 8 }}>
+                  {[1,2,3,4,5].map(i => (
+                    <TouchableOpacity key={i} onPress={() => submitRating(i)} disabled={submitting}>
+                      <MaterialIcons
+                        name={i <= userRating ? 'star' : 'star-border'}
+                        size={32}
+                        color="#F4B400"
+                        style={{ marginHorizontal: 4 }}
                       />
                     </TouchableOpacity>
                   ))}
                 </View>
-                <Text style={[styles.ratingText, { color: secondaryTextColor }]}>
-                  {averageRating.toFixed(1)} ({ratings.length} ratings)
-                </Text>
+                {userRating > 0 && (
+                  <Text style={{ color: isDarkMode ? '#aaa' : '#555', textAlign: 'center', fontSize: 14 }}>
+                    You rated this book {userRating} star{userRating > 1 ? 's' : ''}
+                  </Text>
+                )}
               </View>
             </View>
-          </View>
-          
-          {book.description && (
-            <Text style={[styles.description, { color: textColor }]}>{book.description}</Text>
-          )}
-        </View>
 
-        {/* User Rating Section */}
-        {user && (
-          <View style={[styles.section, { backgroundColor: cardBackground }]}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>Your Rating</Text>
-            <View style={styles.userRatingContainer}>
-              <View style={styles.stars}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <TouchableOpacity
-                    key={star}
-                    onPress={() => submitRating(star)}
-                    disabled={submitting}
-                  >
-                    <Ionicons 
-                      name={star <= userRating ? "star" : "star-outline"} 
-                      size={24} 
-                      color={star <= userRating ? "#FFD700" : secondaryTextColor} 
-                    />
-                  </TouchableOpacity>
-                ))}
-              </View>
-              {userRating > 0 && (
-                <Text style={[styles.userRatingText, { color: secondaryTextColor }]}>
-                  You rated this book {userRating} star{userRating > 1 ? 's' : ''}
+            {/* Comments Section */}
+            <View style={{ paddingHorizontal: 18 }}>
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ color: textColor, fontSize: 18, fontWeight: '600', marginBottom: 16 }}>
+                  Comments ({comments.length})
                 </Text>
-              )}
+                
+                {user && (
+                  <>
+                    <View style={{ marginBottom: 12 }}>
+                      <TextInput
+                        style={{ 
+                          backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9', 
+                          color: textColor, 
+                          borderColor: borderColor,
+                          minHeight: 80,
+                          padding: 12,
+                          borderRadius: 8,
+                          borderWidth: 1
+                        }}
+                        placeholder="Write a comment..."
+                        placeholderTextColor={isDarkMode ? '#888' : '#aaa'}
+                        value={newComment}
+                        onChangeText={setNewComment}
+                        multiline
+                        numberOfLines={3}
+                        textAlignVertical="top"
+                      />
+                    </View>
+                    <TouchableOpacity
+                      style={{ 
+                        backgroundColor: isDarkMode ? '#23272b' : '#e6f0fe',
+                        paddingVertical: 12,
+                        paddingHorizontal: 20,
+                        borderRadius: 8,
+                        marginBottom: 16
+                      }}
+                      onPress={submitComment}
+                      disabled={submitting || !newComment.trim()}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={{ 
+                        color: isDarkMode ? '#43C6AC' : '#2196f3',
+                        textAlign: 'center',
+                        fontWeight: '600'
+                      }}>
+                        {submitting ? 'Posting...' : 'Post Comment'}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+                
+                <Text style={{ color: textColor, marginBottom: 12 }}>Recent Comments</Text>
+                <View>
+                  {comments.length === 0 ? (
+                    <Text style={{ color: isDarkMode ? '#aaa' : '#888' }}>
+                      No comments yet. Be the first to comment!
+                    </Text>
+                  ) : (
+                    comments.map((comment, idx) => (
+                      <View key={idx} style={{ 
+                        backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9',
+                        marginBottom: 12,
+                        padding: 16,
+                        borderRadius: 12
+                      }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <Text style={{ color: textColor, fontWeight: '600', fontSize: 14 }}>
+                            {comment.user_name || 'Anonymous'}
+                          </Text>
+                          <Text style={{ color: isDarkMode ? '#aaa' : '#888', fontSize: 12 }}>
+                            {new Date(comment.created_at).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: '2-digit', 
+                              day: '2-digit' 
+                            })}
+                          </Text>
+                        </View>
+                        <Text style={{ color: isDarkMode ? '#ccc' : '#444', lineHeight: 18 }}>
+                          {comment.content}
+                        </Text>
+                      </View>
+                    ))
+                  )}
+                </View>
+              </View>
             </View>
+          </>
+        ) : (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+            <Ionicons name="book-outline" size={64} color={secondaryTextColor} />
+            <Text style={{ color: textColor, marginTop: 16, fontSize: 18 }}>Book Not Found</Text>
+            <Text style={{ color: isDarkMode ? '#ccc' : '#444', textAlign: 'center', marginTop: 8 }}>
+              The book you're looking for could not be found.
+            </Text>
           </View>
         )}
-
-        {/* Comments Section */}
-        <View style={[styles.section, { backgroundColor: cardBackground }]}>
-          <Text style={[styles.sectionTitle, { color: textColor }]}>Comments ({comments.length})</Text>
-          
-          {user && (
-            <View style={styles.commentInputContainer}>
-              <TextInput
-                style={[styles.commentInput, { 
-                  backgroundColor: isDarkMode ? '#2A2A2A' : '#F8F9FA',
-                  color: textColor,
-                  borderColor: borderColor
-                }]}
-                placeholder="Add a comment..."
-                placeholderTextColor={secondaryTextColor}
-                value={newComment}
-                onChangeText={setNewComment}
-                multiline
-                numberOfLines={3}
-              />
-              <TouchableOpacity
-                style={[styles.submitButton, { backgroundColor: '#007AFF' }]}
-                onPress={submitComment}
-                disabled={submitting || !newComment.trim()}
-              >
-                {submitting ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.submitButtonText}>Post</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <FlatList
-            data={comments}
-            keyExtractor={(item) => item.id.toString()}
-            scrollEnabled={false}
-            renderItem={({ item }) => (
-              <View style={[styles.commentItem, { borderBottomColor: borderColor }]}>
-                <View style={styles.commentHeader}>
-                  <Text style={[styles.commentAuthor, { color: textColor }]}>{item.user_name}</Text>
-                  <Text style={[styles.commentDate, { color: secondaryTextColor }]}>
-                    {new Date(item.created_at).toLocaleDateString()}
-                  </Text>
-                </View>
-                <Text style={[styles.commentContent, { color: textColor }]}>{item.content}</Text>
-              </View>
-            )}
-            ListEmptyComponent={() => (
-              <Text style={[styles.emptyText, { color: secondaryTextColor }]}>
-                No comments yet. Be the first to comment!
-              </Text>
-            )}
-          />
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
