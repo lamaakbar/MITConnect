@@ -10,6 +10,7 @@ interface AdminHeaderProps {
   title: string;
   showBackButton?: boolean;
   backDestination?: string;
+  onBackPress?: () => void;
   rightComponent?: React.ReactNode;
   showShadow?: boolean;
   showLogo?: boolean;
@@ -22,6 +23,7 @@ export default function AdminHeader({
   title,
   showBackButton = true,
   backDestination = '/admin-home',
+  onBackPress,
   rightComponent,
   showShadow = true,
   showLogo = true,
@@ -39,10 +41,12 @@ export default function AdminHeader({
   const iconColor = useThemeColor({}, 'icon');
 
   const handleBackPress = () => {
-    if (backDestination) {
+    if (onBackPress) {
+      onBackPress();
+    } else if (backDestination) {
       router.push(backDestination);
     } else {
-      router.push('/admin-home');
+      router.back();
     }
   };
 
@@ -87,19 +91,23 @@ export default function AdminHeader({
             <Ionicons name="arrow-back" size={24} color={textColor} />
           </TouchableOpacity>
         )}
-        {showLogo && (
+        {showLogo ? (
           <View style={styles.logoSection}>
             <View style={[styles.logoCircle, { backgroundColor: logoCircleBg, width: 36, height: 36, borderRadius: 18 }]}> 
               <Feather name="users" size={18} color="#004080" />
             </View>
             <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', letterSpacing: 0.5 }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
           </View>
+        ) : (
+          <Text style={[styles.headerTitle, { color: textColor, fontSize: 20, fontWeight: 'bold', marginLeft: 8, marginTop: 0 }]} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
         )}
       </View>
-      {/* Center Section - Title (absolutely centered) */}
-      <View pointerEvents="none" style={styles.headerTitleWrapper}>
-        <Text style={[styles.headerTitle, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
-      </View>
+      {/* Center Section - Title (absolutely centered) - only when logo is shown */}
+      {showLogo && (
+        <View pointerEvents="none" style={styles.headerTitleWrapper}>
+          <Text style={[styles.headerTitle, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
+        </View>
+      )}
       {/* Right Section for rightComponent */}
       <View style={styles.headerRight}>
         {rightComponent}
