@@ -31,7 +31,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/mitconnect-logo.png",
+          "image": "./assets/images/mitconnect-logo1.png",
           "imageWidth": 260,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, SafeAreaView, Platform, Modal, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, SafeAreaView, Platform, Modal, Pressable, TouchableNativeFeedback } from 'react-native';
 import { Ionicons, AntDesign } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
@@ -9,6 +9,7 @@ import * as Sharing from 'expo-sharing';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
 import { useRouter } from 'expo-router';
+import { supabase } from '../services/supabase';
 
 const DEPARTMENTS = [
   'IT Services',
@@ -405,10 +406,14 @@ export default function TraineeHub() {
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [selectedProgram, setSelectedProgram] = useState('');
   const [fullName, setFullName] = useState('');
+  const [isEditing, setIsEditing] = useState(true); // Start in editing mode
+  const [traineeName, setTraineeName] = useState(''); // For dashboard heading
   const PROGRAM_OPTIONS = [
     { label: 'COOP Training', value: 'COOP Training' },
     { label: 'Technology', value: 'Technology' },
   ];
+  const [existingPlanId, setExistingPlanId] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const { isDarkMode, toggleTheme } = useTheme();
   const backgroundColor = useThemeColor({}, 'background');
@@ -453,6 +458,44 @@ export default function TraineeHub() {
       setWeekPlan(Array.from({ length: weeks.length }, (_, i) => weekPlan[i] ? { ...weekPlan[i], from: weeks[i].from, to: weeks[i].to } : { department: '', hours: '', task: '', from: weeks[i].from, to: weeks[i].to }));
     }
   }, [overallFrom, overallTo]);
+
+  // Add a function to fetch the user's plan from Supabase and update all relevant state
+  const fetchUserPlan = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('trainee_plans')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+    if (data) {
+      setExistingPlanId(data.id);
+      setFullName(data.trainee_name || '');
+      setTraineeName(data.trainee_name || '');
+      setSelectedProgram(data.program_name || '');
+      setOverallFrom(data.start_date || '');
+      setOverallTo(data.end_date || '');
+      if (Array.isArray(data.weeks)) {
+        setWeekPlan(data.weeks);
+        setDashboardPlan(data.weeks);
+      }
+      setIsEditing(false); // If plan exists, start in summary view
+    } else {
+      setIsEditing(true); // If no plan, start in edit mode
+    }
+  };
+
+  // On mount, always fetch the user's plan
+  useEffect(() => {
+    fetchUserPlan();
+  }, []);
+
+  // In the Dashboard tab, always fetch the user's plan when the tab is selected
+  useEffect(() => {
+    if (tab === 'Dashboard') {
+      fetchUserPlan();
+    }
+  }, [tab]);
 
   const toggleWeek = (idx: number) => {
     setExpandedWeeks(expanded =>
@@ -533,10 +576,66 @@ export default function TraineeHub() {
   const completedWeeks = dashboardPlan.filter(w => new Date(w.to) <= today).length;
   const progress = dashboardPlan.length > 0 ? Math.round((completedWeeks / dashboardPlan.length) * 100) : 0;
 
+  // Handler for submit:
+  const handlePlanSubmit = async () => {
+    setLoading(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      alert('You must be logged in.');
+      setLoading(false);
+      return;
+    }
+    const traineeName = fullName;
+    const programName = selectedProgram;
+    const startDate = overallFrom;
+    const endDate = overallTo;
+    const weeks = weekPlan.map((w, idx) => ({
+      week: idx + 1,
+      from: w.from,
+      to: w.to,
+      department: w.department,
+      hours: w.hours ? Number(w.hours) : 0,
+      task: w.task,
+    }));
+    const planData = {
+      user_id: user.id,
+      trainee_name: traineeName,
+      program_name: programName,
+      start_date: startDate,
+      end_date: endDate,
+      weeks,
+    };
+    let error;
+    if (existingPlanId) {
+      ({ error } = await supabase
+        .from('trainee_plans')
+        .update(planData)
+        .eq('id', existingPlanId));
+    } else {
+      const { data, error: insertError } = await supabase
+        .from('trainee_plans')
+        .insert(planData)
+        .select()
+        .single();
+      if (data) setExistingPlanId(data.id);
+      error = insertError;
+    }
+    setLoading(false);
+    if (error) {
+      console.error('Submit error:', error.message);
+      alert('Failed to save your plan.');
+    } else {
+      alert('Your plan has been saved!');
+      setIsEditing(false); // Hide the form and button after submit
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: isDarkMode ? darkCard : cardBackground }}>
       <View style={[styles.header, { backgroundColor: isDarkMode ? darkCard : cardBackground, borderBottomColor: isDarkMode ? darkBorder : borderColor }] }>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8, ...Platform.select({ android: { marginTop: 8 } }) }}>
           <Ionicons name="arrow-back" size={24} color={iconColor} />
         </TouchableOpacity>
         <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
@@ -546,23 +645,42 @@ export default function TraineeHub() {
       </View>
       <View style={[styles.tabRow, { backgroundColor: isDarkMode ? darkTab : '#F2F2F7' }] }>
         {['Departments', 'Registration', 'Dashboard'].map(t => (
-          <TouchableOpacity
-            key={t}
-            style={[styles.tabBtn, {
-              backgroundColor: isDarkMode
-                ? (tab === t ? darkTabActive : darkTabInactive)
-                : (tab === t ? '#B2E6F7' : undefined)
-            }]}
-            onPress={() => setTab(t as 'Departments' | 'Registration' | 'Dashboard')}
-          >
-            <Text style={{
-              color: isDarkMode
-                ? (tab === t ? darkText : darkSecondary)
-                : (tab === t ? '#3CB6E3' : '#222'),
-              fontWeight: '600',
-              fontSize: 15,
-            }}>{t}</Text>
-          </TouchableOpacity>
+          Platform.OS === 'android' ? (
+            <TouchableNativeFeedback key={t} onPress={() => setTab(t as 'Departments' | 'Registration' | 'Dashboard')} background={TouchableNativeFeedback.Ripple('#3CB6E3', false)}>
+              <View style={[styles.tabBtn, {
+                backgroundColor: isDarkMode
+                  ? (tab === t ? darkTabActive : darkTabInactive)
+                  : (tab === t ? '#B2E6F7' : undefined)
+              }]}
+              >
+                <Text style={{
+                  color: isDarkMode
+                    ? (tab === t ? darkText : darkSecondary)
+                    : (tab === t ? '#3CB6E3' : '#222'),
+                  fontWeight: '600',
+                  fontSize: 15,
+                }}>{t}</Text>
+              </View>
+            </TouchableNativeFeedback>
+          ) : (
+            <TouchableOpacity
+              key={t}
+              style={[styles.tabBtn, {
+                backgroundColor: isDarkMode
+                  ? (tab === t ? darkTabActive : darkTabInactive)
+                  : (tab === t ? '#B2E6F7' : undefined)
+              }]}
+              onPress={() => setTab(t as 'Departments' | 'Registration' | 'Dashboard')}
+            >
+              <Text style={{
+                color: isDarkMode
+                  ? (tab === t ? darkText : darkSecondary)
+                  : (tab === t ? '#3CB6E3' : '#222'),
+                fontWeight: '600',
+                fontSize: 15,
+              }}>{t}</Text>
+            </TouchableOpacity>
+          )
         ))}
       </View>
       <ScrollView style={{ flex: 1, backgroundColor: isDarkMode ? darkBg : backgroundColor }} contentContainerStyle={{ paddingBottom: 32 }}>
@@ -634,7 +752,7 @@ export default function TraineeHub() {
           </ScrollView>
         )}
         {tab === 'Registration' && (
-          !showSummary ? (
+          isEditing ? (
             <View style={{ margin: 18, backgroundColor: isDarkMode ? darkCard : cardBackground, borderRadius: 18, padding: 22, borderWidth: 1, borderColor: isDarkMode ? darkBorder : borderColor, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 }}>
               <Text style={{ textAlign: 'center', fontSize: 26, fontWeight: 'bold', color: isDarkMode ? darkHighlight : '#3CB6E3', marginBottom: 24, letterSpacing: 0.5 }}>Trainee Registration</Text>
               {/* Full Name Input */}
@@ -824,51 +942,71 @@ export default function TraineeHub() {
                 />
               )}
               {/* Submit Button */}
-              <TouchableOpacity
-                style={[styles.savePlanBtn, { opacity: isFormValid() ? 1 : 0.5 }]}
-                onPress={handleFinalSubmit}
-                disabled={!isFormValid()}
-              >
-                <Text style={styles.savePlanBtnText}>Submit</Text>
-              </TouchableOpacity>
+              {isEditing && (
+                <TouchableOpacity
+                  style={[styles.savePlanBtn, { opacity: isFormValid() && !loading ? 1 : 0.5 }]}
+                  onPress={handlePlanSubmit}
+                  disabled={!isFormValid() || loading}
+                >
+                  <Text style={styles.savePlanBtnText}>{loading ? 'Submitting...' : 'Submit'}</Text>
+                </TouchableOpacity>
+              )}
               {submitError ? <Text style={{ color: 'red', marginTop: 8 }}>{submitError}</Text> : null}
               {/* Only show Plan confirmed after submit */}
             </View>
           ) : (
             <View style={{ margin: 18, backgroundColor: '#F8FAFC', borderRadius: 18, padding: 22, borderWidth: 1, borderColor: '#B2E6F7', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 }}>
               <Text style={{ textAlign: 'center', fontSize: 26, fontWeight: 'bold', color: '#3CB6E3', marginBottom: 24, letterSpacing: 0.5 }}>Plan Summary</Text>
-              <Text style={styles.subtitle}>Review your training plan before confirming.</Text>
-              <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 12, marginBottom: 18, backgroundColor: '#F8FAFC', paddingVertical: 8, maxWidth: 500, width: '95%', alignSelf: 'center' }}>
-                <View style={{ flexDirection: 'row', backgroundColor: '#EAF6FB', borderTopLeftRadius: 10, borderTopRightRadius: 10 }}>
-                  <Text style={{ flex: 1, fontWeight: 'bold', color: '#3CB6E3', paddingVertical: 8, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, letterSpacing: 0.5, flexWrap: 'wrap' }} numberOfLines={2}>Week</Text>
-                  <Text style={{ flex: 1.2, fontWeight: 'bold', color: '#3CB6E3', paddingVertical: 8, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, letterSpacing: 0.5, flexWrap: 'wrap' }} numberOfLines={2}>From</Text>
-                  <Text style={{ flex: 1.2, fontWeight: 'bold', color: '#3CB6E3', paddingVertical: 8, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, letterSpacing: 0.5, flexWrap: 'wrap' }} numberOfLines={2}>To</Text>
-                  <Text style={{ flex: 1.2, fontWeight: 'bold', color: '#3CB6E3', paddingVertical: 8, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, letterSpacing: 0.5, flexWrap: 'wrap' }} numberOfLines={2}>Department</Text>
-                  <Text style={{ flex: 0.8, fontWeight: 'bold', color: '#3CB6E3', paddingVertical: 8, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, letterSpacing: 0.5, flexWrap: 'wrap' }} numberOfLines={2}>Hours</Text>
-                  <Text style={{ flex: 2, fontWeight: 'bold', color: '#3CB6E3', paddingVertical: 8, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, letterSpacing: 0.5, flexWrap: 'wrap' }} numberOfLines={2}>Task</Text>
+              {/* Edit icon/button at the top of the summary */}
+              <TouchableOpacity style={{ alignSelf: 'flex-end', marginBottom: 8 }} onPress={() => setIsEditing(true)}>
+                <Ionicons name="pencil" size={22} color="#3CB6E3" />
+              </TouchableOpacity>
+              {/* Plan Summary Table - summary only, not editable */}
+              <View style={{
+                marginTop: 20,
+                padding: 16,
+                borderRadius: 12,
+                backgroundColor: cardBackground,
+                shadowColor: '#000',
+                shadowOpacity: 0.05,
+                shadowRadius: 10,
+                borderWidth: 1,
+                borderColor: borderColor,
+              }}>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: isDarkMode ? '#43C6AC' : '#0EA5E9', marginBottom: 12, textAlign: 'center' }}>Plan Summary</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 8, borderBottomWidth: 1, borderColor: borderColor }}>
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '500', color: textColor, textAlign: 'center' }}>Week</Text>
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '500', color: textColor, textAlign: 'center' }}>From</Text>
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '500', color: textColor, textAlign: 'center' }}>To</Text>
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '500', color: textColor, textAlign: 'center' }}>Department</Text>
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '500', color: textColor, textAlign: 'center' }}>Hours</Text>
                 </View>
                 {weekPlan.map((w, idx) => (
-                  <View key={idx} style={{ flexDirection: 'row', borderTopWidth: idx === 0 ? 0 : 1, borderTopColor: '#EAF6FB', backgroundColor: idx % 2 === 0 ? '#fff' : '#F7FBFD', justifyContent: 'center' }}>
-                    <Text style={{ flex: 1, padding: 10, textAlign: 'center', color: '#222', fontWeight: 'bold', fontSize: 12 }}>{idx + 1}</Text>
-                    <Text style={{ flex: 1.2, padding: 10, textAlign: 'center', color: '#3CB6E3', fontWeight: '500', fontSize: 12 }}>{w.from ? formatDate(w.from) : '-'}</Text>
-                    <Text style={{ flex: 1.2, padding: 10, textAlign: 'center', color: '#3CB6E3', fontWeight: '500', fontSize: 12 }}>{w.to ? formatDate(w.to) : '-'}</Text>
-                    <Text style={{ flex: 1.2, padding: 10, textAlign: 'center', color: '#3CB6E3', fontWeight: 'bold', fontSize: 12 }}>{w.department || '-'}</Text>
-                    <Text style={{ flex: 0.8, padding: 10, textAlign: 'center', color: '#222', fontWeight: 'bold', fontSize: 12 }}>{w.hours || '-'}</Text>
-                    <Text style={{ flex: 2, padding: 10, color: '#555', fontSize: 12 }}>{w.task || '-'}</Text>
+                  <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 0.5, borderColor: borderColor, backgroundColor: isDarkMode ? (idx % 2 === 0 ? '#23272b' : cardBackground) : (idx % 2 === 0 ? '#fff' : '#F7FBFD') }}>
+                    <Text style={{ flex: 1, fontSize: 14, color: textColor, textAlign: 'center' }}>{idx + 1}</Text>
+                    <Text style={{ flex: 1, fontSize: 14, color: textColor, textAlign: 'center' }}>{w.from ? formatDate(w.from) : '-'}</Text>
+                    <Text style={{ flex: 1, fontSize: 14, color: textColor, textAlign: 'center' }}>{w.to ? formatDate(w.to) : '-'}</Text>
+                    <Text style={{ flex: 1, fontSize: 14, color: textColor, textAlign: 'center' }}>{w.department || '-'}</Text>
+                    <Text style={{ flex: 1, fontSize: 14, color: textColor, textAlign: 'center' }}>{w.hours || '-'}</Text>
                   </View>
                 ))}
               </View>
-              <TouchableOpacity
-                style={[styles.continueBtn, { opacity: isFormValid() ? 1 : 0.5 }]}
-                onPress={() => {
-                  setDashboardPlan(weekPlan.map((w, idx) => ({ ...w, week: idx + 1 })));
-                  setTab('Dashboard');
-                  setShowSummary(false);
-                }}
-                disabled={!isFormValid()}
-              >
-                <Text style={styles.continueBtnText}>Confirm Plan</Text>
-              </TouchableOpacity>
+              {/* Date Picker Modal and Submit Button remain unchanged */}
+              {showOverallDatePicker && (
+                <DateTimePickerModal
+                  isVisible={!!showOverallDatePicker}
+                  mode="date"
+                  onConfirm={date => {
+                    if (showOverallDatePicker.field === 'from') setOverallFrom(date.toISOString().split('T')[0]);
+                    if (showOverallDatePicker.field === 'to') setOverallTo(date.toISOString().split('T')[0]);
+                    setShowOverallDatePicker(null);
+                  }}
+                  onCancel={() => setShowOverallDatePicker(null)}
+                  date={showOverallDatePicker.field === 'from' && overallFrom ? new Date(overallFrom) : showOverallDatePicker.field === 'to' && overallTo ? new Date(overallTo) : new Date()}
+                />
+              )}
+              {/* Submit Button */}
+              {/* In the summary view, do NOT render the Submit button at all. */}
               {submitError ? <Text style={{ color: 'red', marginTop: 8 }}>{submitError}</Text> : null}
               {submitSuccess ? <Text style={{ color: '#24B26B', marginTop: 10 }}>Plan confirmed!</Text> : null}
             </View>
@@ -878,7 +1016,7 @@ export default function TraineeHub() {
           <View style={{ paddingHorizontal: 8, paddingTop: 8 }}>
             {(dashboardPlan.length > 0
               ? [{
-                  name: 'My Plan',
+                  name: traineeName || fullName || 'My Plan',
                   department: selectedProgram || '—',
                   progress: dashboardPlan.length > 0 ? Math.round((dashboardPlan.filter(w => new Date(w.to) <= new Date()).length / dashboardPlan.length) * 100) : 0,
                   weeks: dashboardPlan.map((w, idx) => ({
@@ -892,7 +1030,7 @@ export default function TraineeHub() {
               <View key={idx} style={{ backgroundColor: cardBackground, borderRadius: 18, padding: 18, marginBottom: 18, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
                   <View>
-                    <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#222' }}>{trainee.name}</Text>
+                    <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#222' }}>{trainee.name + "'s Plan"}</Text>
                     <Text style={{ color: '#888', fontSize: 13, marginTop: 2 }}>{trainee.department}</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>

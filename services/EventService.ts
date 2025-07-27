@@ -130,7 +130,12 @@ class EventService {
         } = await supabase.auth.getUser();
 
         if (authError) {
-          console.error('❌ getUser error:', authError);
+          if (authError.name === 'AuthSessionMissingError') {
+            // Not an error, just means not logged in
+            console.log('No session: user not logged in.');
+          } else {
+            console.error('❌ getUser error:', authError);
+          }
           return null;
         }
 

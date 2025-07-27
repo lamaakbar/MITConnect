@@ -48,42 +48,65 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     if (!validate()) return;
     setLoading(true);
-    if (!email || !password) {
-      setLoading(false);
-      Alert.alert('Error', 'Please enter both email and password.');
-      return;
-    }
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
       if (error || !data.user) {
         setLoading(false);
         Alert.alert('Login Failed', error?.message || 'Invalid credentials.');
         return;
       }
+
+      // Save credentials if Remember Me is checked
       if (rememberMe) {
         await AsyncStorage.setItem('rememberedCredentials', JSON.stringify({ email, password }));
       } else {
         await AsyncStorage.removeItem('rememberedCredentials');
       }
-      const userRole = data.user.user_metadata?.role;
-      if (!userRole || !['admin', 'employee', 'trainee'].includes(userRole)) {
+
+      // ✅ Fetch role from users table
+      const { data: dbUser, error: dbError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (dbError || !dbUser) {
         setLoading(false);
-        Alert.alert('Error', 'No valid role found in your account. Please contact support.');
+        Alert.alert('Login Error', 'Could not fetch role from database.');
         return;
       }
-      if (userRole === 'admin') {
-        if (email.trim().toLowerCase() !== ADMIN_EMAIL) {
-          setLoading(false);
-          Alert.alert('Access Denied', 'Only the designated admin can access the admin home screen.');
-          return;
-        }
+
+      const role = dbUser.role;
+
+      // Validate role
+      if (!['admin', 'employee', 'trainee'].includes(role)) {
+        setLoading(false);
+        Alert.alert('Access Denied', 'Your account role is invalid. Contact support.');
+        return;
       }
-      await setUserRole(userRole);
-      setLoading(false);
-      router.replace(getHomeRoute() as any);
+
+      if (role === 'admin' && email.toLowerCase().trim() !== ADMIN_EMAIL) {
+        setLoading(false);
+        Alert.alert('Access Denied', 'Only the designated admin can log in as admin.');
+        return;
+      }
+
+      // Clear any previous role from AsyncStorage (prevents old redirect)
+      await AsyncStorage.removeItem('userRole');
+
+      // Set current role in context
+      await setUserRole(role);
+
+      // Optional: clear any previous route storage
+      await AsyncStorage.removeItem('navigationState');
+
+      // Redirect to the redirecting screen
+      router.replace('/redirecting');
     } catch (err) {
       setLoading(false);
-      Alert.alert('Login Error', 'An unexpected error occurred.');
+      Alert.alert('Login Error', 'Unexpected error occurred.');
     }
   };
 
