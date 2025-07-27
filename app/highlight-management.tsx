@@ -11,7 +11,7 @@ import AdminHeader from '../components/AdminHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'react-native';
 
-import { createHighlight, getHighlights, pickAndUploadImage } from '../services/supabase'
+import { updateHighlight, fetchHighlights } from '../services/supabase';
 
 const HighlightManagement = () => {
   const router = useRouter();

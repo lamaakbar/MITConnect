@@ -352,12 +352,7 @@ export default function EmployeeHome() {
           )}
 
           {/* Portal Access Section */}
-          <View style={styles.sectionHeaderContainer}>
-            <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
-              <Ionicons name="grid" size={20} color="#FF6B35" />
-            </View>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>Portal Access</Text>
-          </View>
+          <Text style={[styles.sectionTitle, { color: textColor }]}>Portal Access</Text>
           <View style={styles.portalRow}>
             {portalLinks.map(link => (
               <TouchableOpacity
@@ -378,12 +373,7 @@ export default function EmployeeHome() {
           </View>
 
           {/* Book of the Month Section */}
-          <View style={styles.sectionHeaderContainer}>
-            <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
-              <Ionicons name="book" size={20} color="#1abc9c" />
-            </View>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>Book of the Month</Text>
-          </View>
+          <Text style={[styles.sectionTitle, { color: textColor }]}>Book of the Month</Text>
           {loading ? (
             <Text style={{ textAlign: 'center', color: secondaryTextColor, marginTop: 20 }}>Loading...</Text>
           ) : bookOfMonth ? (
@@ -516,13 +506,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#222',
     marginLeft: 0,
     marginTop: 0,
     marginBottom: 0,
-    letterSpacing: 0.5,
   },
   eventCard: {
     backgroundColor: '#fff',
