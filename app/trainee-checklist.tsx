@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platform, Animated, StatusBar, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, FlatList, Platform, Animated, StatusBar, BackHandler, TextInput, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useNavigation, useFocusEffect } from 'expo-router';
@@ -8,6 +8,8 @@ import { useThemeColor } from '../hooks/useThemeColor';
 import { useUserContext } from '../components/UserContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useEffect } from 'react';
+import { FeedbackService, type TraineeFeedback, type CreateFeedbackInput } from '../services/FeedbackService';
+
 
 const CHECKLIST_ITEMS = [
   'Contract',
@@ -18,6 +20,26 @@ const CHECKLIST_ITEMS = [
   'Card Submission',
 ];
 
+// UI-friendly type that matches our database structure
+type Feedback = {
+  id: string;
+  text: string;
+  rating: number;
+  date: string;
+  traineeId: string;
+  traineeName: string;
+};
+
+// Helper function to convert database feedback to UI feedback
+const convertToUIFeedback = (dbFeedback: TraineeFeedback): Feedback => ({
+  id: dbFeedback.id,
+  text: dbFeedback.text,
+  rating: dbFeedback.rating,
+  date: new Date(dbFeedback.date).toLocaleDateString(), // Use the 'date' column from your table
+  traineeId: dbFeedback.trainee_id,
+  traineeName: dbFeedback.trainee_name,
+});
+
 export default function TraineeChecklist() {
   const router = useRouter();
   const navigation = useNavigation();
@@ -26,8 +48,18 @@ export default function TraineeChecklist() {
     CHECKLIST_ITEMS.map(() => new Animated.Value(1))
   );
   
+  // Feedback state management
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [submittedFeedbacks, setSubmittedFeedbacks] = useState<Feedback[]>([]);
+  const [showPreviousFeedbacks, setShowPreviousFeedbacks] = useState(false);
+  const [isLoadingFeedbacks, setIsLoadingFeedbacks] = useState(true);
+  const [feedbackLoadError, setFeedbackLoadError] = useState<string | null>(null);
+  
   const completed = checked.filter(Boolean).length;
   const progress = completed / CHECKLIST_ITEMS.length;
+  const isAllCompleted = progress === 1;
 
   const canCheckItem = (index: number) => {
     // First item can always be checked
@@ -56,6 +88,69 @@ export default function TraineeChecklist() {
 
     setChecked(prev => prev.map((v, i) => (i === idx ? !v : v)));
   };
+
+  // Feedback submission function
+  const submitFeedback = async () => {
+    if (!feedbackText.trim()) {
+      Alert.alert('Error', 'Please enter your feedback before submitting.');
+      return;
+    }
+    
+    if (feedbackRating === 0) {
+      Alert.alert('Error', 'Please select a rating before submitting.');
+      return;
+    }
+
+    setIsSubmittingFeedback(true);
+    
+    try {
+      // Create feedback input for the service
+      const feedbackInput: CreateFeedbackInput = {
+        feedback_text: feedbackText.trim(),
+        rating: feedbackRating,
+        // trainee_name will be automatically derived from user profile in the service
+      };
+
+      // Submit feedback to database
+      const { data, error } = await FeedbackService.submitFeedback(feedbackInput);
+      
+      if (error) {
+        Alert.alert('Error', error);
+        return;
+      }
+      
+      if (data) {
+        // Convert database feedback to UI format and add to local state
+        const newUIFeedback = convertToUIFeedback(data);
+        setSubmittedFeedbacks(prev => [newUIFeedback, ...prev]);
+        
+        // Reset form
+        setFeedbackText('');
+        setFeedbackRating(0);
+        
+        Alert.alert(
+          'Success!', 
+          'Thank you for your feedback! Your response has been submitted successfully.',
+          [{ text: 'OK', style: 'default' }]
+        );
+      }
+      
+    } catch (error) {
+      console.error('Unexpected error submitting feedback:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
+  // Rating component handler
+  const setRating = (rating: number) => {
+    setFeedbackRating(rating);
+  };
+
+
+
+
 
   const renderChecklistItem = ({ item, index }: { item: string; index: number }) => {
     const isCompleted = checked[index];
@@ -197,6 +292,38 @@ export default function TraineeChecklist() {
     }, [])
   );
 
+  // Load feedback data from database on component mount
+  useEffect(() => {
+    const loadFeedbacks = async () => {
+      setIsLoadingFeedbacks(true);
+      setFeedbackLoadError(null);
+      
+      try {
+        const { data, error } = await FeedbackService.getAllFeedback();
+        
+        if (error) {
+          console.error('Error loading feedbacks:', error);
+          setFeedbackLoadError(error);
+          // Don't show alert for loading errors, just set error state
+          return;
+        }
+        
+        if (data) {
+          // Convert database feedback to UI feedback format
+          const uiFeedbacks = data.map(convertToUIFeedback);
+          setSubmittedFeedbacks(uiFeedbacks);
+        }
+      } catch (error) {
+        console.error('Unexpected error loading feedbacks:', error);
+        setFeedbackLoadError('Failed to load feedback data');
+      } finally {
+        setIsLoadingFeedbacks(false);
+      }
+    };
+
+    loadFeedbacks();
+  }, []);
+
   return (
     <View style={{ flex: 1, backgroundColor: userRole === 'trainee' && isDarkMode ? darkBg : backgroundColor }}>
       {userRole === 'trainee' && (
@@ -269,18 +396,22 @@ export default function TraineeChecklist() {
         <Text style={{ fontSize: 14, color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93', textAlign: 'center', fontWeight: '500' }}>
           {Math.round(progress * 100)}% Complete
         </Text>
+        
+
       </View>
 
-      {/* Checklist Items */}
-      <FlatList
-        data={CHECKLIST_ITEMS}
-        keyExtractor={(item, index) => `checklist-${index}`}
-        renderItem={({ item, index }) => {
+      {/* Checklist Items and Feedback Section */}
+      <ScrollView 
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Checklist Items */}
+        {CHECKLIST_ITEMS.map((item, index) => {
           const isCompleted = checked[index];
           const isAvailable = canCheckItem(index);
           const isLocked = !isAvailable && !isCompleted;
           return (
-            <Animated.View style={{ transform: [{ scale: scaleAnimations[index] }] }}>
+            <Animated.View key={`checklist-${index}`} style={{ transform: [{ scale: scaleAnimations[index] }] }}>
               <TouchableOpacity
                 style={{
                   backgroundColor: userRole === 'trainee' && isDarkMode
@@ -404,10 +535,340 @@ export default function TraineeChecklist() {
               </TouchableOpacity>
             </Animated.View>
           );
-        }}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 }}
-        showsVerticalScrollIndicator={false}
-      />
+        })}
+
+        {/* Feedback Section - Only shows when all checklist items are completed */}
+        {isAllCompleted && (
+          <View style={{
+            marginTop: 24,
+            backgroundColor: userRole === 'trainee' && isDarkMode ? darkCard : '#fff',
+            borderRadius: 16,
+            padding: 20,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.06,
+            shadowRadius: 8,
+            elevation: 3,
+            borderWidth: 1,
+            borderColor: userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759',
+          }}>
+            {/* Completion Celebration */}
+            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+              <Ionicons 
+                name="checkmark-circle" 
+                size={48} 
+                color={userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759'} 
+              />
+              <Text style={{
+                fontSize: 22,
+                fontWeight: 'bold',
+                color: userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759',
+                marginTop: 8,
+                textAlign: 'center'
+              }}>
+                Congratulations!
+              </Text>
+              <Text style={{
+                fontSize: 16,
+                color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+                marginTop: 4,
+                textAlign: 'center'
+              }}>
+                You've completed all checklist items
+              </Text>
+            </View>
+
+            {/* Feedback Form */}
+            <Text style={{
+              fontSize: 18,
+              fontWeight: '600',
+              color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+              marginBottom: 16
+            }}>
+              Share Your Training Experience
+            </Text>
+
+            {/* Rating Section */}
+            <Text style={{
+              fontSize: 14,
+              fontWeight: '500',
+              color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+              marginBottom: 8
+            }}>
+              Rate your overall experience:
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16 }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setRating(star)}
+                  style={{ marginHorizontal: 4 }}
+                >
+                  <Ionicons
+                    name={star <= feedbackRating ? "star" : "star-outline"}
+                    size={32}
+                    color={star <= feedbackRating ? "#FFD700" : (userRole === 'trainee' && isDarkMode ? darkSecondary : "#C7C7CC")}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Feedback Text Input */}
+            <Text style={{
+              fontSize: 14,
+              fontWeight: '500',
+              color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+              marginBottom: 8
+            }}>
+              Tell us about your experience:
+            </Text>
+            <TextInput
+              style={{
+                backgroundColor: userRole === 'trainee' && isDarkMode ? darkBg : '#F8F8F8',
+                borderRadius: 12,
+                padding: 16,
+                minHeight: 100,
+                fontSize: 16,
+                color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+                textAlignVertical: 'top',
+                borderWidth: 1,
+                borderColor: userRole === 'trainee' && isDarkMode ? darkBorder : '#E5E5EA',
+                marginBottom: 16
+              }}
+              multiline
+              numberOfLines={4}
+              placeholder="Share your thoughts about the training program, mentorship, challenges, and suggestions for improvement..."
+              placeholderTextColor={userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93'}
+              value={feedbackText}
+              onChangeText={setFeedbackText}
+            />
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={{
+                backgroundColor: userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759',
+                borderRadius: 12,
+                padding: 16,
+                alignItems: 'center',
+                opacity: isSubmittingFeedback ? 0.7 : 1,
+              }}
+              onPress={submitFeedback}
+              disabled={isSubmittingFeedback}
+            >
+              <Text style={{
+                color: '#fff',
+                fontSize: 16,
+                fontWeight: '600'
+              }}>
+                {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Previous Feedbacks Section */}
+        <View style={{
+          marginTop: 24,
+          backgroundColor: userRole === 'trainee' && isDarkMode ? darkCard : '#fff',
+          borderRadius: 16,
+          padding: 20,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
+          elevation: 3,
+          borderWidth: 1,
+          borderColor: userRole === 'trainee' && isDarkMode ? darkBorder : '#F2F2F7',
+        }}>
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: showPreviousFeedbacks ? 16 : 0
+            }}
+            onPress={() => setShowPreviousFeedbacks(!showPreviousFeedbacks)}
+          >
+            <Text style={{
+              fontSize: 18,
+              fontWeight: '600',
+              color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+            }}>
+              Previous Feedbacks {isLoadingFeedbacks ? '(Loading...)' : `(${submittedFeedbacks.length})`}
+            </Text>
+            <Ionicons
+              name={showPreviousFeedbacks ? "chevron-up" : "chevron-down"}
+              size={24}
+              color={userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93'}
+            />
+          </TouchableOpacity>
+
+          {showPreviousFeedbacks && (
+            <View>
+              {isLoadingFeedbacks ? (
+                <View style={{
+                  padding: 20,
+                  alignItems: 'center'
+                }}>
+                  <Text style={{
+                    color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93',
+                    fontSize: 16
+                  }}>
+                    Loading feedback...
+                  </Text>
+                </View>
+              ) : feedbackLoadError ? (
+                <View style={{
+                  padding: 20,
+                  alignItems: 'center'
+                }}>
+                  <Ionicons 
+                    name="alert-circle-outline" 
+                    size={32} 
+                    color={userRole === 'trainee' && isDarkMode ? darkSecondary : '#FF6B6B'} 
+                  />
+                  <Text style={{
+                    color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#FF6B6B',
+                    fontSize: 14,
+                    textAlign: 'center',
+                    marginTop: 8
+                  }}>
+                    {feedbackLoadError}
+                  </Text>
+                  <TouchableOpacity
+                    style={{
+                      marginTop: 12,
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      backgroundColor: userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759',
+                      borderRadius: 8
+                    }}
+                    onPress={() => {
+                      // Reload feedbacks
+                      const loadFeedbacks = async () => {
+                        setIsLoadingFeedbacks(true);
+                        setFeedbackLoadError(null);
+                        
+                        try {
+                          const { data, error } = await FeedbackService.getAllFeedback();
+                          
+                          if (error) {
+                            setFeedbackLoadError(error);
+                            return;
+                          }
+                          
+                          if (data) {
+                            const uiFeedbacks = data.map(convertToUIFeedback);
+                            setSubmittedFeedbacks(uiFeedbacks);
+                          }
+                        } catch (error) {
+                          setFeedbackLoadError('Failed to load feedback data');
+                        } finally {
+                          setIsLoadingFeedbacks(false);
+                        }
+                      };
+                      loadFeedbacks();
+                    }}
+                  >
+                    <Text style={{
+                      color: '#fff',
+                      fontSize: 12,
+                      fontWeight: '600'
+                    }}>
+                      Retry
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : submittedFeedbacks.length === 0 ? (
+                <View style={{
+                  padding: 20,
+                  alignItems: 'center'
+                }}>
+                  <Ionicons 
+                    name="chatbubble-outline" 
+                    size={32} 
+                    color={userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93'} 
+                  />
+                  <Text style={{
+                    color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93',
+                    fontSize: 16,
+                    textAlign: 'center',
+                    marginTop: 8
+                  }}>
+                    No feedback submitted yet
+                  </Text>
+                </View>
+              ) : (
+                submittedFeedbacks.map((feedback) => (
+                  <View
+                    key={feedback.id}
+                    style={{
+                      backgroundColor: userRole === 'trainee' && isDarkMode ? darkBg : '#F8F8F8',
+                      borderRadius: 12,
+                      padding: 16,
+                      marginBottom: 12,
+                      borderWidth: 1,
+                      borderColor: userRole === 'trainee' && isDarkMode ? darkBorder : '#E5E5EA',
+                    }}
+                  >
+                    <View style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: 8
+                    }}>
+                      <Text style={{
+                        fontSize: 14,
+                        fontWeight: '600',
+                        color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+                      }}>
+                        {feedback.traineeName}
+                      </Text>
+                      <Text style={{
+                        fontSize: 12,
+                        color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93',
+                      }}>
+                        {feedback.date}
+                      </Text>
+                    </View>
+                    
+                    <View style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginBottom: 8
+                    }}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Ionicons
+                          key={star}
+                          name={star <= feedback.rating ? "star" : "star-outline"}
+                          size={16}
+                          color={star <= feedback.rating ? "#FFD700" : (userRole === 'trainee' && isDarkMode ? darkSecondary : "#C7C7CC")}
+                          style={{ marginRight: 2 }}
+                        />
+                      ))}
+                      <Text style={{
+                        fontSize: 12,
+                        color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93',
+                        marginLeft: 8
+                      }}>
+                        {feedback.rating}/5
+                      </Text>
+                    </View>
+                    
+                    <Text style={{
+                      fontSize: 14,
+                      lineHeight: 20,
+                      color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+                    }}>
+                      {feedback.text}
+                    </Text>
+                  </View>
+                ))
+              )}
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </View>
   );
 }
