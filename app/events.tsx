@@ -3,7 +3,7 @@ import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollVi
 import { useRouter } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
 import { Ionicons } from '@expo/vector-icons';
-import EventsTabBar from '../components/EventsTabBar';
+
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
 import { useUserContext } from '../components/UserContext';
@@ -604,7 +604,7 @@ export default function EventsScreen() {
           </View>
         ) : null}
       </View>
-      <EventsTabBar />
+
     </View>
   );
 }

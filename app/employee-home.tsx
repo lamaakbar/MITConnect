@@ -315,7 +315,7 @@ export default function EmployeeHome() {
                       <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
                       <Ionicons name="ellipsis-horizontal" size={18} color={secondaryTextColor} />
                     </View>
-                    <Text style={styles.eventTitle}>{item.title}</Text>
+                    <Text style={[styles.eventTitle, { color: textColor }]}>{item.title}</Text>
                     <Text style={styles.eventDesc}>{item.description}</Text>
                     {registered && registered.includes(item.id) && (
                       <View style={styles.registeredBadge}>
@@ -352,7 +352,12 @@ export default function EmployeeHome() {
           )}
 
           {/* Portal Access Section */}
-          <Text style={[styles.sectionTitle, { color: textColor }]}>Portal Access</Text>
+          <View style={styles.sectionHeaderContainer}>
+            <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+              <Ionicons name="grid" size={20} color="#FF6B35" />
+            </View>
+            <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Portal Access</Text>
+          </View>
           <View style={styles.portalRow}>
             {portalLinks.map(link => (
               <TouchableOpacity
@@ -373,7 +378,12 @@ export default function EmployeeHome() {
           </View>
 
           {/* Book of the Month Section */}
-          <Text style={[styles.sectionTitle, { color: textColor }]}>Book of the Month</Text>
+          <View style={styles.sectionHeaderContainer}>
+            <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+              <Ionicons name="book" size={20} color="#1abc9c" />
+            </View>
+            <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Book of the Month</Text>
+          </View>
           {loading ? (
             <Text style={{ textAlign: 'center', color: secondaryTextColor, marginTop: 20 }}>Loading...</Text>
           ) : bookOfMonth ? (
@@ -506,12 +516,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '900',
     color: '#222',
     marginLeft: 0,
     marginTop: 0,
     marginBottom: 0,
+    letterSpacing: 0.5,
   },
   eventCard: {
     backgroundColor: '#fff',
@@ -543,7 +554,6 @@ const styles = StyleSheet.create({
   eventTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#222',
     marginBottom: 2,
   },
   eventDesc: {

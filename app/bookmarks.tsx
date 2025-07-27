@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
 import { Ionicons } from '@expo/vector-icons';
-import EventsTabBar from '../components/EventsTabBar';
 
 export default function BookmarksScreen() {
   const router = useRouter();
@@ -48,7 +47,6 @@ export default function BookmarksScreen() {
           </View>
         }
       />
-      <EventsTabBar />
     </View>
   );
 }

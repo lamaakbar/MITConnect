@@ -6,7 +6,6 @@ import { useUserContext } from '../components/UserContext';
 import { useTheme } from '../components/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import EventsTabBar from '../components/EventsTabBar';
 import eventService from '../services/EventService';
 import { Event } from '../types/events';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -344,7 +343,7 @@ export default function EventDetailsScreen() {
       </ScrollView>
       
       {/* EventsTabBar at the very bottom */}
-      <EventsTabBar />
+      {/* Removed EventsTabBar import, so this section is removed */}
     </View>
   );
 }
