@@ -40,6 +40,9 @@ export default function RootLayout() {
                 <Stack
                   screenOptions={{
                     headerShown: false, // Hide the default header for all screens
+                    animation: 'fade_from_bottom',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push',
                   }}
                 >
                   <Stack.Screen name="splash" options={{ headerShown: false }} />
@@ -51,20 +54,80 @@ export default function RootLayout() {
                   <Stack.Screen name="admin-home" options={{ headerShown: false }} />
                   <Stack.Screen name="employee-home" options={{ headerShown: false }} />
                   <Stack.Screen name="trainee-home" options={{ headerShown: false }} />
-                  <Stack.Screen name="events" options={{ headerShown: false }} />
-                  <Stack.Screen name="event-details" options={{ headerShown: false }} />
-                  <Stack.Screen name="registration-success" options={{ headerShown: false }} />
-                  <Stack.Screen name="bookmarks" options={{ headerShown: false }} />
-                  <Stack.Screen name="user-profile" options={{ headerShown: false }} />
-                  <Stack.Screen name="gallery" options={{ headerShown: false }} />
-                  <Stack.Screen name="bookclub" options={{ headerShown: false }} />
-                  <Stack.Screen name="inspirer-corner" options={{ headerShown: false }} />
+                  <Stack.Screen name="events" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
+                  <Stack.Screen name="event-details" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
+                  <Stack.Screen name="registration-success" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
+                  <Stack.Screen name="bookmarks" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
+                  <Stack.Screen name="user-profile" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
+                  <Stack.Screen name="gallery" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
+                  <Stack.Screen name="bookclub" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
+                  <Stack.Screen name="inspirer-corner" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
                   <Stack.Screen name="gallery-management" options={{ headerShown: false }} />
                   <Stack.Screen name="books-management" options={{ headerShown: false }} />
                   <Stack.Screen name="add-book" options={{ headerShown: false }} />
                   <Stack.Screen name="book-added" options={{ headerShown: false }} />
-                  <Stack.Screen name="book-details" options={{ headerShown: false }} />
-                  <Stack.Screen name="feature-details" options={{ headerShown: false }} />
+                  <Stack.Screen name="book-details" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
+                  <Stack.Screen name="feature-details" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
                   <Stack.Screen name="events-management" options={{ headerShown: false }} />
                   <Stack.Screen name="admin-events/index" options={{ headerShown: false }} />
                   <Stack.Screen name="admin-events/add" options={{ headerShown: false }} />
@@ -76,15 +139,39 @@ export default function RootLayout() {
                   <Stack.Screen name="trainee-management/registrations" options={{ headerShown: false }} />
                   <Stack.Screen name="trainee-hub" options={{ headerShown: false }} />
                   <Stack.Screen name="trainee-checklist" options={{ headerShown: false }} />
-                  <Stack.Screen name="books-management/[id]/details" options={{ headerShown: false }} />
+                  <Stack.Screen name="books-management/[id]/details" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
                   <Stack.Screen name="shop-management" options={{ headerShown: false }} />
                   <Stack.Screen name="shopdrop" options={{ headerShown: false }} />
                   <Stack.Screen name="highlight-management" options={{ headerShown: false }} />
                   <Stack.Screen name="ideas-management" options={{ headerShown: false }} />
                   <Stack.Screen name="home" options={{ headerShown: false }} />
-                  <Stack.Screen name="my-events" options={{ headerShown: false }} />
-                  <Stack.Screen name="event-feedback" options={{ headerShown: false }} />
-                  <Stack.Screen name="library/[id]/details" options={{ headerShown: false }} />
+                  <Stack.Screen name="my-events" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
+                  <Stack.Screen name="event-feedback" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
+                  <Stack.Screen name="library/[id]/details" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
                 </Stack>
                 <StatusBar style="auto" />
               </ThemeProvider>
