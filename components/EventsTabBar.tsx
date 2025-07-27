@@ -9,19 +9,19 @@ const TABS = [
   {
     key: 'home',
     label: 'Home',
-    icon: (color: string) => <Ionicons name="home" size={26} color={color} />,
+    icon: (color: string) => <Ionicons name="home" size={22} color={color} />,
     route: 'home', // Will be resolved dynamically
   },
   {
     key: 'events',
     label: 'Events',
-    icon: (color: string) => <MaterialIcons name="event" size={26} color={color} />,
+    icon: (color: string) => <MaterialIcons name="event" size={22} color={color} />,
     route: '/events',
   },
   {
     key: 'gallery',
     label: 'Gallery',
-    icon: (color: string) => <Ionicons name="image-outline" size={26} color={color} />,
+    icon: (color: string) => <Ionicons name="image-outline" size={22} color={color} />,
     route: '/gallery',
   },
 ];
@@ -62,7 +62,7 @@ export default function EventsTabBar() {
       };
 
   return (
-    <View style={[styles.tabBar, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+    <View style={[styles.tabBar, { backgroundColor: colors.background }]}>
       {TABS.map(tab => {
         const route = tab.route === 'home' ? getHomeRoute() : tab.route;
         const isActive = pathname === route;
@@ -70,11 +70,15 @@ export default function EventsTabBar() {
           <TouchableOpacity
             key={tab.key}
             style={styles.tabBtn}
-            onPress={() => router.replace(route as any)}
+            onPress={() => {
+              if (pathname !== route) {
+                router.replace(route as any);
+              }
+            }}
             activeOpacity={0.7}
           >
-            {tab.icon(isActive ? colors.active : colors.icon)}
-            <Text style={[styles.tabLabel, { color: isActive ? colors.active : colors.label }]}>{tab.label}</Text>
+            {tab.icon(colors.icon)}
+            <Text style={[styles.tabLabel, { color: colors.label }]}>{tab.label}</Text>
           </TouchableOpacity>
         );
       })}
@@ -85,26 +89,29 @@ export default function EventsTabBar() {
 const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    height: 80, // Increased from 64 to make it higher
+    justifyContent: 'space-around',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 0,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 8,
+    paddingVertical: 12,
+    paddingBottom: 20,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   tabBtn: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 48,
-    minHeight: 48,
     paddingVertical: 4,
   },
   tabLabel: {
-    fontSize: 13,
-    fontWeight: 'bold',
+    fontSize: 10,
+    fontWeight: '500',
     marginTop: 2,
-    textAlign: 'center',
   },
 }); 

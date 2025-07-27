@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
 import { useTheme } from '../components/ThemeContext';
@@ -40,6 +40,7 @@ const portalLinks = [
 
 export default function EmployeeHome() {
   const router = useRouter();
+  const pathname = usePathname();
   const { fromLogin } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState('home');
   const { events, registered } = useEventContext();
@@ -255,8 +256,13 @@ export default function EmployeeHome() {
           </TouchableOpacity> 
         </View> 
       </View>
-        <ScrollView contentContainerStyle={[styles.scrollContent, {alignItems: 'center', justifyContent: 'center', flexGrow: 1}]} showsVerticalScrollIndicator={false}>
-          <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
+        <ScrollView contentContainerStyle={[styles.scrollContent, {flexGrow: 1}]} showsVerticalScrollIndicator={false}>
+          <View style={styles.sectionHeaderContainer}>
+            <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+              <Ionicons name="star" size={20} color="#43C6AC" />
+            </View>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
+          </View>
           <AutoCarousel
             data={highlightCards}
             cardWidth={320}
@@ -287,7 +293,12 @@ export default function EmployeeHome() {
             )}
           />
               {/* Upcoming Events Section */}
-          <Text style={[styles.sectionTitle, { color: textColor }]}>Upcoming Events</Text>
+          <View style={styles.sectionHeaderContainer}>
+            <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+              <Ionicons name="calendar" size={20} color="#7B61FF" />
+            </View>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>Upcoming Events</Text>
+          </View>
           {upcomingEvents && upcomingEvents.length > 0 ? (
             <FlatList
               data={upcomingEvents}
@@ -305,7 +316,7 @@ export default function EmployeeHome() {
                       <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
                       <Ionicons name="ellipsis-horizontal" size={18} color={secondaryTextColor} />
                     </View>
-                    <Text style={styles.eventTitle}>{item.title}</Text>
+                    <Text style={[styles.eventTitle, { color: textColor }]}>{item.title}</Text>
                     <Text style={styles.eventDesc}>{item.description}</Text>
                     {registered && registered.includes(item.id) && (
                       <View style={styles.registeredBadge}>
@@ -342,7 +353,12 @@ export default function EmployeeHome() {
           )}
 
           {/* Portal Access Section */}
-          <Text style={[styles.sectionTitle, { color: textColor }]}>Portal Access</Text>
+          <View style={styles.sectionHeaderContainer}>
+            <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+              <Ionicons name="grid" size={20} color="#FF6B35" />
+            </View>
+            <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Portal Access</Text>
+          </View>
           <View style={styles.portalRow}>
             {portalLinks.map(link => (
               <TouchableOpacity
@@ -350,10 +366,23 @@ export default function EmployeeHome() {
                 style={[styles.portalIconBox, { backgroundColor: cardBackground }]}
                 activeOpacity={0.8}
                 onPress={() => {
-                  if (link.key === 'events') router.push('/events?noHeader=1');
-                  else if (link.key === 'gallery') router.push('/gallery');
-                  else if (link.key === 'inspire') router.push('/inspirer-corner');
-                  else if (link.key === 'bookclub') router.push('/bookclub');
+                  if (link.key === 'events') {
+                    if (pathname !== '/events?noHeader=1') {
+                      router.push('/events?noHeader=1');
+                    }
+                  } else if (link.key === 'gallery') {
+                    if (pathname !== '/gallery') {
+                      router.push('/gallery');
+                    }
+                  } else if (link.key === 'inspire') {
+                    if (pathname !== '/inspirer-corner') {
+                      router.push('/inspirer-corner');
+                    }
+                  } else if (link.key === 'bookclub') {
+                    if (pathname !== '/bookclub') {
+                      router.push('/bookclub');
+                    }
+                  }
                 }}
               >
                 {link.icon}
@@ -363,7 +392,12 @@ export default function EmployeeHome() {
           </View>
 
           {/* Book of the Month Section */}
-          <Text style={[styles.sectionTitle, { color: textColor }]}>Book of the Month</Text>
+          <View style={styles.sectionHeaderContainer}>
+            <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+              <Ionicons name="book" size={20} color="#1abc9c" />
+            </View>
+            <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Book of the Month</Text>
+          </View>
           {loading ? (
             <Text style={{ textAlign: 'center', color: secondaryTextColor, marginTop: 20 }}>Loading...</Text>
           ) : bookOfMonth ? (
@@ -475,13 +509,34 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 90,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#222',
-    marginLeft: 18,
+  sectionHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 16,
     marginTop: 18,
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  sectionIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#222',
+    marginLeft: 0,
+    marginTop: 0,
+    marginBottom: 0,
+    letterSpacing: 0.5,
   },
   eventCard: {
     backgroundColor: '#fff',
@@ -513,7 +568,6 @@ const styles = StyleSheet.create({
   eventTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#222',
     marginBottom: 2,
   },
   eventDesc: {

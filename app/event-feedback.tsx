@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, TextInput, Alert, StatusBar } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import EventsTabBar from '../components/EventsTabBar';
 import { useEventContext } from '../components/EventContext';
+import { useUserContext } from '../components/UserContext';
 import { useTheme } from '../components/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { Event, EventStats } from '../types/events';
@@ -335,7 +335,6 @@ export default function EventFeedbackScreen() {
         </View>
       </ScrollView>
 
-      <EventsTabBar />
     </View>
   );
 }

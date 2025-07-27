@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, StatusBar, ActivityIndicator, RefreshControl, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
 import { Ionicons } from '@expo/vector-icons';
-import EventsTabBar from '../components/EventsTabBar';
+
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
 import { useUserContext } from '../components/UserContext';
@@ -14,6 +14,7 @@ const EVENT_TABS = ['All', 'Upcoming', 'My Events'];
 
 export default function EventsScreen() {
   const router = useRouter();
+  const pathname = usePathname();
   const { events, bookmarks, bookmarkEvent, unbookmarkEvent, registered, registerEvent, getUserEventStatus, searchEvents } = useEventContext();
   const [search, setSearch] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -31,7 +32,7 @@ export default function EventsScreen() {
   const secondaryTextColor = isDarkMode ? '#B0B0B0' : '#666666';
   const borderColor = isDarkMode ? '#333333' : '#E5E5E5';
   const iconColor = isDarkMode ? '#FFFFFF' : '#1A1A1A';
-  const { userRole } = useUserContext();
+  const { userRole, getHomeRoute } = useUserContext();
   const insets = useSafeAreaInsets();
   
   // Dark mode specific colors
@@ -81,7 +82,7 @@ export default function EventsScreen() {
     color: isActive ? activeTabText : inactiveTabText,
   });
   
-  const { getHomeRoute } = useUserContext();
+
   
   // Animation values
   const searchScale = new Animated.Value(1);
@@ -89,16 +90,18 @@ export default function EventsScreen() {
   
   const handleBack = () => {
     const homeRoute = getHomeRoute();
-    if (homeRoute === '/home') {
-      router.push('/home');
-    } else if (homeRoute === '/admin-home') {
-      router.push('/admin-home');
-    } else if (homeRoute === '/employee-home') {
-      router.push('/employee-home');
-    } else if (homeRoute === '/trainee-home') {
-      router.push('/trainee-home');
-    } else {
-      router.push('/home');
+    if (pathname !== homeRoute) {
+      if (homeRoute === '/home') {
+        router.push('/home');
+      } else if (homeRoute === '/admin-home') {
+        router.push('/admin-home');
+      } else if (homeRoute === '/employee-home') {
+        router.push('/employee-home');
+      } else if (homeRoute === '/trainee-home') {
+        router.push('/trainee-home');
+      } else {
+        router.push('/home');
+      }
     }
   };
 
@@ -604,7 +607,7 @@ export default function EventsScreen() {
           </View>
         ) : null}
       </View>
-      <EventsTabBar />
+
     </View>
   );
 }

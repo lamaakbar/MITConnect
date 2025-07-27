@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, Pressable, SafeAreaView, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
@@ -8,6 +8,9 @@ import { useUserContext } from '../components/UserContext';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { IdeasService, type Idea as DatabaseIdea } from '../services/IdeasService';
+import SharedIdeasService from '../services/SharedIdeasService';
+import uuid from 'react-native-uuid';
 
 type VoteType = 'yesno' | 'likedislike';
 type Idea = {
@@ -41,7 +44,7 @@ const stats = {
 };
 
 const currentUserId = 'user1';
-const ideas: Idea[] = [
+const mockIdeas: Idea[] = [
   {
     id: '1',
     title: 'Mobile App Dark Mode Feature',
@@ -92,7 +95,52 @@ export default function InspirerCornerScreen() {
   const [ideaCategory, setIdeaCategory] = useState('');
   const [ideaDescription, setIdeaDescription] = useState('');
   const [votes, setVotes] = useState<{ [key: string]: string }>({});
-  const [userVotes, setUserVotes] = useState<{ [key: string]: 'yes' | 'no' }>({});
+  const [userVotes, setUserVotes] = useState<{ [key: string]: string }>({});
+  const [ideas, setIdeas] = useState(mockIdeas);
+
+  // Load approved ideas with polls from shared service
+  useEffect(() => {
+    const loadApprovedIdeas = () => {
+      const approvedIdeas = SharedIdeasService.getApprovedIdeas();
+      
+      // Transform to match Inspire Corner format
+      const transformedIdeas = approvedIdeas.map(idea => ({
+        id: idea.id,
+        title: idea.title,
+        description: idea.description,
+        category: idea.category,
+        submitter: idea.submitter_name,
+        status: 'Approved' as const,
+        likes: idea.yes_votes || 0,
+        dislikes: idea.no_votes || 0,
+        totalVotes: idea.total_votes || 0,
+        voteType: 'yesno' as const,
+        votes: { yes: idea.yes_votes || 0, no: idea.no_votes || 0 },
+        comments: idea.comment_count || 0,
+        submitterId: idea.submitter_role,
+        // Add poll if exists
+        ...(idea.hasPoll && idea.poll ? {
+          poll: {
+            question: idea.poll.question,
+            options: idea.poll.options
+          }
+        } : {})
+      }));
+      
+      // Combine with existing mock ideas
+      const allIdeas = [...transformedIdeas, ...mockIdeas.filter(mock => 
+        !transformedIdeas.find(transformed => transformed.id === mock.id)
+      )];
+      
+      setIdeas(allIdeas);
+    };
+
+    loadApprovedIdeas();
+    
+    // Refresh every few seconds to get updates
+    const interval = setInterval(loadApprovedIdeas, 3000);
+    return () => clearInterval(interval);
+  }, []);
   const [hasVoted, setHasVoted] = useState<{ [key: string]: boolean }>({});
   
   const router = useRouter();
@@ -102,6 +150,7 @@ export default function InspirerCornerScreen() {
     i.status === 'Approved' || i.submitterId === userId
   );
 
+  const { userRole } = useUserContext();
   const { isDarkMode } = useTheme();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -117,33 +166,106 @@ export default function InspirerCornerScreen() {
     setUserVotes(prev => ({ ...prev, [ideaId]: voteType }));
   };
 
-  const handleSubmitVote = (ideaId: string) => {
+  const handleSubmitVote = async (ideaId: string) => {
     const selectedVote = userVotes[ideaId];
     if (!selectedVote) {
       Alert.alert('Please select an option', 'You must choose Yes or No before voting.');
       return;
     }
 
-    // Mark as voted
-    setHasVoted(prev => ({ ...prev, [ideaId]: true }));
-    
-    // Show success message
-    Alert.alert(
-      'Vote Submitted!', 
-      `Your vote "${selectedVote}" has been recorded.`,
-      [{ text: 'OK', style: 'default' }]
-    );
+    try {
+      // Submit vote using shared service
+      const voteType = selectedVote === 'Yes' ? 'yes' : 'no';
+      const success = SharedIdeasService.submitVote(ideaId, voteType);
+      
+      if (success) {
+        // Mark as voted
+        setHasVoted(prev => ({ ...prev, [ideaId]: true }));
+        
+        // Update local display immediately
+        setIdeas(prev => prev.map(idea => {
+          if (idea.id === ideaId) {
+            return {
+              ...idea,
+              [selectedVote === 'Yes' ? 'likes' : 'dislikes']: 
+                (idea[selectedVote === 'Yes' ? 'likes' : 'dislikes'] || 0) + 1,
+              totalVotes: (idea.totalVotes || 0) + 1
+            };
+          }
+          return idea;
+        }));
+        
+        console.log('Vote submitted successfully:', ideaId, voteType);
+      } else {
+        Alert.alert('Error', 'Failed to submit vote. Please try again.');
+        return;
+      }
 
-    // In a real app, you would send this to your backend
-    console.log(`Vote submitted for idea ${ideaId}: ${selectedVote}`);
+      // Show success message
+      Alert.alert(
+        'Vote Submitted!', 
+        `Your vote "${selectedVote}" has been recorded and counted!`,
+        [{ text: 'OK', style: 'default' }]
+      );
+
+      // TODO: Re-enable database voting once UUID issues are resolved
+      // const tempUserId = uuid.v4() as string;
+      // const { error } = await IdeasService.submitVote({
+      //   idea_id: ideaId,
+      //   user_id: tempUserId,
+      //   user_name: 'Demo User',
+      //   user_role: 'employee',
+      //   vote_type: selectedVote === 'Yes' ? 'yes' : 'no'
+      // });
+    } catch (error) {
+      console.error('Error submitting vote:', error);
+      Alert.alert('Error', 'Failed to submit vote. Please try again.');
+    }
   };
 
-  const handleSubmitIdea = () => {
-    setModalVisible(false);
-    setIdeaTitle('');
-    setIdeaCategory('');
-    setIdeaDescription('');
-    Alert.alert('Success', 'Your idea has been submitted for review!');
+  const handleSubmitIdea = async () => {
+    if (!ideaTitle.trim() || !ideaDescription.trim() || !ideaCategory) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    try {
+      // Submit idea using shared service
+      const newIdea = SharedIdeasService.submitIdea({
+        title: ideaTitle.trim(),
+        description: ideaDescription.trim(),
+        category: ideaCategory,
+        submitter_name: 'Employee User',
+        submitter_role: 'employee'
+      });
+
+      console.log('Idea submitted:', newIdea);
+
+      setModalVisible(false);
+      setIdeaTitle('');
+      setIdeaCategory('');
+      setIdeaDescription('');
+      
+      Alert.alert(
+        'Success!', 
+        'Your idea has been submitted for admin review! The admin can now see and manage your idea.',
+        [{ text: 'OK', style: 'default' }]
+      );
+
+      // TODO: Re-enable database submission when issues are fixed
+      // const tempUserId = uuid.v4() as string;
+      // const { data, error } = await IdeasService.submitIdea({
+      //   title: ideaTitle.trim(),
+      //   description: ideaDescription.trim(),
+      //   category: ideaCategory,
+      //   submitter_id: tempUserId,
+      //   submitter_name: 'Demo User', 
+      //   submitter_role: 'employee',
+      // });
+    } catch (error) {
+      console.error('Error submitting idea:', error);
+      Alert.alert('Error', 'Failed to submit idea. Please try again.');
+    }
   };
 
   const handleShare = (ideaId: string) => {
@@ -167,6 +289,11 @@ export default function InspirerCornerScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
+            {userRole === 'employee' && (
+              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <Ionicons name="arrow-back" size={24} color={primaryText} />
+              </TouchableOpacity>
+            )}
             <View style={styles.iconContainer}>
               <Ionicons name="bulb" size={24} color="#FF9500" />
             </View>
@@ -392,6 +519,10 @@ const styles = StyleSheet.create({
      marginBottom: 12,
      flexWrap: 'wrap',
    },
+  backButton: {
+    padding: 8,
+    marginRight: 12,
+  },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -508,8 +639,8 @@ const styles = StyleSheet.create({
      fontWeight: '600',
      marginLeft: 4,
    },
-  ideaTitle: { fontSize: 17, fontWeight: 'bold', marginBottom: 2, color: '#222' },
-  ideaDescription: { fontSize: 14, color: '#444', marginBottom: 10 },
+  ideaTitle: { fontSize: 17, fontWeight: 'bold', marginBottom: 2 },
+  ideaDescription: { fontSize: 14, marginBottom: 10 },
      votingContainer: {
      marginBottom: 12,
      paddingVertical: 12,

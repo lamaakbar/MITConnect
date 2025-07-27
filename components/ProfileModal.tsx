@@ -28,7 +28,18 @@ export default function ProfileModal({ visible, onClose }: { visible: boolean; o
           <Text style={{ fontSize: 14, color: secondaryTextColor, marginBottom: 24 }}>{user?.email || 'No email found'}</Text>
           <TouchableOpacity
             style={{ backgroundColor: '#ff6b6b', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 32, marginTop: 8 }}
-            onPress={async () => { await logout(); onClose(); router.replace('/'); }}
+            onPress={async () => { 
+              try {
+                await logout(); 
+                onClose(); 
+                router.replace('/'); 
+              } catch (error) {
+                console.log('⚠️ Logout navigation error (non-critical):', error);
+                // Still close modal and navigate even if there's an error
+                onClose();
+                router.replace('/');
+              }
+            }}
           >
             <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Sign Out</Text>
           </TouchableOpacity>

@@ -1,15 +1,17 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, StatusBar } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../components/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AdminHeaderProps {
   title: string;
   showBackButton?: boolean;
   backDestination?: string;
+  onBackPress?: () => void;
   rightComponent?: React.ReactNode;
   showShadow?: boolean;
   showLogo?: boolean;
@@ -22,6 +24,7 @@ export default function AdminHeader({
   title,
   showBackButton = true,
   backDestination = '/admin-home',
+  onBackPress,
   rightComponent,
   showShadow = true,
   showLogo = true,
@@ -32,6 +35,7 @@ export default function AdminHeader({
   const router = useRouter();
   const colorScheme = useColorScheme();
   const { isDarkMode } = useTheme();
+  const insets = useSafeAreaInsets();
   const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
   const logoCircleBg = isDarkMode ? '#2A2A2A' : '#E8F8F5';
   const textColor = useThemeColor({}, 'text');
@@ -39,10 +43,12 @@ export default function AdminHeader({
   const iconColor = useThemeColor({}, 'icon');
 
   const handleBackPress = () => {
-    if (backDestination) {
+    if (onBackPress) {
+      onBackPress();
+    } else if (backDestination) {
       router.push(backDestination);
     } else {
-      router.push('/admin-home');
+      router.back();
     }
   };
 
@@ -69,9 +75,9 @@ export default function AdminHeader({
       { 
         backgroundColor: cardBackground,
         borderBottomColor: 'transparent',
-        paddingTop: 48,
-        paddingBottom: 10,
-        paddingHorizontal: 20,
+        paddingTop: insets.top + (Platform.OS === 'ios' ? 8 : 12),
+        paddingBottom: 12,
+        paddingHorizontal: 16,
       }
     ]}>
       {/* Left Section */}
@@ -87,19 +93,23 @@ export default function AdminHeader({
             <Ionicons name="arrow-back" size={24} color={textColor} />
           </TouchableOpacity>
         )}
-        {showLogo && (
+        {showLogo ? (
           <View style={styles.logoSection}>
             <View style={[styles.logoCircle, { backgroundColor: logoCircleBg, width: 36, height: 36, borderRadius: 18 }]}> 
               <Feather name="users" size={18} color="#004080" />
             </View>
             <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', letterSpacing: 0.5 }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
           </View>
+        ) : (
+          <Text style={[styles.headerTitle, { color: textColor, fontSize: 20, fontWeight: 'bold', marginLeft: 8, marginTop: 0 }]} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
         )}
       </View>
-      {/* Center Section - Title (absolutely centered) */}
-      <View pointerEvents="none" style={styles.headerTitleWrapper}>
-        <Text style={[styles.headerTitle, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
-      </View>
+      {/* Center Section - Title (absolutely centered) - only when logo is shown */}
+      {showLogo && (
+        <View pointerEvents="none" style={styles.headerTitleWrapper}>
+          <Text style={[styles.headerTitle, { color: textColor }]} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
+        </View>
+      )}
       {/* Right Section for rightComponent */}
       <View style={styles.headerRight}>
         {rightComponent}
@@ -114,10 +124,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 20 : 28,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    minHeight: 80,
+    minHeight: Platform.OS === 'ios' ? 88 : 80,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -162,7 +171,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 60,
     right: 60,
-    top: Platform.OS === 'ios' ? 20 : 28,
+    top: 0,
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
@@ -171,11 +180,11 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   headerTitle: {
-    fontSize: 16, // reduced from 20
-    fontWeight: '600', // reduced from 'bold'
+    fontSize: Platform.OS === 'ios' ? 17 : 16,
+    fontWeight: '600',
     textAlign: 'center',
     letterSpacing: 0.5,
     maxWidth: '100%',
-    marginTop: 18, // add margin to separate from logo
+    marginTop: Platform.OS === 'ios' ? 16 : 18,
   },
 }); 

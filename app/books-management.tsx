@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Alert, SafeA
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useBooks } from '../components/BookContext';
-import AdminTabBar from '../components/AdminTabBar';
+
 import Toast from 'react-native-root-toast';
 import AdminHeader from '../components/AdminHeader';
 import { useTheme } from '../components/ThemeContext';
@@ -245,7 +245,7 @@ export default function AdminBooksScreen() {
       />
 
       {/* Bottom Tab Bar */}
-      <AdminTabBar activeTab="books" />
+      
     </View>
   );
 }

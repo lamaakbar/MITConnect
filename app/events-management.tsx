@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Sta
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../components/ThemeContext';
-import AdminTabBar from '../components/AdminTabBar';
-import AdminHeader from '../components/AdminHeader';
+import { useRouter } from 'expo-router';
+
 import { Colors } from '@/constants/Colors';
 import { ThemedView } from '../components/ThemedView';
 import { ThemedText } from '../components/ThemedText';
@@ -47,10 +47,12 @@ const mockEvents = [
 ];
 
 export default function EventsManagement() {
+  const router = useRouter();
   const { isDarkMode } = useTheme();
   const [selectedTab, setSelectedTab] = useState('All');
   const [showAddModal, setShowAddModal] = useState(false); // For future add event modal
   const FILTERS = ['All', 'Upcoming', 'Past'];
+  const insets = useSafeAreaInsets();
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -102,32 +104,24 @@ export default function EventsManagement() {
     </TouchableOpacity>
   );
 
-  const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1, backgroundColor }}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-      <View style={{
-        paddingTop: insets.top,
-        backgroundColor: cardBackground,
-        borderBottomColor: borderColor,
-        borderBottomWidth: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingBottom: 12,
-      }}>
-        <TouchableOpacity onPress={() => { /* TODO: implement back navigation */ }} style={{ padding: 4, marginRight: 8 }}>
-          <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#fff' : '#222'} />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{
-            fontSize: 20,
-            fontWeight: 'bold',
-            letterSpacing: 0.5,
-            color: isDarkMode ? '#fff' : '#222',
-          }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
-        </View>
-        <View style={{ width: 32 }} />
+        <Text style={[styles.headerTitle, { color: textColor }]}>
+          MIT<Text style={{ color: '#3CB371' }}>Connect</Text>
+        </Text>
+        <TouchableOpacity 
+          style={[styles.addButton, { backgroundColor: '#3CB371' }]}
+          onPress={() => setShowAddModal(true)}
+        >
+          <Ionicons name="add" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
       <View style={[styles.container, { backgroundColor, flex: 1 }]}> 
         {/* Search Bar - all styles inline */}
@@ -212,7 +206,7 @@ export default function EventsManagement() {
             </View>
           )}
         </ScrollView>
-        <AdminTabBar activeTab="events" />
+
         {AddEventFAB}
       </View>
       {/* Future: Add Event Modal can go here, controlled by showAddModal */}
@@ -227,13 +221,26 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 32,
-    marginBottom: 4,
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  backButton: {
+    padding: 8,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerSubtitle: {
     fontSize: 14,

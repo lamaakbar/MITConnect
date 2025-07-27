@@ -75,11 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Wait for AsyncStorage to be ready
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Initialize session
-      const session = await initializeSession();
+      // Check for existing session first
+      const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        console.log('✅ Session restored for user:', session.user.email);
+        console.log('✅ Session found for user:', session.user.email);
         
         // Fetch user data from users table
         const { data: userProfile, error } = await supabase
@@ -103,9 +103,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(userData);
       } else {
         console.log('ℹ️ No existing session found');
+        setUser(null);
       }
     } catch (error) {
-      console.error('❌ Error initializing auth:', error);
+      console.log('⚠️ Error initializing auth (non-critical):', error);
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
@@ -127,21 +129,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      // Check if there's an active session before trying to sign out
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-          console.error('❌ Error signing out:', error);
-        } else {
-          console.log('✅ Logout successful');
+      console.log('🔄 Starting logout process...');
+      
+      // Check if there's a valid session first
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.log('ℹ️ No active session found, skipping signOut');
+          setUser(null);
+          return;
         }
-      } else {
-        console.log('ℹ️ No active session to sign out from');
+      } catch (sessionError) {
+        console.log('ℹ️ Session check failed, proceeding with signOut anyway');
       }
+      
+      // Try to sign out with timeout
+      const signOutPromise = supabase.auth.signOut();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Sign out timeout')), 5000)
+      );
+      
+      const { error } = await Promise.race([signOutPromise, timeoutPromise]) as any;
+      
+      if (error) {
+        // Log the error but don't throw - we still want to clear local state
+        console.log('⚠️ Sign out error (non-critical):', error.message);
+      } else {
+        console.log('✅ Logout successful');
+      }
+      
+      // Always clear user state regardless of signOut result
       setUser(null);
+      console.log('✅ User state cleared');
+      
     } catch (error) {
-      console.error('❌ Error during logout:', error);
+      console.log('⚠️ Logout error (non-critical):', error);
       // Always clear user state even if signOut fails
       setUser(null);
     }
