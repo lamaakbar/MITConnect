@@ -82,6 +82,27 @@ export default function GalleryManagement() {
   const [editCoverImage, setEditCoverImage] = useState<Photo | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  
+  // Function to handle image loading errors
+  const handleImageError = (imageUri: string) => {
+    setImageErrors(prev => new Set(prev).add(imageUri));
+  };
+
+  // Function to refresh authentication session
+  const refreshAuthSession = async () => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error('Error refreshing session:', error);
+        return false;
+      }
+      return !!data.session;
+    } catch (error) {
+      console.error('Error refreshing session:', error);
+      return false;
+    }
+  };
 
   // Fetch albums from Supabase
   const fetchAlbums = async () => {
@@ -921,7 +942,7 @@ export default function GalleryManagement() {
         
         if (error) {
           console.error('Error updating album:', error);
-          Alert.alert('Error', 'Failed to update album');
+          Alert.alert('Error', 'Failed to update album. Please try again.');
           return;
         }
         
@@ -988,14 +1009,14 @@ export default function GalleryManagement() {
             numColumns={1}
             contentContainerStyle={styles.photoWidgetList}
             renderItem={({ item, index }) => {
-              let loadError = false;
+              const hasError = imageErrors.has(item.uri);
               return (
                 <Animated.View style={[styles.photoWidgetListItem, deleteAnimIdx === index && { opacity: deleteAnim, transform: [{ scale: deleteAnim }] }]}>
-                  {!loadError ? (
+                  {!hasError ? (
                     <Image
                       source={{ uri: item.uri }}
                       style={styles.photoWidgetListImg}
-                      onError={() => { loadError = true; }}
+                      onError={() => handleImageError(item.uri)}
                     />
                   ) : (
                     <View style={[styles.photoWidgetListImg, { alignItems: 'center', justifyContent: 'center' }]}>
@@ -1063,8 +1084,12 @@ export default function GalleryManagement() {
                         onPress={pickEditCoverImage}
                         activeOpacity={0.8}
                       >
-                        {editCoverImage ? (
-                          <Image source={{ uri: editCoverImage.uri }} style={styles.coverImagePreview} />
+                        {editCoverImage && !imageErrors.has(editCoverImage.uri) ? (
+                          <Image 
+                            source={{ uri: editCoverImage.uri }} 
+                            style={styles.coverImagePreview}
+                            onError={() => handleImageError(editCoverImage.uri)}
+                          />
                         ) : (
                           <View style={[styles.coverImagePlaceholder, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]}>
                             <Ionicons name="image-outline" size={32} color="#bbb" />
@@ -1095,7 +1120,244 @@ export default function GalleryManagement() {
     }
   }
 
-  return null;
+  // Main Gallery Management View (Album List)
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor }}>
+      <AdminHeader 
+        title="Gallery Management"
+        backDestination={undefined}
+        showLogo={false}
+        rightComponent={
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => setShowCreateModal(true)}
+            accessibilityLabel="Create new album"
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add" size={20} color="#fff" />
+          </TouchableOpacity>
+        }
+      />
+      
+      {/* Search Bar */}
+      <View style={[styles.searchBarContainer, { backgroundColor: searchBackground }]}>
+        <Ionicons name="search" size={20} color={secondaryTextColor} style={{ marginRight: 8 }} />
+        <TextInput
+          style={[styles.searchBar, { color: textColor }]}
+          placeholder="Search albums..."
+          placeholderTextColor={secondaryTextColor}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
+      {/* Albums List */}
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.albumGrid}>
+          {albums.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="images-outline" size={64} color="#bbb" />
+              <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Albums Yet</Text>
+              <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+                Create your first album to start organizing photos
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyStateButton}
+                onPress={() => setShowCreateModal(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add" size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.emptyStateButtonText}>Create Album</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            albums.map((album) => (
+              <TouchableOpacity
+                key={album.id}
+                style={[styles.albumCard, { backgroundColor: cardBackground, borderColor: borderColor }]}
+                onPress={() => setSelectedAlbumId(album.id)}
+                activeOpacity={0.9}
+              >
+                <View style={styles.albumCardContent}>
+                  <View style={styles.albumCoverBox}>
+                    {album.cover_image && !imageErrors.has(album.cover_image) ? (
+                      <Image 
+                        source={{ uri: album.cover_image }} 
+                        style={styles.albumCoverImg}
+                        onError={() => album.cover_image && handleImageError(album.cover_image)}
+                      />
+                    ) : album.photos[0] && !imageErrors.has(album.photos[0].uri) ? (
+                      <Image 
+                        source={{ uri: album.photos[0].uri }} 
+                        style={styles.albumCoverImg}
+                        onError={() => handleImageError(album.photos[0].uri)}
+                      />
+                    ) : (
+                      <View style={[styles.albumCoverPlaceholder, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]}>
+                        <Ionicons name="image-outline" size={32} color="#bbb" />
+                      </View>
+                    )}
+                    <View style={styles.albumOverlay}>
+                      <Text style={[styles.albumTitle, { color: '#fff' }]}>{album.title}</Text>
+                      <Text style={[styles.albumCount, { color: '#fff' }]}>
+                        {album.photos.length} photo{album.photos.length !== 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={styles.deleteAlbumButton}
+                  onPress={() => handleDeleteAlbum(album.id)}
+                  accessibilityLabel="Delete album"
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#fff" />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Create Album Modal */}
+      <Modal
+        visible={showCreateModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowCreateModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalSheet, { backgroundColor: modalBackground }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: textColor }]}>Create New Album</Text>
+                <TouchableOpacity onPress={() => setShowCreateModal(false)} style={styles.modalCloseBtn}>
+                  <Ionicons name="close" size={28} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.formContainer}>
+                <TextInput
+                  style={[styles.formInput, { color: textColor, borderColor: borderColor }]}
+                  placeholder="Album Title"
+                  value={newTitle}
+                  onChangeText={setNewTitle}
+                  placeholderTextColor="#aaa"
+                  autoFocus
+                />
+                
+                {/* Cover Image Selection for Admin */}
+                {userRole === 'admin' && (
+                  <View style={{ marginTop: 20 }}>
+                    <Text style={[styles.formLabel, { color: textColor }]}>Album Cover</Text>
+                    <TouchableOpacity
+                      style={styles.coverImageSelector}
+                      onPress={async () => {
+                        const cover = await pickCoverImage();
+                        if (cover) setCoverImage(cover);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      {coverImage && !imageErrors.has(coverImage.uri) ? (
+                        <Image 
+                          source={{ uri: coverImage.uri }} 
+                          style={styles.coverImagePreview}
+                          onError={() => handleImageError(coverImage.uri)}
+                        />
+                      ) : (
+                        <View style={[styles.coverImagePlaceholder, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]}>
+                          <Ionicons name="image-outline" size={32} color="#bbb" />
+                          <Text style={{ color: '#bbb', fontSize: 14, marginTop: 8 }}>Select Cover Image</Text>
+                        </View>
+                      )}
+                      <View style={styles.coverImageOverlay}>
+                        <Ionicons name="camera" size={20} color="#fff" />
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Photo Selection */}
+                <View style={{ marginTop: 20 }}>
+                  <Text style={[styles.formLabel, { color: textColor }]}>Photos</Text>
+                  <TouchableOpacity
+                    style={styles.coverImageSelector}
+                    onPress={async () => {
+                      const photos = await pickImagesFromLibrary();
+                      if (photos.length > 0) setNewPhotos(photos);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    {newPhotos.length > 0 ? (
+                      <View style={styles.selectedPhotosContainer}>
+                        <Text style={[styles.selectedPhotosTitle, { color: textColor }]}>
+                          {newPhotos.length} photo{newPhotos.length !== 1 ? 's' : ''} selected
+                        </Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          {newPhotos.map((photo, index) => (
+                            <View key={index} style={styles.selectedPhotoItem}>
+                              {!imageErrors.has(photo.uri) ? (
+                                <Image 
+                                  source={{ uri: photo.uri }} 
+                                  style={styles.selectedPhoto}
+                                  onError={() => handleImageError(photo.uri)}
+                                />
+                              ) : (
+                                <View style={[styles.selectedPhoto, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0' }]}>
+                                  <Ionicons name="alert-circle-outline" size={20} color="#f00" />
+                                </View>
+                              )}
+                              <TouchableOpacity
+                                style={styles.cancelBtn}
+                                onPress={() => setNewPhotos(newPhotos.filter((_, i) => i !== index))}
+                              >
+                                <Ionicons name="close" size={16} color="#f00" />
+                              </TouchableOpacity>
+                            </View>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    ) : (
+                      <View style={[styles.coverImagePlaceholder, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]}>
+                        <Ionicons name="images-outline" size={32} color="#bbb" />
+                        <Text style={{ color: '#bbb', fontSize: 14, marginTop: 8 }}>Select Photos</Text>
+                      </View>
+                    )}
+                    <View style={styles.coverImageOverlay}>
+                      <Ionicons name="images" size={20} color="#fff" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.createBtn,
+                    {
+                      backgroundColor: newTitle.trim() && newPhotos.length > 0 && (userRole !== 'admin' || coverImage) ? '#3CB371' : (isDarkMode ? '#2A2A2A' : '#E5E5EA'),
+                      opacity: newTitle.trim() && newPhotos.length > 0 && (userRole !== 'admin' || coverImage) ? 1 : 0.6
+                    }
+                  ]}
+                  onPress={handleCreateAlbum}
+                  activeOpacity={0.85}
+                  disabled={!newTitle.trim() || newPhotos.length === 0 || (userRole === 'admin' && !coverImage) || loading}
+                >
+                  <Text style={[styles.createBtnText, { color: newTitle.trim() && newPhotos.length > 0 && (userRole !== 'admin' || coverImage) ? '#fff' : secondaryTextColor }]}>
+                    Create Album
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </SafeAreaView>
+  );
 }
 
 const albumColors = [
