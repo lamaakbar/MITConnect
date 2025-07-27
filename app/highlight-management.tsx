@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, Alert, Image, FlatList, TouchableOpacity, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Dimensions, Modal, ActivityIndicator, SafeAreaView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, Pressable, Alert, Image, FlatList, TouchableOpacity, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Dimensions, Modal, ActivityIndicator, SafeAreaView, Button } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -11,23 +10,13 @@ import AdminTabBar from '../components/AdminTabBar';
 import AdminHeader from '../components/AdminHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'react-native';
-import { supabase, fetchHighlights, addHighlight, updateHighlight, deleteHighlight } from '../services/supabase';
-import mime from 'mime';
-import { decode } from 'base64-arraybuffer';
 
-type Highlight = {
-  id: string;
-  title: string;
-  description: string;
-  image_url: string | null;
-  created_at: string;
-  updated_at: string;
-};
+import { updateHighlight, fetchHighlights } from '../services/supabase';
 
-export default function HighlightManagement() {
+const HighlightManagement = () => {
   const router = useRouter();
   const { isDarkMode } = useTheme();
-  
+
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -37,16 +26,39 @@ export default function HighlightManagement() {
   const searchBackground = isDarkMode ? '#2A2A2A' : '#F2F4F7';
   const modalBackground = isDarkMode ? '#1E1E1E' : '#fff';
   const overlayBackground = isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.3)';
-  
-  // State management
-  const [highlights, setHighlights] = useState<Highlight[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [image, setImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [highlights, setHighlights] = useState<Array<{title: string, description: string, image: string | null}>>([
+    {
+      title: 'Team Building Event',
+      description: 'A fun day with the team! 🎉',
+      image: 'https://via.placeholder.com/300x200.png?text=Highlight+1',
+    },
+    {
+      title: 'Product Launch',
+      description: 'Launching our new app 🚀',
+      image: 'https://via.placeholder.com/300x200.png?text=Highlight+2',
+    },
+    {
+      title: 'Award Ceremony',
+      description: 'Celebrating our achievements 🏆',
+      image: 'https://via.placeholder.com/300x200.png?text=Highlight+3',
+    },
+    {
+      title: 'Hackathon',
+      description: 'Innovating together 💡',
+      image: 'https://via.placeholder.com/300x200.png?text=Highlight+4',
+    },
+  ]);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
   // Add form state for Add Modal
   const [addTitle, setAddTitle] = useState('');
+  const [addDescription, setAddDescription] = useState('');
   const [addImage, setAddImage] = useState<string | null>(null);
   const [addLoading, setAddLoading] = useState(false);
 
@@ -58,72 +70,12 @@ export default function HighlightManagement() {
 
   const numColumns = Dimensions.get('window').width > 500 ? 3 : 2;
 
-  // Image upload function
-  const uploadImageToSupabase = async (uri: string): Promise<string | null> => {
-    try {
-      const ext = uri.split('.').pop() || 'jpg';
-      const fileName = `highlight-${Date.now()}.${ext}`;
-      const mimeType = mime.getType(uri) || 'image/jpeg';
-
-      // Read file as base64
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      // Convert to ArrayBuffer
-      const fileBuffer = decode(base64);
-
-      // Upload as binary
-      const { data, error } = await supabase.storage
-        .from("highlight-images")
-        .upload(fileName, fileBuffer, {
-          contentType: mimeType,
-          upsert: true,
-        });
-
-      if (error) {
-        console.error("❌ Upload error:", error.message);
-        return null;
-      }
-
-      // Get the public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("highlight-images")
-        .getPublicUrl(data.path);
-
-      console.log("✅ Final image public URL:", publicUrl);
-      return publicUrl;
-    } catch (error) {
-      console.error("❌ Unexpected upload error:", error);
-      return null;
-    }
-  };
-
-  // Load highlights from Supabase
-  const loadHighlights = async () => {
-    try {
-      setRefreshing(true);
-      const data = await fetchHighlights();
-      console.log("✅ Highlights fetched from DB:", data);
-      setHighlights(data);
-    } catch (error) {
-      console.error('Error loading highlights:', error);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    loadHighlights();
-  }, []);
-
   const pickImage = async (setImageFn: (uri: string) => void) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
-      base64: false, // let FileSystem handle base64
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setImageFn(result.assets[0].uri);
@@ -131,34 +83,20 @@ export default function HighlightManagement() {
   };
 
   // Add Modal Handlers
-  const handleAddSubmit = async () => {
-    if (!addTitle) {
-      Alert.alert('Error', 'Please enter a title.');
-      return;
-    }
-
+  const handleAddSubmit = () => {
     setAddLoading(true);
-    try {
-      let uploadedUrl: string | null = null;
-      if (addImage) {
-        console.log('Starting image upload for:', addImage);
-        uploadedUrl = await uploadImageToSupabase(addImage);
-        console.log('Upload result:', uploadedUrl);
-      }
-
-      console.log('Adding highlight with URL:', uploadedUrl);
-      await addHighlight(addTitle, uploadedUrl);
-      console.log('Highlight added successfully');
-      await loadHighlights();
-      setShowAddModal(false);
-      setAddTitle('');
-      setAddImage(null);
-    } catch (error) {
-      console.error('Error in handleAddSubmit:', error);
-      Alert.alert('Error', 'Failed to add highlight.');
-    } finally {
+    setTimeout(() => {
       setAddLoading(false);
-    }
+      if (!addTitle || !addDescription) {
+        Alert.alert('Error', 'Please fill in all fields.');
+        return;
+      }
+      setHighlights(prev => [...prev, { title: addTitle, description: addDescription, image: addImage }]);
+      setAddTitle('');
+      setAddDescription('');
+      setAddImage(null);
+      setShowAddModal(false);
+    }, 800);
   };
 
   // Edit Modal Handlers
@@ -166,49 +104,30 @@ export default function HighlightManagement() {
     const h = highlights[idx];
     setEditTitle(h.title);
     setEditDescription(h.description);
-    setEditImage(h.image_url);
+    setEditImage(h.image);
     setEditIndex(idx);
     setShowEditModal(true);
   };
-
-  const handleEditSubmit = async () => {
-    if (editIndex === null || !editTitle || !editDescription) {
-      Alert.alert('Error', 'Please fill in all fields.');
-      return;
-    }
-
-    const id = highlights[editIndex].id;
+  const handleEditSubmit = () => {
     setEditLoading(true);
-
-    try {
-      let uploadedUrl = highlights[editIndex].image_url;
-      if (editImage && editImage !== uploadedUrl) {
-        uploadedUrl = await uploadImageToSupabase(editImage);
+    setTimeout(() => {
+      setEditLoading(false);
+      if (!editTitle || !editDescription) {
+        Alert.alert('Error', 'Please fill in all fields.');
+        return;
       }
-
-      await updateHighlight(id, editTitle, editDescription, uploadedUrl);
-      await loadHighlights();
+      setHighlights(prev => prev.map((h, i) => i === editIndex ? { title: editTitle, description: editDescription, image: editImage } : h));
       setShowEditModal(false);
       setEditIndex(null);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update highlight.');
-    } finally {
-      setEditLoading(false);
-    }
+    }, 800);
   };
 
-  // Delete highlight function
-  const handleDeleteHighlight = async () => {
-    if (editIndex === null) return;
-    const id = highlights[editIndex].id;
-
-    try {
-      await deleteHighlight(id);
-      await loadHighlights();
+  // Add this function for deleting from the Edit modal
+  const handleDeleteHighlight = () => {
+    if (editIndex !== null) {
+      setHighlights(prev => prev.filter((_, i) => i !== editIndex));
       setShowEditModal(false);
       setEditIndex(null);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to delete highlight.');
     }
   };
 
@@ -266,7 +185,19 @@ export default function HighlightManagement() {
               onSubmitEditing={handleInputSubmit}
               blurOnSubmit
             />
-
+            <Text style={[styles.label, { color: textColor }]}>Description</Text>
+            <TextInput
+              style={[styles.input, styles.textarea, { color: textColor, backgroundColor: searchBackground, borderColor }]}
+              placeholder="Description..."
+              placeholderTextColor={secondaryTextColor}
+              value={addDescription}
+              onChangeText={setAddDescription}
+              multiline
+              numberOfLines={4}
+              returnKeyType="done"
+              onSubmitEditing={handleInputSubmit}
+              blurOnSubmit
+            />
             <Text style={styles.label}>Picture</Text>
             <TouchableOpacity style={styles.uploadBtn} onPress={() => pickImage(setAddImage)} activeOpacity={0.85}>
               <Text style={styles.uploadBtnText}>{addImage ? 'Change Picture' : 'Upload Picture'}</Text>
@@ -363,25 +294,15 @@ export default function HighlightManagement() {
             )}
           </View>
         }
-        renderItem={({ item, index }) => {
-          // Debug logging to check image_url
-          console.log(`Highlight ${index}:`, { 
-            id: item.id, 
-            title: item.title, 
-            image_url: item.image_url,
-            hasImage: !!item.image_url 
-          });
-          console.log("📸 Rendering highlight:", item.title, "URL:", item.image_url);
-          
-          return (
-            <View style={[styles.highlightCard, { backgroundColor: cardBackground, borderColor }]}>
-              {item.image_url ? (
-                <Image source={{ uri: item.image_url }} style={styles.highlightImg} resizeMode="cover" />
-              ) : (
-                <View style={[styles.highlightImg, { backgroundColor: '#eee', justifyContent: 'center', alignItems: 'center' }]}> 
-                  <Ionicons name="image" size={32} color="#bbb" />
-                </View>
-              )}
+        renderItem={({ item, index }) => (
+                      <View style={[styles.highlightCard, { backgroundColor: cardBackground, borderColor }]}>
+            {item.image ? (
+              <Image source={{ uri: item.image }} style={styles.highlightImg} resizeMode="cover" />
+            ) : (
+              <View style={[styles.highlightImg, { backgroundColor: '#eee', justifyContent: 'center', alignItems: 'center' }]}> 
+                <Ionicons name="image" size={32} color="#bbb" />
+              </View>
+            )}
                           <Text style={[styles.highlightTitle, { color: textColor }]} numberOfLines={1}>{item.title}</Text>
               <Text style={[styles.highlightDesc, { color: secondaryTextColor }]} numberOfLines={2}>{item.description}</Text>
                           <View style={styles.highlightActions}>
@@ -389,9 +310,8 @@ export default function HighlightManagement() {
                   <Ionicons name="create" size={18} color="#3CB371" />
                 </TouchableOpacity>
               </View>
-            </View>
-          );
-        }}
+          </View>
+        )}
       />
       
       {/* Bottom Tab Bar */}
@@ -637,4 +557,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-}); 
+});
+
+export default HighlightManagement;
