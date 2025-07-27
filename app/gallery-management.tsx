@@ -536,29 +536,22 @@ export default function GalleryManagement() {
     const insets = useSafeAreaInsets();
     return (
       <View style={{ flex: 1, backgroundColor }}>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-        <View style={{
-          paddingTop: insets.top,
-          backgroundColor: cardBackground,
-          borderBottomColor: borderColor,
-          borderBottomWidth: 1,
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 16,
-          paddingBottom: 12,
-        }}>
-          <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
-            <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#fff' : '#222'} />
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={textColor} />
           </TouchableOpacity>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{
-              fontSize: 20,
-              fontWeight: 'bold',
-              letterSpacing: 0.5,
-              color: isDarkMode ? '#fff' : '#222',
-            }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
-          </View>
-          <View style={{ width: 32 }} />
+          <Text style={[styles.headerTitle, { color: textColor }]}>
+            MIT<Text style={{ color: '#3CB371' }}>Connect</Text>
+          </Text>
+          <TouchableOpacity 
+            style={[styles.addButton, { backgroundColor: '#3CB371' }]}
+            onPress={() => setShowCreate(true)}
+          >
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
         </View>
         <View style={[styles.mainContainer, { backgroundColor }]}>
           {/* Search Bar */}
@@ -1902,5 +1895,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 32,
     paddingTop: 40,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 }); 

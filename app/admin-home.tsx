@@ -58,9 +58,7 @@ export default function AdminHome() {
       
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        <View style={styles.backButton} />
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           MIT<Text style={{ color: '#3CB371' }}>Connect</Text>
         </Text>
