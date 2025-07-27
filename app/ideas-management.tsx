@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Alert, ActivityIndicator, Platform, ToastAndroid, SafeAreaView, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -8,12 +8,17 @@ import { useTheme } from '../components/ThemeContext';
 import AdminTabBar from '../components/AdminTabBar';
 import AdminHeader from '../components/AdminHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { IdeasService, type Idea as DatabaseIdea } from '../services/IdeasService';
+import { useUserContext } from '../components/UserContext';
+import SharedIdeasService from '../services/SharedIdeasService';
+import uuid from 'react-native-uuid';
 
 // Idea status types
 const IDEA_STATUS = {
-  PENDING: 'pending',
-  IN_PROGRESS: 'in progress',
-  APPROVED: 'approved',
+  PENDING: 'Pending',
+  IN_PROGRESS: 'In Progress',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
 };
 
 // Add poll data to Idea type
@@ -21,19 +26,13 @@ type Poll = {
   question: string;
   options: string[];
 };
-type Idea = {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  status: string;
+
+// Extended Idea type that includes database fields
+type Idea = DatabaseIdea & {
   votes: number;
   hasPoll?: boolean;
   poll?: Poll;
 };
-
-// Empty ideas array - no mock data
-const mockIdeas: Idea[] = [];
 
 export default function IdeasManagement() {
   const router = useRouter();
@@ -41,15 +40,109 @@ export default function IdeasManagement() {
   
   const [tab, setTab] = useState<'pending' | 'submitted'>('pending');
   const [manageIdea, setManageIdea] = useState<Idea | null>(null);
-  const [ideas, setIdeas] = useState<Idea[]>(mockIdeas);
+  const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [pollModalIdea, setPollModalIdea] = useState<Idea | null>(null);
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const [pollError, setPollError] = useState<string | null>(null);
-  // In IdeasManagement component state, add a pendingPoll state
   const [pendingPoll, setPendingPoll] = useState<{ ideaId: string, question: string, options: string[] } | null>(null);
+
+  // Load ideas from database
+  const loadIdeas = async () => {
+    try {
+      setLoading(true);
+      
+      // Load ideas from shared service
+      const sharedIdeas = SharedIdeasService.getAllIdeas();
+      
+      // Transform to match component format
+      const transformedIdeas: Idea[] = sharedIdeas.map(idea => ({
+        ...idea,
+        updated_at: idea.created_at,
+        submitter_id: 'shared-' + idea.id,
+        votes: idea.votes || 0
+      }));
+      
+      setIdeas(transformedIdeas);
+
+      // TODO: Re-enable database loading when issues are fixed
+      // const { data, error } = await IdeasService.getAdminIdeas();
+      // if (error) {
+      //   console.error('Error loading ideas:', error);
+      //   Alert.alert('Error', 'Failed to load ideas. Please try again.');
+      //   return;
+      // }
+      // if (data) {
+      //   const transformedIdeas: Idea[] = data.map(idea => ({
+      //     ...idea,
+      //     votes: idea.total_votes || 0,
+      //   }));
+      //   setIdeas(transformedIdeas);
+      // }
+    } catch (error) {
+      console.error('Error loading ideas:', error);
+      Alert.alert('Error', 'Failed to load ideas. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load ideas on component mount
+  useEffect(() => {
+    loadIdeas();
+  }, []);
+
+  // Handle approve idea
+  const handleApprove = async (id: string) => {
+    setActionLoading(id + '-approve');
+    try {
+      // Update using shared service
+      const success = SharedIdeasService.updateIdeaStatus(id, 'Approved');
+      
+      if (success) {
+        // Reload ideas from shared service
+        await loadIdeas();
+        Alert.alert('Success!', 'Idea approved successfully! It will now appear in the Submitted tab and be visible to employees in Inspire Corner.');
+      } else {
+        Alert.alert('Error', 'Failed to approve idea. Please try again.');
+      }
+      
+      // TODO: Re-enable database call when issues are fixed
+      // const { error } = await IdeasService.updateIdeaStatus(id, 'Approved', uuid.v4() as string);
+    } catch (error) {
+      console.error('Error approving idea:', error);
+      Alert.alert('Error', 'Failed to approve idea. Please try again.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Handle reject idea
+  const handleReject = async (id: string) => {
+    setActionLoading(id + '-reject');
+    try {
+      // For now, just update locally without database
+      console.log('Rejecting idea:', id);
+      
+      // Update local state
+      setIdeas(prev => prev.map(idea => 
+        idea.id === id ? { ...idea, status: 'Rejected' as const } : idea
+      ));
+      
+      Alert.alert('Success!', 'Idea rejected successfully!');
+      
+      // TODO: Re-enable database call when issues are fixed
+      // const { error } = await IdeasService.updateIdeaStatus(id, 'Rejected', uuid.v4() as string);
+    } catch (error) {
+      console.error('Error rejecting idea:', error);
+      Alert.alert('Error', 'Failed to reject idea. Please try again.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -75,38 +168,23 @@ export default function IdeasManagement() {
     setTimeout(() => setToast(null), 1500);
   };
 
-  // Handlers
-  const handleApprove = (id: string) => {
-    setActionLoading(id + '-approve');
-    setTimeout(() => {
-      setIdeas(prev => prev.map(i => {
-        if (i.id === id) {
-          if (pendingPoll && pendingPoll.ideaId === id) {
-            return { ...i, status: IDEA_STATUS.APPROVED, hasPoll: true, poll: { question: pendingPoll.question, options: pendingPoll.options } };
-          }
-          return { ...i, status: IDEA_STATUS.APPROVED };
-        }
-        return i;
-      }));
-      setPendingPoll(null);
-      setActionLoading(null);
-      showToast('Idea approved');
-    }, 800);
-  };
-  const handleReject = (id: string) => {
-    setActionLoading(id + '-reject');
-    setTimeout(() => {
-      setIdeas(prev => prev.filter(i => i.id !== id));
-      setActionLoading(null);
-      showToast('Idea discarded');
-    }, 800);
-  };
+  // Handlers (other handlers for polls, etc.)
   const handleCreatePoll = (id: string) => {
     const idea = ideas.find(i => i.id === id);
     setPollModalIdea(idea || null);
-    setPollQuestion('');
-    setPollOptions(['', '']);
+    
+    // If idea already has a poll, pre-populate the modal for editing
+    if (idea?.hasPoll && idea.poll) {
+      setPollQuestion(idea.poll.question);
+      setPollOptions([...idea.poll.options]);
+    } else {
+      // Reset for new poll
+      setPollQuestion('');
+      setPollOptions(['', '']);
+    }
+    
     setPollError(null);
+    // Modal is controlled by pollModalIdea being set
   };
   const handlePollOptionChange = (idx: number, value: string) => {
     setPollOptions(opts => opts.map((opt, i) => (i === idx ? value : opt)));
@@ -126,27 +204,82 @@ export default function IdeasManagement() {
       setPollError('No idea selected for poll creation.');
       return;
     }
-    setPendingPoll({ ideaId: pollModalIdea.id, question: pollQuestion, options: pollOptions });
+
+    // Create the poll and attach it to the idea using shared service
+    const newPoll = {
+      question: pollQuestion.trim(),
+      options: pollOptions.filter(opt => opt.trim()).map(opt => opt.trim())
+    };
+
+    // Add poll using shared service
+    const success = SharedIdeasService.addPollToIdea(pollModalIdea.id, newPoll);
+    
+    if (success) {
+      // Reload ideas to reflect changes
+      loadIdeas();
+    }
+
+    // Close modal and reset
     setPollModalIdea(null);
-    showToast('Poll ready to be attached. Approve to publish.');
+    setPollQuestion('');
+    setPollOptions(['', '']);
+    setPollError(null);
+    
+    Alert.alert(
+      'Poll Created!', 
+      `Poll "${pollQuestion.trim()}" has been successfully created for this idea. It will be visible when the idea is approved.`,
+      [{ text: 'OK', style: 'default' }]
+    );
+
+    console.log('Poll created:', newPoll, 'for idea:', pollModalIdea.id);
+
+    // TODO: When database is connected, save poll to database
+    // const { error } = await IdeasService.createPoll({
+    //   idea_id: pollModalIdea.id,
+    //   question: newPoll.question,
+    //   options: newPoll.options
+    // });
   };
-  const handleUpdateStatus = (id: string, status: string) => {
+  const handleUpdateStatus = async (id: string, status: 'Pending' | 'In Progress' | 'Approved' | 'Rejected') => {
     setActionLoading(id + '-status');
-    setTimeout(() => {
-      setIdeas(prev => prev.map(i => i.id === id ? { ...i, status } : i));
-      setActionLoading(null);
+    try {
+             const { error } = await IdeasService.updateIdeaStatus(id, status, uuid.v4() as string);
+      
+      if (error) {
+        Alert.alert('Error', 'Failed to update status. Please try again.');
+        return;
+      }
+
+      // Reload ideas to get updated data
+      await loadIdeas();
       showToast('Status updated');
       setManageIdea(null);
-    }, 800);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update status. Please try again.');
+    } finally {
+      setActionLoading(null);
+    }
   };
   const handleDelete = (id: string) => {
     Alert.alert('Delete Idea', 'Are you sure you want to delete this idea?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive', onPress: () => {
-          setIdeas(prev => prev.filter(i => i.id !== id));
-          setManageIdea(null);
-          showToast('Idea deleted');
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            const { error } = await IdeasService.deleteIdea(id);
+            
+            if (error) {
+              Alert.alert('Error', 'Failed to delete idea. Please try again.');
+              return;
+            }
+
+            // Reload ideas to get updated data
+            await loadIdeas();
+            setManageIdea(null);
+            showToast('Idea deleted');
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete idea. Please try again.');
+          }
         }
       }
     ]);
@@ -236,7 +369,7 @@ export default function IdeasManagement() {
                 idea={idea}
                 onApprove={tab === 'pending' ? handleApprove : undefined}
                 onReject={tab === 'pending' ? handleReject : undefined}
-                onCreatePoll={tab === 'pending' ? handleCreatePoll : undefined}
+                onCreatePoll={handleCreatePoll}
                 onManage={() => setManageIdea(idea)}
                 isPending={tab === 'pending'}
                 actionLoading={actionLoading}
@@ -319,7 +452,7 @@ export default function IdeasManagement() {
                     { backgroundColor: isDarkMode ? '#2A2A2A' : '#eee' },
                     manageIdea?.status === IDEA_STATUS.IN_PROGRESS && styles.activeStatusBtn
                   ]}
-                  onPress={() => manageIdea && handleUpdateStatus(manageIdea.id, IDEA_STATUS.IN_PROGRESS)}
+                  onPress={() => manageIdea && handleUpdateStatus(manageIdea.id, 'In Progress')}
                   disabled={actionLoading === (manageIdea?.id || '') + '-status'}
                 >
                   <Text style={[
@@ -336,7 +469,7 @@ export default function IdeasManagement() {
                     { backgroundColor: isDarkMode ? '#2A2A2A' : '#eee' },
                     manageIdea?.status === IDEA_STATUS.APPROVED && styles.activeStatusBtn
                   ]}
-                  onPress={() => manageIdea && handleUpdateStatus(manageIdea.id, IDEA_STATUS.APPROVED)}
+                  onPress={() => manageIdea && handleUpdateStatus(manageIdea.id, 'Approved')}
                   disabled={actionLoading === (manageIdea?.id || '') + '-status'}
                 >
                   <Text style={[
@@ -407,8 +540,8 @@ function IdeaCard({ idea, onApprove, onReject, onCreatePoll, onManage, isPending
           </TouchableOpacity>
         )}
         {!isPending && (
-          <View style={[styles.statusBadge, idea.status === 'approved' ? styles.statusApproved : styles.statusInProgress]}>
-            <Text style={styles.statusBadgeText}>{idea.status === 'approved' ? 'Approved' : 'In Progress'}</Text>
+          <View style={[styles.statusBadge, idea.status === 'Approved' ? styles.statusApproved : styles.statusInProgress]}>
+            <Text style={styles.statusBadgeText}>{idea.status === 'Approved' ? 'Approved' : 'In Progress'}</Text>
           </View>
         )}
       </View>
@@ -426,20 +559,29 @@ function IdeaCard({ idea, onApprove, onReject, onCreatePoll, onManage, isPending
           ))}
         </View>
       )}
-      {isPending ? (
-        <View style={styles.ideaCardActions}>
-          <TouchableOpacity style={[styles.rejectBtn, isRejectLoading && styles.btnDisabled]} onPress={() => !isRejectLoading && onReject && onReject(idea.id)} disabled={isRejectLoading} accessibilityLabel="Reject this idea">
-            {isRejectLoading ? <ActivityIndicator size={16} color="#fff" /> : <Text style={styles.rejectBtnText}>Reject</Text>}
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.approveBtn, isApproveLoading && styles.btnDisabled]} onPress={() => !isApproveLoading && onApprove && onApprove(idea.id)} disabled={isApproveLoading} accessibilityLabel="Approve this idea">
-            {isApproveLoading ? <ActivityIndicator size={16} color="#fff" /> : <Text style={styles.approveBtnText}>Approve</Text>}
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity style={styles.manageBtn} onPress={onManage} accessibilityLabel="Manage this idea">
-          <Text style={styles.manageBtnText}>Manage Idea</Text>
+      <View style={styles.ideaCardActions}>
+        {isPending && (
+          <>
+            <TouchableOpacity style={[styles.rejectBtn, isRejectLoading && styles.btnDisabled]} onPress={() => !isRejectLoading && onReject && onReject(idea.id)} disabled={isRejectLoading} accessibilityLabel="Reject this idea">
+              {isRejectLoading ? <ActivityIndicator size={16} color="#fff" /> : <Text style={styles.rejectBtnText}>Reject</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.approveBtn, isApproveLoading && styles.btnDisabled]} onPress={() => !isApproveLoading && onApprove && onApprove(idea.id)} disabled={isApproveLoading} accessibilityLabel="Approve this idea">
+              {isApproveLoading ? <ActivityIndicator size={16} color="#fff" /> : <Text style={styles.approveBtnText}>Approve</Text>}
+            </TouchableOpacity>
+          </>
+        )}
+        
+        {/* Add Poll button - always available */}
+        <TouchableOpacity style={[styles.addPollBtn, isPollLoading && styles.btnDisabled]} onPress={() => !isPollLoading && onCreatePoll && onCreatePoll(idea.id)} disabled={isPollLoading} accessibilityLabel="Add poll to this idea">
+          {isPollLoading ? <ActivityIndicator size={16} color="#fff" /> : <Text style={styles.addPollBtnText}>{idea.hasPoll ? 'Update Poll' : 'Add Poll'}</Text>}
         </TouchableOpacity>
-      )}
+        
+        {!isPending && (
+          <TouchableOpacity style={styles.manageBtn} onPress={onManage} accessibilityLabel="Manage this idea">
+            <Text style={styles.manageBtnText}>Manage Idea</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -589,16 +731,33 @@ const styles = StyleSheet.create({
   },
   ideaCardActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
     marginTop: 8,
   },
   rejectBtn: {
     backgroundColor: '#E74C3C',
     borderRadius: 8,
     paddingVertical: 8,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    flex: 1,
+    alignItems: 'center',
   },
   rejectBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  addPollBtn: {
+    backgroundColor: '#9C27B0',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    flex: 1,
+    alignItems: 'center',
+    minWidth: 100,
+  },
+  addPollBtnText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 14,
@@ -607,7 +766,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#3CB371',
     borderRadius: 8,
     paddingVertical: 8,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    flex: 1,
+    alignItems: 'center',
   },
   approveBtnText: {
     color: '#fff',
@@ -618,9 +779,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#7D3C98',
     borderRadius: 8,
     paddingVertical: 8,
-    paddingHorizontal: 24,
-    alignSelf: 'flex-end',
-    marginTop: 8,
+    paddingHorizontal: 20,
+    flex: 1,
+    alignItems: 'center',
   },
   manageBtnText: {
     color: '#fff',
