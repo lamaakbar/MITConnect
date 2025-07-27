@@ -297,7 +297,12 @@ export default function TraineeHome() {
             </View>
           ) : (
             <>
-              <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
+              <View style={styles.sectionHeaderContainer}>
+                <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+                  <Ionicons name="star" size={20} color="#43C6AC" />
+                </View>
+                <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
+              </View>
               <AutoCarousel
                 data={highlightCards}
                 cardWidth={320}
@@ -340,7 +345,12 @@ export default function TraineeHome() {
             </View>
           ) : (
             <>
-              <Text style={[styles.sectionTitle, { color: textColor }]}>Upcoming Events</Text>
+              <View style={styles.sectionHeaderContainer}>
+                <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+                  <Ionicons name="calendar" size={20} color="#7B61FF" />
+                </View>
+                <Text style={[styles.sectionTitle, { color: textColor }]}>Upcoming Events</Text>
+              </View>
               <FlatList
                 data={upcomingEvents}
                 keyExtractor={item => item.id}
@@ -378,7 +388,12 @@ export default function TraineeHome() {
             />
             </>
           )}
-          <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Portal Access</Text>
+          <View style={styles.sectionHeaderContainer}>
+            <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+              <Ionicons name="grid" size={20} color="#FF6B35" />
+            </View>
+            <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Portal Access</Text>
+          </View>
           <View style={styles.portalRow}>
             {portalLinks.map(link => (
               <TouchableOpacity
@@ -399,7 +414,12 @@ export default function TraineeHome() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Book of the Month</Text>
+                      <View style={styles.sectionHeaderContainer}>
+              <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+                <Ionicons name="book" size={20} color="#1abc9c" />
+              </View>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Book of the Month</Text>
+            </View>
           {loadingBookOfMonth ? (
             <View style={[styles.emptyState, { backgroundColor: cardBackground }]}>
               <Ionicons name="book-outline" size={64} color={secondaryTextColor} />
@@ -537,13 +557,34 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 90,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#222',
+  sectionHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginLeft: 16,
     marginTop: 18,
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  sectionIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#222',
+    marginLeft: 0,
+    marginTop: 0,
+    marginBottom: 0,
+    letterSpacing: 0.5,
   },
   subtitle: {
     fontSize: 15,

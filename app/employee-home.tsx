@@ -256,7 +256,12 @@ export default function EmployeeHome() {
         </View> 
       </View>
         <ScrollView contentContainerStyle={[styles.scrollContent, {flexGrow: 1}]} showsVerticalScrollIndicator={false}>
-          <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
+          <View style={styles.sectionHeaderContainer}>
+            <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+              <Ionicons name="star" size={20} color="#43C6AC" />
+            </View>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
+          </View>
           <AutoCarousel
             data={highlightCards}
             cardWidth={320}
@@ -287,7 +292,12 @@ export default function EmployeeHome() {
             )}
           />
               {/* Upcoming Events Section */}
-          <Text style={[styles.sectionTitle, { color: textColor }]}>Upcoming Events</Text>
+          <View style={styles.sectionHeaderContainer}>
+            <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+              <Ionicons name="calendar" size={20} color="#7B61FF" />
+            </View>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>Upcoming Events</Text>
+          </View>
           {upcomingEvents && upcomingEvents.length > 0 ? (
             <FlatList
               data={upcomingEvents}
@@ -342,7 +352,12 @@ export default function EmployeeHome() {
           )}
 
           {/* Portal Access Section */}
-          <Text style={[styles.sectionTitle, { color: textColor }]}>Portal Access</Text>
+          <View style={styles.sectionHeaderContainer}>
+            <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+              <Ionicons name="grid" size={20} color="#FF6B35" />
+            </View>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>Portal Access</Text>
+          </View>
           <View style={styles.portalRow}>
             {portalLinks.map(link => (
               <TouchableOpacity
@@ -363,7 +378,12 @@ export default function EmployeeHome() {
           </View>
 
           {/* Book of the Month Section */}
-          <Text style={[styles.sectionTitle, { color: textColor }]}>Book of the Month</Text>
+          <View style={styles.sectionHeaderContainer}>
+            <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+              <Ionicons name="book" size={20} color="#1abc9c" />
+            </View>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>Book of the Month</Text>
+          </View>
           {loading ? (
             <Text style={{ textAlign: 'center', color: secondaryTextColor, marginTop: 20 }}>Loading...</Text>
           ) : bookOfMonth ? (
@@ -475,13 +495,34 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 90,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#222',
+  sectionHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginLeft: 16,
     marginTop: 18,
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  sectionIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#222',
+    marginLeft: 0,
+    marginTop: 0,
+    marginBottom: 0,
+    letterSpacing: 0.5,
   },
   eventCard: {
     backgroundColor: '#fff',
