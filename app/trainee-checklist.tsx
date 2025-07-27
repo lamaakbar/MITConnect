@@ -56,6 +56,8 @@ export default function TraineeChecklist() {
   const [showPreviousFeedbacks, setShowPreviousFeedbacks] = useState(false);
   const [isLoadingFeedbacks, setIsLoadingFeedbacks] = useState(true);
   const [feedbackLoadError, setFeedbackLoadError] = useState<string | null>(null);
+  const [userFeedbackCount, setUserFeedbackCount] = useState(0);
+  const [firstFeedbackRating, setFirstFeedbackRating] = useState(0);
   
   const completed = checked.filter(Boolean).length;
   const progress = completed / CHECKLIST_ITEMS.length;
@@ -91,12 +93,21 @@ export default function TraineeChecklist() {
 
   // Feedback submission function
   const submitFeedback = async () => {
+    // Check if user has reached the limit
+    if (userFeedbackCount >= 2) {
+      Alert.alert('Limit Reached', 'You have already submitted the maximum number of feedbacks (2).');
+      return;
+    }
+    
     if (!feedbackText.trim()) {
       Alert.alert('Error', 'Please enter your feedback before submitting.');
       return;
     }
     
-    if (feedbackRating === 0) {
+    // For second feedback, rating is automatically set to first feedback's rating
+    const finalRating = userFeedbackCount === 1 ? firstFeedbackRating : feedbackRating;
+    
+    if (userFeedbackCount === 0 && feedbackRating === 0) {
       Alert.alert('Error', 'Please select a rating before submitting.');
       return;
     }
@@ -107,7 +118,7 @@ export default function TraineeChecklist() {
       // Create feedback input for the service
       const feedbackInput: CreateFeedbackInput = {
         feedback_text: feedbackText.trim(),
-        rating: feedbackRating,
+        rating: finalRating,
         // trainee_name will be automatically derived from user profile in the service
       };
 
@@ -124,13 +135,24 @@ export default function TraineeChecklist() {
         const newUIFeedback = convertToUIFeedback(data);
         setSubmittedFeedbacks(prev => [newUIFeedback, ...prev]);
         
+        // Update user feedback count and set first rating if this was the first feedback
+        setUserFeedbackCount(prev => prev + 1);
+        if (userFeedbackCount === 0) {
+          setFirstFeedbackRating(finalRating);
+        }
+        
         // Reset form
         setFeedbackText('');
-        setFeedbackRating(0);
+        if (userFeedbackCount === 0) {
+          setFeedbackRating(0); // Only reset rating for first feedback
+        }
         
+        const isSecondFeedback = userFeedbackCount === 1;
         Alert.alert(
           'Success!', 
-          'Thank you for your feedback! Your response has been submitted successfully.',
+          isSecondFeedback 
+            ? 'Thank you for your additional feedback! You have now submitted both of your allowed feedbacks.'
+            : 'Thank you for your feedback! You can submit one more feedback with the same rating.',
           [{ text: 'OK', style: 'default' }]
         );
       }
@@ -147,6 +169,13 @@ export default function TraineeChecklist() {
   const setRating = (rating: number) => {
     setFeedbackRating(rating);
   };
+
+  // Auto-set rating for second feedback
+  useEffect(() => {
+    if (userFeedbackCount === 1 && firstFeedbackRating > 0) {
+      setFeedbackRating(firstFeedbackRating);
+    }
+  }, [userFeedbackCount, firstFeedbackRating]);
 
 
 
@@ -299,19 +328,35 @@ export default function TraineeChecklist() {
       setFeedbackLoadError(null);
       
       try {
-        const { data, error } = await FeedbackService.getAllFeedback();
+        // Get all feedbacks for display
+        const { data: allData, error: allError } = await FeedbackService.getAllFeedback();
         
-        if (error) {
-          console.error('Error loading feedbacks:', error);
-          setFeedbackLoadError(error);
-          // Don't show alert for loading errors, just set error state
+        if (allError) {
+          console.error('Error loading all feedbacks:', allError);
+          setFeedbackLoadError(allError);
           return;
         }
         
-        if (data) {
+        // Get current user's feedbacks for count and rating check
+        const { data: userData, error: userError } = await FeedbackService.getUserFeedback();
+        
+        if (userError) {
+          console.error('Error loading user feedbacks:', userError);
+          // Continue even if user feedback fails, just won't have limits
+        }
+        
+        if (allData) {
           // Convert database feedback to UI feedback format
-          const uiFeedbacks = data.map(convertToUIFeedback);
+          const uiFeedbacks = allData.map(convertToUIFeedback);
           setSubmittedFeedbacks(uiFeedbacks);
+        }
+        
+        if (userData) {
+          setUserFeedbackCount(userData.length);
+          if (userData.length > 0) {
+            // Set the first feedback's rating for the second feedback form
+            setFirstFeedbackRating(userData[0].rating);
+          }
         }
       } catch (error) {
         console.error('Unexpected error loading feedbacks:', error);
@@ -578,91 +623,167 @@ export default function TraineeChecklist() {
               </Text>
             </View>
 
-            {/* Feedback Form */}
-            <Text style={{
-              fontSize: 18,
-              fontWeight: '600',
-              color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
-              marginBottom: 16
-            }}>
-              Share Your Training Experience
-            </Text>
+            {/* Feedback Form - Conditional based on submission count */}
+            {userFeedbackCount >= 2 ? (
+              // User has reached the limit
+              <View style={{ alignItems: 'center', marginBottom: 16 }}>
+                <Ionicons name="checkmark-circle" size={48} color="#34C759" style={{ marginBottom: 12 }} />
+                <Text style={{
+                  fontSize: 18,
+                  fontWeight: '600',
+                  color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+                  marginBottom: 8,
+                  textAlign: 'center'
+                }}>
+                  Feedback Complete
+                </Text>
+                <Text style={{
+                  fontSize: 14,
+                  color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93',
+                  textAlign: 'center',
+                  lineHeight: 20
+                }}>
+                  You have submitted both of your allowed feedbacks. Thank you for sharing your training experience!
+                </Text>
+              </View>
+            ) : (
+              // User can still submit feedback
+              <>
+                <Text style={{
+                  fontSize: 18,
+                  fontWeight: '600',
+                  color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+                  marginBottom: 16
+                }}>
+                  {userFeedbackCount === 0 ? 'Share Your Training Experience' : 'Additional Feedback'}
+                </Text>
 
-            {/* Rating Section */}
-            <Text style={{
-              fontSize: 14,
-              fontWeight: '500',
-              color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
-              marginBottom: 8
-            }}>
-              Rate your overall experience:
-            </Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16 }}>
-              {[1, 2, 3, 4, 5].map((star) => (
+                {userFeedbackCount === 1 && (
+                  <View style={{
+                    backgroundColor: userRole === 'trainee' && isDarkMode ? '#1A1A1A' : '#F0F8FF',
+                    borderRadius: 8,
+                    padding: 12,
+                    marginBottom: 16,
+                    borderLeftWidth: 4,
+                    borderLeftColor: '#007AFF'
+                  }}>
+                    <Text style={{
+                      fontSize: 14,
+                      color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+                      fontWeight: '500'
+                    }}>
+                      📝 Second Feedback: Your rating will remain the same as your first feedback. You can only update your comments.
+                    </Text>
+                  </View>
+                )}
+
+                {/* Rating Section */}
+                <Text style={{
+                  fontSize: 14,
+                  fontWeight: '500',
+                  color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+                  marginBottom: 8
+                }}>
+                  {userFeedbackCount === 1 ? 'Your rating (locked):' : 'Rate your overall experience:'}
+                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16 }}>
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const currentRating = userFeedbackCount === 1 ? firstFeedbackRating : feedbackRating;
+                    const isDisabled = userFeedbackCount === 1;
+                    
+                    return (
+                      <TouchableOpacity
+                        key={star}
+                        onPress={() => !isDisabled && setRating(star)}
+                        style={{ 
+                          marginHorizontal: 4,
+                          opacity: isDisabled ? 0.6 : 1
+                        }}
+                        disabled={isDisabled}
+                      >
+                        <Ionicons
+                          name={star <= currentRating ? "star" : "star-outline"}
+                          size={32}
+                          color={star <= currentRating ? "#FFD700" : (userRole === 'trainee' && isDarkMode ? darkSecondary : "#C7C7CC")}
+                        />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Feedback Text Input */}
+                <Text style={{
+                  fontSize: 14,
+                  fontWeight: '500',
+                  color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+                  marginBottom: 8
+                }}>
+                  {userFeedbackCount === 1 ? 'Add additional comments:' : 'Tell us about your experience:'}
+                </Text>
+                <TextInput
+                  style={{
+                    backgroundColor: userRole === 'trainee' && isDarkMode ? darkBg : '#F8F8F8',
+                    borderRadius: 12,
+                    padding: 16,
+                    minHeight: 100,
+                    fontSize: 16,
+                    color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
+                    textAlignVertical: 'top',
+                    borderWidth: 1,
+                    borderColor: userRole === 'trainee' && isDarkMode ? darkBorder : '#E5E5EA',
+                    marginBottom: 16
+                  }}
+                  multiline
+                  numberOfLines={4}
+                  placeholder={
+                    userFeedbackCount === 1 
+                      ? "Share any additional thoughts, updates, or new observations..."
+                      : "Share your thoughts about the training program, mentorship, challenges, and suggestions for improvement..."
+                  }
+                  placeholderTextColor={userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93'}
+                  value={feedbackText}
+                  onChangeText={setFeedbackText}
+                />
+
+                {/* Submit Button */}
                 <TouchableOpacity
-                  key={star}
-                  onPress={() => setRating(star)}
-                  style={{ marginHorizontal: 4 }}
+                  style={{
+                    backgroundColor: userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759',
+                    borderRadius: 12,
+                    padding: 16,
+                    alignItems: 'center',
+                    opacity: isSubmittingFeedback ? 0.7 : 1,
+                  }}
+                  onPress={submitFeedback}
+                  disabled={isSubmittingFeedback}
                 >
-                  <Ionicons
-                    name={star <= feedbackRating ? "star" : "star-outline"}
-                    size={32}
-                    color={star <= feedbackRating ? "#FFD700" : (userRole === 'trainee' && isDarkMode ? darkSecondary : "#C7C7CC")}
-                  />
+                  <Text style={{
+                    color: '#fff',
+                    fontSize: 16,
+                    fontWeight: '600'
+                  }}>
+                    {isSubmittingFeedback 
+                      ? 'Submitting...' 
+                      : userFeedbackCount === 1 
+                        ? 'Submit Additional Feedback' 
+                        : 'Submit Feedback'
+                    }
+                  </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
 
-            {/* Feedback Text Input */}
-            <Text style={{
-              fontSize: 14,
-              fontWeight: '500',
-              color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
-              marginBottom: 8
-            }}>
-              Tell us about your experience:
-            </Text>
-            <TextInput
-              style={{
-                backgroundColor: userRole === 'trainee' && isDarkMode ? darkBg : '#F8F8F8',
-                borderRadius: 12,
-                padding: 16,
-                minHeight: 100,
-                fontSize: 16,
-                color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
-                textAlignVertical: 'top',
-                borderWidth: 1,
-                borderColor: userRole === 'trainee' && isDarkMode ? darkBorder : '#E5E5EA',
-                marginBottom: 16
-              }}
-              multiline
-              numberOfLines={4}
-              placeholder="Share your thoughts about the training program, mentorship, challenges, and suggestions for improvement..."
-              placeholderTextColor={userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93'}
-              value={feedbackText}
-              onChangeText={setFeedbackText}
-            />
-
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={{
-                backgroundColor: userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759',
-                borderRadius: 12,
-                padding: 16,
-                alignItems: 'center',
-                opacity: isSubmittingFeedback ? 0.7 : 1,
-              }}
-              onPress={submitFeedback}
-              disabled={isSubmittingFeedback}
-            >
-              <Text style={{
-                color: '#fff',
-                fontSize: 16,
-                fontWeight: '600'
-              }}>
-                {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'}
-              </Text>
-            </TouchableOpacity>
+                {userFeedbackCount === 0 && (
+                  <Text style={{
+                    fontSize: 12,
+                    color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93',
+                    textAlign: 'center',
+                    marginTop: 8,
+                    fontStyle: 'italic'
+                  }}>
+                    You can submit up to 2 feedbacks. The second feedback will keep the same rating.
+                  </Text>
+                )}
+              </>
+            )}
           </View>
         )}
 
