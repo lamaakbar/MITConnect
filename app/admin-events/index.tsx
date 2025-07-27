@@ -25,19 +25,42 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../../components/ThemeContext';
 import { useEventContext } from '../../components/EventContext';
-import AdminTabBar from '../../components/AdminTabBar';
+
 import AdminHeader from '../../components/AdminHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DatePickerModal from '../../components/DatePickerModal';
+import TimePickerModal from '../../components/TimePickerModal';
 
 // Import event service
 import eventService, { EventService } from '../../services/EventService';
 
 const FILTERS = ['All', 'Upcoming', 'Past'];
 
+// Helper function to get the correct image source for an event
+const getEventImageSource = (event: any) => {
+  // If coverImage is a string (URI from database), use it
+  if (event.coverImage && typeof event.coverImage === 'string' && event.coverImage.trim() !== '') {
+    return { uri: event.coverImage };
+  }
+  
+  // If coverImage is an object with uri property
+  if (event.coverImage && typeof event.coverImage === 'object' && event.coverImage.uri) {
+    return { uri: event.coverImage.uri };
+  }
+  
+  // If image is a require() object, use it
+  if (event.image && typeof event.image === 'object') {
+    return event.image;
+  }
+  
+  // Default placeholder image
+  return require('../../assets/images/splash-icon.png');
+};
+
 const AdminEventListScreen: React.FC = () => {
   const router = useRouter();
   const { isDarkMode } = useTheme();
-  const { handleEventDeletion } = useEventContext();
+  const { handleEventDeletion, updateEventInContext, addEventToContext } = useEventContext();
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -49,6 +72,8 @@ const AdminEventListScreen: React.FC = () => {
   const overlayBackground = isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.3)';
   
   const [search, setSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [events, setEvents] = useState<any[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -63,6 +88,12 @@ const AdminEventListScreen: React.FC = () => {
   const [addDescription, setAddDescription] = useState('');
   const [addLoading, setAddLoading] = useState(false);
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+
+  // Date and Time Picker states
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedTime, setSelectedTime] = useState(new Date());
 
   // Add Edit Event modal state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -84,6 +115,31 @@ const AdminEventListScreen: React.FC = () => {
     fetchEvents();
   }, []);
 
+  // Search effect
+  useEffect(() => {
+    const performSearch = async () => {
+      if (search.trim()) {
+        setIsSearching(true);
+        try {
+          const results = await eventService.searchEvents(search);
+          setSearchResults(results);
+        } catch (error) {
+          console.error('Search error:', error);
+          setSearchResults([]);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+        setIsSearching(false);
+      }
+    };
+
+    // Debounce search to avoid too many API calls
+    const timeoutId = setTimeout(performSearch, 300);
+    return () => clearTimeout(timeoutId);
+  }, [search]);
+
   const fetchEvents = async () => {
     try {
       setLoading(true);
@@ -96,34 +152,51 @@ const AdminEventListScreen: React.FC = () => {
     }
   };
 
-  // Test functionality (for debugging)
-  const testFunctionality = async () => {
-    console.log('🧪 Running functionality tests...');
-    const results = await eventService.testAllFunctionality();
-    
-    const allPassed = Object.values(results).every(result => result);
-    if (allPassed) {
-      alert('✅ All tests passed! Check console for details.');
-    } else {
-      alert('❌ Some tests failed. Check console for details.');
-    }
-  };
 
-  // Debug session state
-  const debugSession = async () => {
-    console.log('🔍 Debugging session state...');
-    await eventService.debugSessionState();
-    alert('🔍 Session debug completed! Check console for details.');
-  };
   const [attendeesSearch, setAttendeesSearch] = useState('');
   // Add state for attendeeStatus
   const [attendeeStatus, setAttendeeStatus] = useState<'Confirmed' | 'Canceled'>('Confirmed');
   // Add state to track which event's attendees are being shown
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
 
-  // Filter events based on filter selection (mock logic)
-  const featuredEvent = events.find((e) => e.featured);
-  const filteredEvents = events.filter((e) => !e.featured);
+  // Helper function to check if event is in the past
+  const isEventInPast = (eventDate: string, eventTime: string) => {
+    try {
+      const today = new Date();
+      const eventDateTime = new Date(`${eventDate} ${eventTime}`);
+      return eventDateTime < today;
+    } catch (error) {
+      console.error('Error parsing event date/time:', error);
+      return false;
+    }
+  };
+
+  // Use search results if searching, otherwise use all events
+  const eventsToUse = search.trim() ? searchResults : events;
+  
+  // Categorize events into upcoming and past
+  const upcomingEvents = eventsToUse.filter((e) => !isEventInPast(e.date, e.time));
+  const pastEvents = eventsToUse.filter((e) => isEventInPast(e.date, e.time));
+  
+  // Filter events based on selected filter
+  let filteredEvents: any[] = [];
+  let featuredEvent: any = null;
+  
+  switch (selectedFilter) {
+    case 'Upcoming':
+      filteredEvents = upcomingEvents.filter((e) => !e.featured);
+      featuredEvent = upcomingEvents.find((e) => e.featured);
+      break;
+    case 'Past':
+      filteredEvents = pastEvents.filter((e) => !e.featured);
+      featuredEvent = pastEvents.find((e) => e.featured);
+      break;
+    case 'All':
+    default:
+      filteredEvents = eventsToUse.filter((e) => !e.featured);
+      featuredEvent = eventsToUse.find((e) => e.featured);
+      break;
+  }
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -135,6 +208,55 @@ const AdminEventListScreen: React.FC = () => {
     if (!result.canceled && result.assets.length > 0) {
       setAddImage(result.assets[0].uri);
     }
+  };
+
+  // Date Picker Functions
+  const openDatePicker = () => {
+    setShowDatePicker(true);
+  };
+
+  const onDateConfirm = (date: Date) => {
+    setSelectedDate(date);
+    // Format date as YYYY-MM-DD for better compatibility with validation
+    const formattedDate = date.toISOString().split('T')[0];
+    
+    // Update the appropriate date field based on which modal is open
+    if (showEditModal) {
+      setEditDate(formattedDate);
+    } else {
+      setAddDate(formattedDate);
+    }
+    setShowDatePicker(false);
+  };
+
+  const onDateCancel = () => {
+    setShowDatePicker(false);
+  };
+
+  // Time Picker Functions
+  const openTimePicker = () => {
+    setShowTimePicker(true);
+  };
+
+  const onTimeConfirm = (time: Date) => {
+    setSelectedTime(time);
+    const formattedTime = time.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    // Update the appropriate time field based on which modal is open
+    if (showEditModal) {
+      setEditTime(formattedTime);
+    } else {
+      setAddTime(formattedTime);
+    }
+    setShowTimePicker(false);
+  };
+
+  const onTimeCancel = () => {
+    setShowTimePicker(false);
   };
 
   const handleAddEvent = async () => {
@@ -171,13 +293,6 @@ const AdminEventListScreen: React.FC = () => {
         return;
       }
 
-      console.log('Creating event with validated data:', {
-        title: addTitle,
-        date: formattedDate,
-        time: normalizedTime,
-        location: addLocation
-      });
-
       const newEvent = await eventService.createEvent({
         title: addTitle,
         description: addDescription,
@@ -193,6 +308,10 @@ const AdminEventListScreen: React.FC = () => {
       });
 
       if (newEvent) {
+        // Add the new event to the global context
+        await addEventToContext(newEvent);
+        
+        // Also update local state for immediate UI update
         setEvents(prev => [...prev, newEvent]);
         setShowAddModal(false);
         
@@ -218,42 +337,98 @@ const AdminEventListScreen: React.FC = () => {
   // Open Edit Modal and populate fields
   const openEditModal = (idx: number) => {
     const e = filteredEvents[idx];
+    
     setEditIndex(idx);
-    setEditImage(e.coverImage?.uri || null);
-    setEditTitle(e.title);
-    setEditType(e.type);
-    setEditDate(e.date);
-    setEditTime(e.time);
-    setEditLocation(e.location);
-    setEditDescription(e.description);
+    
+    // Handle different image source formats
+    if (e.coverImage && typeof e.coverImage === 'string') {
+      setEditImage(e.coverImage);
+    } else if (e.coverImage && e.coverImage.uri) {
+      setEditImage(e.coverImage.uri);
+    } else {
+      setEditImage(null);
+    }
+    
+    setEditTitle(e.title || '');
+    setEditType(e.type || '');
+    setEditDate(e.date || '');
+    setEditTime(e.time || '');
+    setEditLocation(e.location || '');
+    setEditDescription(e.description || '');
+    
     setShowEditModal(true);
   };
 
   // Handle Edit Save
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     setEditLoading(true);
-    setTimeout(() => {
-      setEditLoading(false);
+    try {
       if (!editTitle || !editType || !editDate || !editTime || !editLocation || !editDescription) {
-        alert('Please fill in all fields.');
+        Alert.alert('Validation Error', 'Please fill in all fields.');
         return;
       }
+
       if (editIndex !== null) {
-        const updatedEvents = [...events];
-        const eventToUpdate = updatedEvents.find(e => e.id === filteredEvents[editIndex].id);
-        if (eventToUpdate) {
-          eventToUpdate.title = editTitle;
-          eventToUpdate.type = editType;
-          eventToUpdate.date = editDate;
-          eventToUpdate.time = editTime;
-          eventToUpdate.location = editLocation;
-          eventToUpdate.description = editDescription;
-          if (editImage) {
-            eventToUpdate.coverImage = { uri: editImage };
-          }
+        const eventToUpdate = filteredEvents[editIndex];
+        
+        // Validate date format
+        const formattedDate = EventService.validateAndFormatDate(editDate);
+        if (!formattedDate) {
+          Alert.alert('Date Error', 'Invalid date format. Please use a valid date.');
+          return;
         }
-        setEvents(updatedEvents);
+
+        // Validate time format
+        if (!EventService.validateTimeFormat(editTime)) {
+          Alert.alert('Time Error', 'Invalid time format. Please use HH:MM or HH:MM AM/PM format (e.g., 14:30 or 2:30 PM).');
+          return;
+        }
+
+        // Normalize time to 24-hour format
+        const normalizedTime = EventService.normalizeTimeFormat(editTime);
+        if (!normalizedTime) {
+          Alert.alert('Time Error', 'Could not process time format. Please check your input.');
+          return;
+        }
+
+        const updateSuccess = await eventService.updateEvent(eventToUpdate.id, {
+          title: editTitle,
+          description: editDescription,
+          date: formattedDate,
+          time: normalizedTime,
+          location: editLocation,
+          coverImage: editImage || undefined,
+          category: editType as any,
+          type: 'MITC'
+        });
+
+        if (updateSuccess) {
+          // Fetch the updated event data to ensure we have the latest version
+          const updatedEventData = await eventService.getEventById(eventToUpdate.id);
+          
+          if (updatedEventData) {
+            // Update the event in the global context
+            await updateEventInContext(updatedEventData);
+          }
+          
+          // Also refresh the local events list for immediate UI update
+          await fetchEvents();
+          
+          // Show success message
+          if (Platform.OS === 'android') {
+            ToastAndroid.show('Event updated successfully', ToastAndroid.SHORT);
+          } else {
+            Alert.alert('Success', 'Event updated successfully');
+          }
+        } else {
+          Alert.alert('Error', 'Failed to update event. Please try again.');
+        }
       }
+    } catch (error) {
+      console.error('Error updating event:', error);
+      Alert.alert('Error', 'An error occurred while updating the event.');
+    } finally {
+      setEditLoading(false);
       setShowEditModal(false);
       setEditIndex(null);
       setEditImage(null);
@@ -263,7 +438,7 @@ const AdminEventListScreen: React.FC = () => {
       setEditTime('');
       setEditLocation('');
       setEditDescription('');
-    }, 800);
+    }
   };
 
   // Handle Edit Delete
@@ -303,8 +478,6 @@ const AdminEventListScreen: React.FC = () => {
                   } else {
                     Alert.alert('Success', 'Event deleted successfully');
                   }
-                  
-                  console.log('Event deleted successfully:', eventToDelete.id);
                 } else {
                   Alert.alert('Error', 'Failed to delete event. Please try again.');
                 }
@@ -383,7 +556,8 @@ const AdminEventListScreen: React.FC = () => {
 
   const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor }}>
+    <>
+      <SafeAreaView style={{ flex: 1, backgroundColor }}>
       {/* Unified Admin Header */}
       <AdminHeader 
         title=""
@@ -399,6 +573,9 @@ const AdminEventListScreen: React.FC = () => {
           value={search}
           onChangeText={setSearch}
         />
+        {isSearching && (
+          <ActivityIndicator size="small" color="#43C6AC" style={{ marginLeft: 8 }} />
+        )}
       </View>
 
       {/* Filter Tabs */}
@@ -432,11 +609,18 @@ const AdminEventListScreen: React.FC = () => {
         bounces={true}
       >
         {/* Empty State */}
-        {events.length === 0 ? (
+        {(search.trim() ? searchResults.length === 0 : events.length === 0) ? (
           <View style={styles.emptyState}>
             <Ionicons name="calendar-outline" size={64} color="#ccc" />
-            <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Events Created</Text>
-            <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>Start by creating your first event to manage activities and track attendees.</Text>
+            <Text style={[styles.emptyStateTitle, { color: textColor }]}>
+              {search.trim() ? 'No Events Found' : 'No Events Created'}
+            </Text>
+            <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+              {search.trim() 
+                ? `No events found matching "${search}". Try a different search term.`
+                : 'Start by creating your first event to manage activities and track attendees.'
+              }
+            </Text>
           </View>
         ) : (
           <>
@@ -447,7 +631,12 @@ const AdminEventListScreen: React.FC = () => {
                 onPress={() => router.push(`/admin-events/${featuredEvent.id}/details`)}
                 activeOpacity={0.8}
               >
-                <Image source={featuredEvent.coverImage} style={styles.featuredImage} />
+                <Image 
+                  source={getEventImageSource(featuredEvent)} 
+                  style={styles.featuredImage}
+                  resizeMode="cover"
+                  onError={() => console.log('Failed to load featured event image:', featuredEvent.id)}
+                />
                 <View style={styles.featuredOverlay}>
                   <View style={styles.featuredBadge}>
                     <Text style={styles.featuredText}>Featured</Text>
@@ -458,43 +647,143 @@ const AdminEventListScreen: React.FC = () => {
               </TouchableOpacity>
             )}
 
-            {/* Regular Events */}
-            {filteredEvents.map((event, index) => (
-              <TouchableOpacity 
-                key={event.id}
-                style={[styles.eventCard, { backgroundColor: cardBackground, borderColor }]}
-                onPress={() => router.push(`/admin-events/${event.id}/details`)}
-                activeOpacity={0.8}
-              >
-                <Image source={event.coverImage} style={styles.eventImage} />
-                <View style={styles.eventInfo}>
-                  <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
-                  <Text style={[styles.eventType, { color: '#3CB371' }]}>{event.type}</Text>
-                  <Text style={[styles.eventDate, { color: secondaryTextColor }]}>{formatDate(event.date)} • {event.time}</Text>
-                  <Text style={[styles.eventLocation, { color: secondaryTextColor }]}>{event.location}</Text>
-                </View>
-                <View style={styles.eventActions}>
-                  <TouchableOpacity 
-                    style={styles.actionBtn}
-                    onPress={() => openAttendeesModal(event.id)}
-                  >
-                    <Ionicons name="people" size={20} color="#3CB371" />
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.actionBtn}
-                    onPress={() => openEditModal(index)}
-                  >
-                    <Ionicons name="create" size={20} color="#4A90E2" />
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            ))}
+            {/* Show categorized events when "All" is selected */}
+            {selectedFilter === 'All' ? (
+              <>
+                {/* Upcoming Events Section */}
+                {upcomingEvents.length > 0 && (
+                  <View style={styles.sectionContainer}>
+                    <View style={styles.sectionHeader}>
+                      <Ionicons name="calendar-outline" size={20} color="#3CB371" />
+                      <Text style={[styles.sectionTitle, { color: textColor }]}>Upcoming Events ({upcomingEvents.length})</Text>
+                    </View>
+                    {upcomingEvents.map((event, index) => (
+                      <TouchableOpacity 
+                        key={event.id}
+                        style={[styles.eventCard, { backgroundColor: cardBackground, borderColor }]}
+                        onPress={() => router.push(`/admin-events/${event.id}/details`)}
+                        activeOpacity={0.8}
+                      >
+                        <Image 
+                          source={getEventImageSource(event)} 
+                          style={styles.eventImage}
+                          resizeMode="cover"
+                          onError={() => console.log('Failed to load image for event:', event.id)}
+                        />
+                        <View style={styles.eventInfo}>
+                          <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
+                          <Text style={[styles.eventType, { color: '#3CB371' }]}>{event.type}</Text>
+                          <Text style={[styles.eventDate, { color: secondaryTextColor }]}>{formatDate(event.date)} • {event.time}</Text>
+                          <Text style={[styles.eventLocation, { color: secondaryTextColor }]}>{event.location}</Text>
+                        </View>
+                        <View style={styles.eventActions}>
+                          <TouchableOpacity 
+                            style={styles.actionBtn}
+                            onPress={() => openAttendeesModal(event.id)}
+                          >
+                            <Ionicons name="people" size={20} color="#3CB371" />
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.actionBtn}
+                            onPress={() => openEditModal(events.findIndex(e => e.id === event.id))}
+                          >
+                            <Ionicons name="create" size={20} color="#4A90E2" />
+                          </TouchableOpacity>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {/* Past Events Section */}
+                {pastEvents.length > 0 && (
+                  <View style={styles.sectionContainer}>
+                    <View style={styles.sectionHeader}>
+                      <Ionicons name="time-outline" size={20} color="#888" />
+                      <Text style={[styles.sectionTitle, { color: textColor }]}>Past Events ({pastEvents.length})</Text>
+                    </View>
+                    {pastEvents.map((event, index) => (
+                      <TouchableOpacity 
+                        key={event.id}
+                        style={[styles.eventCard, { backgroundColor: cardBackground, borderColor, opacity: 0.7 }]}
+                        onPress={() => router.push(`/admin-events/${event.id}/details`)}
+                        activeOpacity={0.8}
+                      >
+                        <Image 
+                          source={getEventImageSource(event)} 
+                          style={styles.eventImage}
+                          resizeMode="cover"
+                          onError={() => console.log('Failed to load image for event:', event.id)}
+                        />
+                        <View style={styles.eventInfo}>
+                          <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
+                          <Text style={[styles.eventType, { color: '#888' }]}>{event.type}</Text>
+                          <Text style={[styles.eventDate, { color: secondaryTextColor }]}>{formatDate(event.date)} • {event.time}</Text>
+                          <Text style={[styles.eventLocation, { color: secondaryTextColor }]}>{event.location}</Text>
+                        </View>
+                        <View style={styles.eventActions}>
+                          <TouchableOpacity 
+                            style={styles.actionBtn}
+                            onPress={() => openAttendeesModal(event.id)}
+                          >
+                            <Ionicons name="people" size={20} color="#888" />
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.actionBtn}
+                            onPress={() => openEditModal(events.findIndex(e => e.id === event.id))}
+                          >
+                            <Ionicons name="create" size={20} color="#888" />
+                          </TouchableOpacity>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </>
+            ) : (
+              /* Show filtered events for specific tabs */
+              filteredEvents.map((event, index) => (
+                <TouchableOpacity 
+                  key={event.id}
+                  style={[styles.eventCard, { backgroundColor: cardBackground, borderColor }]}
+                  onPress={() => router.push(`/admin-events/${event.id}/details`)}
+                  activeOpacity={0.8}
+                >
+                  <Image 
+                    source={getEventImageSource(event)} 
+                    style={styles.eventImage}
+                    resizeMode="cover"
+                    onError={() => console.log('Failed to load image for event:', event.id)}
+                  />
+                  <View style={styles.eventInfo}>
+                    <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
+                    <Text style={[styles.eventType, { color: '#3CB371' }]}>{event.type}</Text>
+                    <Text style={[styles.eventDate, { color: secondaryTextColor }]}>{formatDate(event.date)} • {event.time}</Text>
+                    <Text style={[styles.eventLocation, { color: secondaryTextColor }]}>{event.location}</Text>
+                  </View>
+                  <View style={styles.eventActions}>
+                    <TouchableOpacity 
+                      style={styles.actionBtn}
+                      onPress={() => openAttendeesModal(event.id)}
+                    >
+                      <Ionicons name="people" size={20} color="#3CB371" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.actionBtn}
+                      onPress={() => openEditModal(index)}
+                    >
+                      <Ionicons name="create" size={20} color="#4A90E2" />
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
           </>
         )}
       </ScrollView>
 
       {/* Bottom Tab Bar */}
-      <AdminTabBar activeTab="events" isDarkMode={isDarkMode} />
+      
       {AddEventFAB}
 
       {/* Add Event Modal */}
@@ -534,21 +823,32 @@ const AdminEventListScreen: React.FC = () => {
                   placeholderTextColor={secondaryTextColor}
                 />
                 <Text style={[styles.modalLabel, { color: textColor }]}>Date</Text>
-                <TextInput
-                  style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground }]}
-                  value={addDate}
-                  onChangeText={setAddDate}
-                  placeholder="YYYY-MM-DD (e.g., 2024-12-25)"
-                  placeholderTextColor={secondaryTextColor}
-                />
+                <TouchableOpacity
+                  style={[styles.pickerButton, { backgroundColor: searchBackground, borderColor }]}
+                  onPress={openDatePicker}
+                >
+                  <View style={styles.pickerButtonContent}>
+                    <Ionicons name="calendar-outline" size={20} color="#3CB371" />
+                    <Text style={[styles.pickerButtonText, { color: addDate ? textColor : secondaryTextColor }]}>
+                      {addDate || 'Select Date'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-down" size={16} color={secondaryTextColor} />
+                </TouchableOpacity>
+
                 <Text style={[styles.modalLabel, { color: textColor }]}>Time</Text>
-                <TextInput
-                  style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground }]}
-                  value={addTime}
-                  onChangeText={setAddTime}
-                  placeholder="HH:MM or HH:MM AM/PM (e.g., 14:30 or 2:30 PM)"
-                  placeholderTextColor={secondaryTextColor}
-                />
+                <TouchableOpacity
+                  style={[styles.pickerButton, { backgroundColor: searchBackground, borderColor }]}
+                  onPress={openTimePicker}
+                >
+                  <View style={styles.pickerButtonContent}>
+                    <Ionicons name="time-outline" size={20} color="#3CB371" />
+                    <Text style={[styles.pickerButtonText, { color: addTime ? textColor : secondaryTextColor }]}>
+                      {addTime || 'Select Time'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-down" size={16} color={secondaryTextColor} />
+                </TouchableOpacity>
                 <Text style={[styles.modalLabel, { color: textColor }]}>Location</Text>
                 <TextInput
                   style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground }]}
@@ -592,6 +892,24 @@ const AdminEventListScreen: React.FC = () => {
             </View>
           </View>
         </KeyboardAvoidingView>
+        
+        {/* Date Picker Modal - Inside Add Event Modal */}
+        <DatePickerModal
+          visible={showDatePicker}
+          onClose={onDateCancel}
+          onConfirm={onDateConfirm}
+          initialDate={selectedDate}
+          title="Select Event Date"
+        />
+
+        {/* Time Picker Modal - Inside Add Event Modal */}
+        <TimePickerModal
+          visible={showTimePicker}
+          onClose={onTimeCancel}
+          onConfirm={onTimeConfirm}
+          initialTime={selectedTime}
+          title="Select Event Time"
+        />
       </Modal>
 
       {/* Edit Event Modal */}
@@ -631,21 +949,68 @@ const AdminEventListScreen: React.FC = () => {
                   placeholderTextColor={secondaryTextColor}
                 />
                 <Text style={[styles.modalLabel, { color: textColor }]}>Date</Text>
-                <TextInput
-                  style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground, borderColor }]}
-                  value={editDate}
-                  onChangeText={setEditDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={secondaryTextColor}
-                />
+                <TouchableOpacity
+                  style={[styles.pickerButton, { backgroundColor: searchBackground, borderColor }]}
+                  onPress={() => {
+                    // Parse the current date string to set initial date
+                    if (editDate) {
+                      try {
+                        const [year, month, day] = editDate.split('-').map(Number);
+                        const initialDate = new Date(year, month - 1, day);
+                        setSelectedDate(initialDate);
+                      } catch (error) {
+                        setSelectedDate(new Date());
+                      }
+                    } else {
+                      setSelectedDate(new Date());
+                    }
+                    setShowDatePicker(true);
+                  }}
+                >
+                  <View style={styles.pickerButtonContent}>
+                    <Ionicons name="calendar-outline" size={20} color={secondaryTextColor} />
+                    <Text style={[styles.pickerButtonText, { color: textColor }]}>
+                      {editDate || 'Select Date'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-down" size={20} color={secondaryTextColor} />
+                </TouchableOpacity>
+
                 <Text style={[styles.modalLabel, { color: textColor }]}>Time</Text>
-                <TextInput
-                  style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground, borderColor }]}
-                  value={editTime}
-                  onChangeText={setEditTime}
-                  placeholder="HH:MM AM/PM"
-                  placeholderTextColor={secondaryTextColor}
-                />
+                <TouchableOpacity
+                  style={[styles.pickerButton, { backgroundColor: searchBackground, borderColor }]}
+                  onPress={() => {
+                    // Parse the current time string to set initial time
+                    if (editTime) {
+                      try {
+                        const timeMatch = editTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+                        if (timeMatch) {
+                          let [_, hours, minutes, period] = timeMatch;
+                          let hour = parseInt(hours);
+                          if (period.toUpperCase() === 'PM' && hour !== 12) hour += 12;
+                          if (period.toUpperCase() === 'AM' && hour === 12) hour = 0;
+                          const initialTime = new Date(new Date().setHours(hour, parseInt(minutes), 0, 0));
+                          setSelectedTime(initialTime);
+                        } else {
+                          setSelectedTime(new Date());
+                        }
+                      } catch (error) {
+                        setSelectedTime(new Date());
+                      }
+                    } else {
+                      setSelectedTime(new Date());
+                    }
+                    setShowTimePicker(true);
+                  }}
+                >
+                  <View style={styles.pickerButtonContent}>
+                    <Ionicons name="time-outline" size={20} color={secondaryTextColor} />
+                    <Text style={[styles.pickerButtonText, { color: textColor }]}>
+                      {editTime || 'Select Time'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-down" size={20} color={secondaryTextColor} />
+                </TouchableOpacity>
                 <Text style={[styles.modalLabel, { color: textColor }]}>Location</Text>
                 <TextInput
                   style={[styles.modalInput, { color: textColor, backgroundColor: searchBackground, borderColor }]}
@@ -689,10 +1054,29 @@ const AdminEventListScreen: React.FC = () => {
                     )}
                   </TouchableOpacity>
                 </View>
+                
               </ScrollView>
             </View>
           </View>
         </KeyboardAvoidingView>
+        
+        {/* Date Picker Modal - Inside Edit Event Modal */}
+        <DatePickerModal
+          visible={showDatePicker}
+          onClose={onDateCancel}
+          onConfirm={onDateConfirm}
+          initialDate={selectedDate}
+          title="Select Event Date"
+        />
+
+        {/* Time Picker Modal - Inside Edit Event Modal */}
+        <TimePickerModal
+          visible={showTimePicker}
+          onClose={onTimeCancel}
+          onConfirm={onTimeConfirm}
+          initialTime={selectedTime}
+          title="Select Event Time"
+        />
       </Modal>
 
       {/* Attendees Modal */}
@@ -783,12 +1167,14 @@ const AdminEventListScreen: React.FC = () => {
                 </View>
               )}
             </ScrollView>
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
-  );
-};
+                     </View>
+         </View>
+       </Modal>
+
+     </SafeAreaView>
+     </>
+   );
+ };
 
 function formatDate(dateStr: string) {
   const date = new Date(dateStr);
@@ -887,6 +1273,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     resizeMode: 'cover',
+    backgroundColor: '#F3F5F2', // Light background for better visibility
   },
   featuredOverlay: {
     position: 'absolute',
@@ -937,6 +1324,7 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 8,
     marginRight: 12,
+    backgroundColor: '#F3F5F2', // Light background for better visibility
   },
   eventInfo: {
     flex: 1,
@@ -1222,16 +1610,77 @@ const styles = StyleSheet.create({
   dropdownOptionText: {
     fontSize: 16,
   },
-  testBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    marginLeft: 8,
+  // Picker Button Styles
+  pickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    minHeight: 48,
   },
-  testBtnText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+  pickerButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  pickerButtonText: {
+    fontSize: 16,
+    marginLeft: 8,
+    flex: 1,
+  },
+  // Picker Modal Styles
+  pickerModalContent: {
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '60%',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 10,
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  pickerContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  datePicker: {
+    width: 300,
+    height: 200,
+  },
+  timePicker: {
+    width: 300,
+    height: 200,
+  },
+  // Section Styles
+  sectionContainer: {
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
   });
   

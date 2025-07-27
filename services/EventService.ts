@@ -301,7 +301,7 @@ class EventService {
         query = query.ilike('location', `%${filters.location}%`);
       }
       if (filters.search) {
-        query = query.or(`title.ilike.%${filters.search}%,desc.ilike.%${filters.search}%`);
+        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
       }
 
       const { data, error } = await query.order('date', { ascending: true });
@@ -337,6 +337,45 @@ class EventService {
       return data?.map(this.mapSupabaseEventToEvent) || [];
     } catch (error) {
       console.error('Error fetching featured events:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Search events by title and description
+   */
+  async searchEvents(searchText: string): Promise<Event[]> {
+    try {
+      console.log('🔍 Searching events with text:', searchText);
+      
+      if (!searchText.trim()) {
+        // If search is empty, return all events
+        console.log('🔍 Search text is empty, returning all events');
+        return this.getAllEvents();
+      }
+
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .or(`title.ilike.%${searchText}%,description.ilike.%${searchText}%`)
+        .order('date', { ascending: true });
+
+      if (error) {
+        console.error('Error searching events:', error);
+        return [];
+      }
+
+      console.log('🔍 Search results found:', data?.length || 0, 'events');
+      if (data && data.length > 0) {
+        console.log('🔍 First few results:');
+        data.slice(0, 3).forEach((event, index) => {
+          console.log(`  ${index + 1}. Title: "${event.title}", Description: "${event.description?.substring(0, 50)}..."`);
+        });
+      }
+
+      return data?.map(this.mapSupabaseEventToEvent) || [];
+    } catch (error) {
+      console.error('Error searching events:', error);
       return [];
     }
   }
@@ -459,17 +498,23 @@ class EventService {
    */
   async registerForEvent(eventId: string): Promise<boolean> {
     try {
-      const userId = await this.getAuthenticatedUserId();
-      if (!userId) {
+      // Get the authenticated user
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user?.id) {
+        console.error('User not authenticated');
         return false;
       }
 
       // Check if user is already registered
       const { data: existingRegistration, error: checkError } = await supabase
-        .from('event_registrations')
+        .from('event_attendees')
         .select('*')
         .eq('event_id', eventId)
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
         .maybeSingle();
 
       if (checkError) {
@@ -482,28 +527,13 @@ class EventService {
         return false;
       }
 
-      // Check if event date has passed
-      const event = await this.getEventById(eventId);
-      if (!event) {
-        console.log('Event not found');
-        return false;
-      }
-
-      const eventDate = new Date(event.date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      if (eventDate < today) {
-        console.log('Event date has passed - registration blocked');
-        return false;
-      }
-
-      // Register user for event
+      // Register user for the event
       const { error } = await supabase
-        .from('event_registrations')
+        .from('event_attendees')
         .insert({
           event_id: eventId,
-          user_id: userId
+          user_id: user.id,
+          status: 'confirmed'
         });
 
       if (error) {
@@ -511,7 +541,7 @@ class EventService {
         return false;
       }
 
-      console.log('Successfully registered for event:', { eventId, userId });
+      console.log('Successfully registered for event:', { eventId, userId: user.id });
       return true;
     } catch (error) {
       console.error('Error registering for event:', error);
@@ -535,8 +565,9 @@ class EventService {
         return false;
       }
 
+      // Remove registration
       const { error } = await supabase
-        .from('event_registrations')
+        .from('event_attendees')
         .delete()
         .eq('event_id', eventId)
         .eq('user_id', user.id);
@@ -693,12 +724,13 @@ class EventService {
         return null;
       }
 
+      // Check event_attendees table (correct table name from schema)
       const { data, error } = await supabase
-        .from('event_registrations')
+        .from('event_attendees')
         .select('*')
         .eq('event_id', eventId)
         .eq('user_id', user.id)
-        .maybeSingle(); // Use maybeSingle() instead of single() to handle 0 rows gracefully
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching user event status:', error);
@@ -710,10 +742,14 @@ class EventService {
         return null;
       }
 
+      // Check if event is in the past to determine if user "attended"
+      const event = await this.getEventById(eventId);
+      const isEventInPast = event ? new Date(event.date) < new Date() : false;
+
       return {
         eventId: data.event_id,
         userId: data.user_id,
-        status: 'registered',
+        status: isEventInPast ? 'attended' : 'registered',
         registrationDate: new Date(data.created_at),
         feedbackSubmitted: false
       };
@@ -1051,9 +1087,9 @@ class EventService {
         return false;
       }
 
-      // Check if user is registered for this event
+      // Check if user is registered for this event (using correct table name)
       const { data: existingRegistration, error: checkError } = await supabase
-        .from('event_registrations')
+        .from('event_attendees')
         .select('*')
         .eq('event_id', feedbackData.eventId)
         .eq('user_id', user.id)
@@ -1066,6 +1102,38 @@ class EventService {
 
       if (!existingRegistration) {
         console.log('User not registered for this event');
+        return false;
+      }
+
+      // Check if event is in the past (users can only submit feedback for past events)
+      const event = await this.getEventById(feedbackData.eventId);
+      if (!event) {
+        console.error('Event not found');
+        return false;
+      }
+
+      const eventDate = new Date(event.date);
+      const today = new Date();
+      if (eventDate >= today) {
+        console.log('Cannot submit feedback for future events');
+        return false;
+      }
+
+      // Check if user already submitted feedback
+      const { data: existingFeedback, error: feedbackCheckError } = await supabase
+        .from('event_feedback')
+        .select('*')
+        .eq('event_id', feedbackData.eventId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (feedbackCheckError) {
+        console.error('Error checking existing feedback:', feedbackCheckError);
+        return false;
+      }
+
+      if (existingFeedback) {
+        console.log('User already submitted feedback for this event');
         return false;
       }
 
@@ -1103,9 +1171,9 @@ class EventService {
    */
   async getEventStats(eventId: string): Promise<EventStats | null> {
     try {
-      // Get total registrations
+      // Get total registrations (using correct table name)
       const { count: totalRegistrations } = await supabase
-        .from('event_registrations')
+        .from('event_attendees')
         .select('*', { count: 'exact', head: true })
         .eq('event_id', eventId);
 
@@ -1138,18 +1206,18 @@ class EventService {
       return {
         totalRegistrations: totalRegistrations || 0,
         totalAttendees: 0, // Would need separate attendance tracking
-        averageRating,
+        averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal
         totalReviews: feedbackData.length,
         ratingDistribution: {
           1: feedbackData.filter(f => f.rating === 1).length,
           2: feedbackData.filter(f => f.rating === 2).length,
           3: feedbackData.filter(f => f.rating === 3).length,
           4: feedbackData.filter(f => f.rating === 4).length,
-          5: feedbackData.filter(f => f.rating === 5).length,
-        },
+          5: feedbackData.filter(f => f.rating === 5).length
+        }
       };
     } catch (error) {
-      console.error('Error fetching event stats:', error);
+      console.error('Error getting event stats:', error);
       return null;
     }
   }

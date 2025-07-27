@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Event, EventContextType, UserEvent, EventFeedback, EventStats, UserEventTracking } from '../types/events';
 import eventService from '../services/EventService';
+import { supabase } from '../services/supabase';
 
 // No longer needed - using authenticated user from Supabase
 
@@ -20,6 +21,10 @@ interface LegacyEventContextType {
   markUserAsAttended: (eventId: string) => Promise<boolean>;
   fetchUserEvents: () => Promise<void>;
   handleEventDeletion: (deletedEventId: string) => Promise<void>;
+  updateEventInContext: (updatedEvent: Event) => Promise<void>;
+  addEventToContext: (newEvent: Event) => Promise<void>;
+  removeEventFromContext: (eventId: string) => Promise<void>;
+  searchEvents: (searchText: string) => Promise<Event[]>;
 }
 
 const EventContext = createContext<LegacyEventContextType | undefined>(undefined);
@@ -37,7 +42,74 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     fetchEvents();
     fetchUserEvents();
+    
+    // Set up Supabase Realtime subscription
+    const channel = subscribeToEventChanges();
+    
+    // Cleanup subscription on unmount
+    return () => {
+      console.log('🔌 Cleaning up Supabase Realtime subscription');
+      channel.unsubscribe();
+    };
   }, []);
+
+  // Supabase Realtime subscription for events table
+  const subscribeToEventChanges = () => {
+    console.log('📡 Setting up Supabase Realtime subscription for events table');
+    
+    const channel = supabase
+      .channel('realtime-events')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'events' }, 
+        (payload) => {
+          console.log('📡 Realtime Event Change:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            console.log('📡 Realtime: New event added');
+            const newEvent = mapSupabaseEventToEvent(payload.new);
+            addEventToContext(newEvent);
+          } else if (payload.eventType === 'UPDATE') {
+            console.log('♻️ Realtime: Event updated');
+            const updatedEvent = mapSupabaseEventToEvent(payload.new);
+            updateEventInContext(updatedEvent);
+          } else if (payload.eventType === 'DELETE') {
+            console.log('❌ Realtime: Event deleted');
+            removeEventFromContext(payload.old.id);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Supabase Realtime subscription status:', status);
+      });
+
+    return channel;
+  };
+
+  // Helper function to map Supabase event to Event interface
+  const mapSupabaseEventToEvent = (supabaseEvent: any): Event => {
+    return {
+      id: supabaseEvent.id,
+      title: supabaseEvent.title,
+      description: supabaseEvent.description,
+      date: supabaseEvent.date,
+      time: supabaseEvent.time,
+      location: supabaseEvent.location,
+      image: supabaseEvent.cover_image ? { uri: supabaseEvent.cover_image } : require('../assets/images/splash-icon.png'),
+      coverImage: supabaseEvent.cover_image,
+      category: supabaseEvent.category,
+      registeredCount: 0, // Will be calculated separately
+      featured: supabaseEvent.featured,
+      status: supabaseEvent.status,
+      type: supabaseEvent.type,
+      maxCapacity: supabaseEvent.max_capacity,
+      organizer: supabaseEvent.organizer,
+      tags: supabaseEvent.tags,
+      requirements: supabaseEvent.requirements,
+      materials: supabaseEvent.materials,
+      createdAt: new Date(supabaseEvent.created_at),
+      updatedAt: new Date(supabaseEvent.updated_at)
+    };
+  };
 
   // Event operations
   const fetchEvents = async (): Promise<void> => {
@@ -96,19 +168,145 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log('Handling deletion of event:', deletedEventId);
       
-      // Remove from local state immediately
-      setRegistered(prev => prev.filter(id => id !== deletedEventId));
-      setBookmarks(prev => prev.filter(id => id !== deletedEventId));
+      // Remove from events list
       setEvents(prev => prev.filter(event => event.id !== deletedEventId));
+      
+      // Remove from user events
       setUserEvents(prev => prev.filter(event => event.id !== deletedEventId));
       
-      // Refresh all data to ensure consistency
+      // Remove from registered and bookmarked lists
+      setRegistered(prev => prev.filter(id => id !== deletedEventId));
+      setBookmarks(prev => prev.filter(id => id !== deletedEventId));
+      
+      // Clear cache to ensure fresh data
+      eventService.clearCache();
+      
+      console.log('✅ Successfully removed event from context:', deletedEventId);
+    } catch (err) {
+      console.error('❌ Error handling event deletion:', err);
+    }
+  };
+
+  // Function to handle event updates in context
+  const updateEventInContext = async (updatedEvent: Event): Promise<void> => {
+    try {
+      console.log('🔄 Updating event in context:', updatedEvent.id);
+      console.log('🔄 Updated event data:', {
+        id: updatedEvent.id,
+        title: updatedEvent.title,
+        date: updatedEvent.date,
+        time: updatedEvent.time,
+        location: updatedEvent.location
+      });
+      
+      // Update the event in local state immediately
+      setEvents(prev => {
+        const updatedEvents = prev.map(event => 
+          event.id === updatedEvent.id ? updatedEvent : event
+        );
+        console.log('🔄 Updated events array length:', updatedEvents.length);
+        return updatedEvents;
+      });
+      
+      // Update in userEvents if it exists there
+      setUserEvents(prev => {
+        const updatedUserEvents = prev.map(event => 
+          event.id === updatedEvent.id ? { ...event, ...updatedEvent } : event
+        );
+        console.log('🔄 Updated userEvents array length:', updatedUserEvents.length);
+        return updatedUserEvents;
+      });
+      
+      // Clear cache and refresh to ensure consistency with database
+      console.log('🔄 Clearing cache and refreshing data...');
+      eventService.clearCache();
       await fetchEvents();
       await fetchUserEvents();
       
-      console.log('Successfully cleaned up deleted event from all user states');
+      console.log('✅ Successfully updated event in context:', updatedEvent.id);
     } catch (err) {
-      console.error('Error handling event deletion cleanup:', err);
+      console.error('❌ Error updating event in context:', err);
+      // Fallback: refresh all data
+      await fetchEvents();
+      await fetchUserEvents();
+    }
+  };
+
+  // Function to add new events to context
+  const addEventToContext = async (newEvent: Event): Promise<void> => {
+    try {
+      console.log('➕ Adding new event to context:', newEvent.id);
+      console.log('➕ New event data:', {
+        id: newEvent.id,
+        title: newEvent.title,
+        date: newEvent.date,
+        time: newEvent.time,
+        location: newEvent.location
+      });
+      
+      // Add the event to local state immediately
+      setEvents(prev => {
+        const updatedEvents = [...prev, newEvent];
+        console.log('➕ Updated events array length:', updatedEvents.length);
+        return updatedEvents;
+      });
+      
+      // Clear cache and refresh to ensure consistency with database
+      console.log('➕ Clearing cache and refreshing data...');
+      eventService.clearCache();
+      await fetchEvents();
+      await fetchUserEvents();
+      
+      console.log('✅ Successfully added new event to context:', newEvent.id);
+    } catch (err) {
+      console.error('❌ Error adding new event to context:', err);
+      // Fallback: refresh all data
+      await fetchEvents();
+      await fetchUserEvents();
+    }
+  };
+
+  // Function to remove events from context
+  const removeEventFromContext = async (eventId: string): Promise<void> => {
+    try {
+      console.log('🗑️ Removing event from context:', eventId);
+      
+      // Remove from events list
+      setEvents(prev => {
+        const updatedEvents = prev.filter(event => event.id !== eventId);
+        console.log('🗑️ Updated events array length:', updatedEvents.length);
+        return updatedEvents;
+      });
+      
+      // Remove from user events
+      setUserEvents(prev => {
+        const updatedUserEvents = prev.filter(event => event.id !== eventId);
+        console.log('🗑️ Updated userEvents array length:', updatedUserEvents.length);
+        return updatedUserEvents;
+      });
+      
+      // Remove from registered and bookmarked lists
+      setRegistered(prev => prev.filter(id => id !== eventId));
+      setBookmarks(prev => prev.filter(id => id !== eventId));
+      
+      // Clear cache to ensure fresh data
+      eventService.clearCache();
+      
+      console.log('✅ Successfully removed event from context:', eventId);
+    } catch (err) {
+      console.error('❌ Error removing event from context:', err);
+    }
+  };
+
+  const searchEvents = async (searchText: string): Promise<Event[]> => {
+    try {
+      console.log('🔍 Searching events with text:', searchText);
+      const searchResults = await eventService.searchEvents(searchText);
+      console.log('🔍 Search results:', searchResults.length, 'events found');
+      return searchResults;
+    } catch (error) {
+      console.error('🔍 Error searching events:', error);
+      return [];
     }
   };
 
@@ -291,6 +489,10 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
         markUserAsAttended,
         fetchUserEvents,
         handleEventDeletion,
+        updateEventInContext,
+        addEventToContext,
+        removeEventFromContext,
+        searchEvents,
       }}
     >
       {children}

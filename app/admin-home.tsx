@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, StatusBar } from 'react-native';
 import { Feather, MaterialIcons, MaterialCommunityIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -7,6 +7,7 @@ import AdminTabBar from '../components/AdminTabBar';
 import { useTheme } from '../components/ThemeContext';
 import ProfileModal from '../components/ProfileModal';
 import { useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Mock user data for admin
 const mockAdminUser = {
@@ -19,6 +20,7 @@ export default function AdminHome() {
   const { isDarkMode, toggleTheme } = useTheme();
   const [profileVisible, setProfileVisible] = useState(false);
   const { fromLogin } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
 
   React.useEffect(() => {
     if (fromLogin) {
@@ -52,28 +54,20 @@ export default function AdminHome() {
 
   return (
     <View style={[styles.mainContainer, { backgroundColor: colors.background }]}>
-      {/* Custom Header */}
-      <View style={[styles.headerContainer, { backgroundColor: colors.cardBackground }]}>
-        <View style={styles.headerLeft}>
-          <View style={[styles.logoCircle, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F8F5' }]}>
-            <Feather name="users" size={18} color="#004080" />
-          </View>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            MIT<Text style={{ color: '#3CB371' }}>Connect</Text>
-          </Text>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity onPress={toggleTheme} style={styles.headerIcon}>
-            <Feather 
-              name={isDarkMode ? "sun" : "moon"} 
-              size={18} 
-              color={colors.icon} 
-            />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setProfileVisible(true)} style={styles.headerIcon}>
-            <Ionicons name="person-circle-outline" size={26} color={colors.icon} />
-          </TouchableOpacity>
-        </View>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <View style={styles.backButton} />
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          MIT<Text style={{ color: '#3CB371' }}>Connect</Text>
+        </Text>
+        <TouchableOpacity 
+          style={[styles.addButton, { backgroundColor: '#3CB371' }]}
+          onPress={() => setProfileVisible(true)}
+        >
+          <Ionicons name="person-circle-outline" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
 
       {/* Scrollable Content */}
@@ -213,38 +207,29 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
   },
-  headerContainer: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 48,
-    paddingBottom: 10,
     paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
+  backButton: {
+    padding: 8,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     letterSpacing: 0.5,
   },
-  headerRight: {
-    flexDirection: 'row',
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
-  },
-  headerIcon: {
-    marginLeft: 16,
-    padding: 4,
+    justifyContent: 'center',
   },
   scrollContainer: {
     flex: 1,

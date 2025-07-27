@@ -14,15 +14,35 @@ import {
 import AdminHeader from '../../../components/AdminHeader';
 import eventService from '../../../services/EventService';
 import { Event } from '../../../types/events';
+import { useTheme } from '../../../components/ThemeContext';
+import { Colors } from '../../../constants/Colors';
 
 const EventDetailsScreen: React.FC = () => {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { isDarkMode } = useTheme();
   
   const [event, setEvent] = useState<Event | null>(null);
   const [attendees, setAttendees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Theme-aware colors
+  const colors = isDarkMode ? Colors.dark : Colors.light;
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const textColor = colors.text;
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#666';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#D6E3D7';
+  const iconBackground = isDarkMode ? '#2A2A2A' : '#F3F5F2';
+  const statsBackground = isDarkMode ? '#2A2A2A' : '#f8f9fa';
+
+  // Debug theme state
+  console.log('🎨 Admin Event Details - Theme Debug:', {
+    isDarkMode,
+    cardBackground,
+    textColor,
+    secondaryTextColor
+  });
 
   // Fetch event data from database
   useEffect(() => {
@@ -71,11 +91,11 @@ const EventDetailsScreen: React.FC = () => {
   // Show loading state
   if (loading) {
     return (
-      <View style={styles.container}>
-        <AdminHeader title="Event Details" />
+      <View style={[styles.container, { backgroundColor: cardBackground }]}>
+        <AdminHeader title="" backDestination="/admin-events" />
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#43C6AC" />
-          <Text style={styles.loadingText}>Loading event details...</Text>
+          <Text style={[styles.loadingText, { color: secondaryTextColor }]}>Loading event details...</Text>
         </View>
       </View>
     );
@@ -84,13 +104,13 @@ const EventDetailsScreen: React.FC = () => {
   // Show error state
   if (error || !event) {
     return (
-      <View style={styles.container}>
-        <AdminHeader title="Event Details" />
+      <View style={[styles.container, { backgroundColor: cardBackground }]}>
+        <AdminHeader title="" backDestination="/admin-events" />
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={64} color="#ff6b6b" />
-          <Text style={styles.errorText}>{error || 'Event not found'}</Text>
-          <Text style={styles.errorText}>Event ID: {id}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => router.back()}>
+          <Text style={[styles.errorText, { color: '#ff6b6b' }]}>{error || 'Event not found'}</Text>
+          <Text style={[styles.errorText, { color: '#ff6b6b' }]}>Event ID: {id}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => router.push('/admin-events')}>
             <Text style={styles.retryBtnText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -110,72 +130,76 @@ const EventDetailsScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <AdminHeader title="Event Details" />
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+    <View style={[styles.container, { backgroundColor: cardBackground }]}>
+      <AdminHeader title="" backDestination="/admin-events" />
+      
+      {/* Event Details Title */}
+      <View style={styles.titleContainer}>
+        <Text style={[styles.pageTitle, { color: textColor }]}>Event Details</Text>
+      </View>
+      
+      <ScrollView style={[styles.scroll, { backgroundColor: cardBackground }]} contentContainerStyle={styles.scrollContent}>
         <Image 
           source={event.coverImage ? { uri: event.coverImage } : event.image} 
           style={styles.coverImage} 
         />
-        {/* Bookmark icon placeholder */}
-        <View style={styles.bookmarkIconBox}>
-          <Ionicons name="bookmark-outline" size={28} color="#222" />
-        </View>
-        <Text style={styles.title}>{event.title}</Text>
+        {/* REMOVED BOOKMARK ICON */}
+        <Text style={[styles.title, { color: textColor }]}>{event.title}</Text>
         
         {/* Event Description */}
         {event.description && (
-          <Text style={styles.description}>{event.description}</Text>
+          <Text style={[styles.description, { color: secondaryTextColor }]}>{event.description}</Text>
         )}
         
         {/* Date, Time, Location */}
         <View style={styles.infoRow}>
-          <View style={styles.infoIconBox}><MaterialIcons name="calendar-today" size={20} color="#222" /></View>
-          <Text style={styles.infoText}>{formatDate(event.date)}</Text>
+          <View style={[styles.infoIconBox, { backgroundColor: iconBackground }]}><MaterialIcons name="calendar-today" size={20} color="#43C6AC" /></View>
+          <Text style={[styles.infoText, { color: textColor }]}>{formatDate(event.date)}</Text>
         </View>
         <View style={styles.infoRow}>
-          <View style={styles.infoIconBox}><Ionicons name="time-outline" size={20} color="#222" /></View>
-          <Text style={styles.infoText}>{event.time}</Text>
+          <View style={[styles.infoIconBox, { backgroundColor: iconBackground }]}><Ionicons name="time-outline" size={20} color="#43C6AC" /></View>
+          <Text style={[styles.infoText, { color: textColor }]}>{event.time}</Text>
         </View>
         <View style={styles.infoRow}>
-          <View style={styles.infoIconBox}><Ionicons name="location-outline" size={20} color="#222" /></View>
-          <Text style={styles.infoText}>{event.location}</Text>
+          <View style={[styles.infoIconBox, { backgroundColor: iconBackground }]}><Ionicons name="location-outline" size={20} color="#43C6AC" /></View>
+          <Text style={[styles.infoText, { color: textColor }]}>{event.location}</Text>
         </View>
         
         {/* Additional Event Details */}
         {event.category && (
           <View style={styles.infoRow}>
-            <View style={styles.infoIconBox}><Ionicons name="pricetag-outline" size={20} color="#222" /></View>
-            <Text style={styles.infoText}>Category: {event.category}</Text>
+            <View style={[styles.infoIconBox, { backgroundColor: iconBackground }]}><Ionicons name="pricetag-outline" size={20} color="#43C6AC" /></View>
+            <Text style={[styles.infoText, { color: textColor }]}>Category: {event.category}</Text>
           </View>
         )}
         
         {event.organizer && (
           <View style={styles.infoRow}>
-            <View style={styles.infoIconBox}><Ionicons name="person-outline" size={20} color="#222" /></View>
-            <Text style={styles.infoText}>Organizer: {event.organizer}</Text>
+            <View style={[styles.infoIconBox, { backgroundColor: iconBackground }]}><Ionicons name="person-outline" size={20} color="#43C6AC" /></View>
+            <Text style={[styles.infoText, { color: textColor }]}>Organizer: {event.organizer}</Text>
           </View>
         )}
         
         {event.maxCapacity && (
           <View style={styles.infoRow}>
-            <View style={styles.infoIconBox}><Ionicons name="people-outline" size={20} color="#222" /></View>
-            <Text style={styles.infoText}>Capacity: {event.maxCapacity} people</Text>
+            <View style={[styles.infoIconBox, { backgroundColor: iconBackground }]}><Ionicons name="people-outline" size={20} color="#43C6AC" /></View>
+            <Text style={[styles.infoText, { color: textColor }]}>Capacity: {event.maxCapacity} people</Text>
           </View>
         )}
         
         <View style={styles.infoRow}>
-          <View style={styles.infoIconBox}><Ionicons name="flag-outline" size={20} color="#222" /></View>
-          <Text style={styles.infoText}>Status: {event.status}</Text>
+          <View style={[styles.infoIconBox, { backgroundColor: iconBackground }]}><Ionicons name="flag-outline" size={20} color="#43C6AC" /></View>
+          <Text style={[styles.infoText, { color: textColor }]}>Status: {event.status}</Text>
         </View>
         
-        <View style={styles.infoRow}>
+        {/* REMOVED TYPE FIELD */}
+        {/* <View style={styles.infoRow}>
           <View style={styles.infoIconBox}><Ionicons name="globe-outline" size={20} color="#222" /></View>
           <Text style={styles.infoText}>Type: {event.type}</Text>
-        </View>
+        </View> */}
         
-        {/* Attendees */}
-        <Text style={styles.attendeeTitle}>Event Attendees ({attendees.length})</Text>
+        {/* REMOVED ATTENDEES SECTION */}
+        {/* <Text style={styles.attendeeTitle}>Event Attendees ({attendees.length})</Text>
         {attendees.length > 0 ? (
           <FlatList
             data={attendees}
@@ -202,28 +226,28 @@ const EventDetailsScreen: React.FC = () => {
             <Ionicons name="people-outline" size={48} color="#ccc" />
             <Text style={styles.emptyAttendeesText}>No attendees registered yet</Text>
           </View>
-        )}
+        )} */}
         
         {/* Registration Statistics */}
-        <View style={styles.statsContainer}>
-          <Text style={styles.statsTitle}>Registration Statistics</Text>
+        <View style={[styles.statsContainer, { backgroundColor: statsBackground }]}>
+          <Text style={[styles.statsTitle, { color: textColor }]}>Registration Statistics</Text>
           <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{attendees.length}</Text>
-              <Text style={styles.statLabel}>Registered</Text>
-            </View>
-            {event.maxCapacity && (
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{event.maxCapacity - attendees.length}</Text>
-                <Text style={styles.statLabel}>Available</Text>
-              </View>
-            )}
-            {event.maxCapacity && (
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{Math.round((attendees.length / event.maxCapacity) * 100)}%</Text>
-                <Text style={styles.statLabel}>Filled</Text>
-              </View>
-            )}
+                         <View style={styles.statItem}>
+               <Text style={[styles.statNumber, { color: '#43C6AC' }]}>{attendees.length}</Text>
+               <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Registered</Text>
+             </View>
+                         {event.maxCapacity && (
+               <View style={styles.statItem}>
+                 <Text style={[styles.statNumber, { color: '#43C6AC' }]}>{event.maxCapacity - attendees.length}</Text>
+                 <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Available</Text>
+               </View>
+             )}
+                         {event.maxCapacity && (
+               <View style={styles.statItem}>
+                 <Text style={[styles.statNumber, { color: '#43C6AC' }]}>{Math.round((attendees.length / event.maxCapacity) * 100)}%</Text>
+                 <Text style={[styles.statLabel, { color: secondaryTextColor }]}>Filled</Text>
+               </View>
+             )}
           </View>
         </View>
       </ScrollView>
@@ -233,16 +257,14 @@ const EventDetailsScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   scroll: {
-    backgroundColor: '#fff',
+    flex: 1,
   },
   scrollContent: {
     padding: 0,
-    backgroundColor: '#fff',
     alignItems: 'stretch',
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   coverImage: {
     width: '100%',
@@ -266,7 +288,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#222',
     marginHorizontal: 16,
     marginTop: 8,
     marginBottom: 16,
@@ -278,14 +299,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   infoIconBox: {
-    backgroundColor: '#F3F5F2',
     borderRadius: 8,
     padding: 6,
     marginRight: 10,
   },
   infoText: {
     fontSize: 15,
-    color: '#222',
   },
   attendeeTitle: {
     fontWeight: 'bold',
@@ -293,7 +312,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 8,
     marginHorizontal: 16,
-    color: '#222',
   },
   attendeeRow: {
     borderTopWidth: 1,
@@ -311,7 +329,6 @@ const styles = StyleSheet.create({
   attendeeName: {
     fontWeight: 'bold',
     fontSize: 15,
-    color: '#222',
   },
   attendeeEmail: {
     fontSize: 14,
@@ -324,14 +341,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   attendeeStatus: {
-    backgroundColor: '#e0f7f4',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   statusText: {
     fontSize: 12,
-    color: '#43C6AC',
     fontWeight: 'bold',
     textTransform: 'uppercase',
   },
@@ -343,13 +358,11 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
     marginTop: 16,
     textAlign: 'center',
   },
   errorText: {
     fontSize: 18,
-    color: '#ff6b6b',
     marginTop: 16,
     marginBottom: 24,
     textAlign: 'center',
@@ -368,7 +381,6 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 16,
-    color: '#444',
     marginHorizontal: 16,
     marginBottom: 16,
     lineHeight: 24,
@@ -381,7 +393,6 @@ const styles = StyleSheet.create({
   },
   emptyAttendeesText: {
     fontSize: 16,
-    color: '#666',
     marginTop: 16,
     textAlign: 'center',
   },
@@ -389,13 +400,11 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginHorizontal: 16,
     padding: 16,
-    backgroundColor: '#f8f9fa',
     borderRadius: 12,
   },
   statsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#222',
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -409,12 +418,19 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#43C6AC',
   },
   statLabel: {
     fontSize: 14,
-    color: '#666',
     marginTop: 4,
+  },
+  titleContainer: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
 });
 

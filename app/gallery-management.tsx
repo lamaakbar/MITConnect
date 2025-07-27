@@ -27,18 +27,33 @@ import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../components/ThemeContext';
-import AdminTabBar from '../components/AdminTabBar';
+import { useUserContext } from '../components/UserContext';
+
 import AdminHeader from '../components/AdminHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { 
+  fetchGalleryAlbums, 
+  createAlbum, 
+  uploadCoverImageToStorage, 
+  uploadPhotosToAlbum, 
+  deleteAlbum, 
+  deletePhoto,
+  fetchAlbumPhotos,
+  Album as GalleryAlbum,
+  Photo as GalleryPhoto
+} from '../services/galleryService';
+import { supabase } from '../services/supabase';
 
 // Album and Photo Types
 interface Photo {
+  id?: string;
   uri: string;
 }
 interface Album {
   id: string;
   title: string;
   photos: Photo[];
+  cover_image?: string;
 }
 
 // Empty albums array - no mock data
@@ -47,11 +62,13 @@ const initialAlbums: Album[] = [];
 export default function GalleryManagement() {
   const router = useRouter();
   const { isDarkMode } = useTheme();
+  const { userRole } = useUserContext();
   
   const [albums, setAlbums] = useState<Album[]>(initialAlbums);
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newPhotos, setNewPhotos] = useState<Photo[]>([]);
+  const [coverImage, setCoverImage] = useState<Photo | null>(null);
   // Replace selectedAlbum with selectedAlbumId
   const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
   // Add state for modal animation
@@ -62,6 +79,77 @@ export default function GalleryManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [editTitle, setEditTitle] = useState('');
+  const [editCoverImage, setEditCoverImage] = useState<Photo | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  
+  // Function to handle image loading errors
+  const handleImageError = (imageUri: string) => {
+    setImageErrors(prev => new Set(prev).add(imageUri));
+  };
+
+  // Function to refresh authentication session
+  const refreshAuthSession = async () => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error('Error refreshing session:', error);
+        return false;
+      }
+      return !!data.session;
+    } catch (error) {
+      console.error('Error refreshing session:', error);
+      return false;
+    }
+  };
+
+  // Fetch albums from Supabase
+  const fetchAlbums = async () => {
+    try {
+      setLoading(true);
+      const fetchedAlbums = await fetchGalleryAlbums();
+      
+      // Filter out any temporary albums that might be left over
+      const realAlbums = fetchedAlbums.filter(album => !album.id.startsWith('temp-'));
+      console.log('✅ Real albums (filtered):', realAlbums.length);
+      
+      // Convert to local format and load photos for each album
+      const localAlbums: Album[] = await Promise.all(
+        realAlbums.map(async (album) => {
+          const photos = await fetchAlbumPhotos(album.id);
+          const localAlbum = {
+            id: album.id,
+            title: album.title,
+            cover_image: album.cover_image,
+            photos: photos.map(photo => ({
+              id: photo.id,
+              uri: photo.uri
+            }))
+          };
+          console.log('📸 Loaded album:', {
+            id: localAlbum.id,
+            title: localAlbum.title,
+            cover_image: localAlbum.cover_image,
+            photoCount: localAlbum.photos.length
+          });
+          return localAlbum;
+        })
+      );
+      
+      setAlbums(localAlbums);
+    } catch (error) {
+      console.error('Error fetching albums:', error);
+      Alert.alert('Error', 'Failed to fetch albums. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load albums on component mount
+  React.useEffect(() => {
+    fetchAlbums();
+  }, []);
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -83,7 +171,7 @@ export default function GalleryManagement() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
-      quality: 1,
+      quality: 0.8, // Reduced quality for faster uploads
       selectionLimit: 10,
     });
     console.log('ImagePicker result:', result);
@@ -95,37 +183,321 @@ export default function GalleryManagement() {
     return [];
   };
 
+  // Pick cover image separately
+  const pickCoverImage = async (): Promise<Photo | null> => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please grant photo library access to add cover image.');
+      return null;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: false,
+      quality: 0.8,
+    });
+    console.log('Cover ImagePicker result:', result);
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      return { uri: result.assets[0].uri };
+    }
+    return null;
+  };
+
   // Create a new album
-  const handleCreateAlbum = () => {
-    if (!newTitle.trim() || newPhotos.length === 0) return;
-    const newAlbum: Album = {
-      id: (albums.length + 1).toString(),
-      title: newTitle.trim(),
-      photos: newPhotos,
-    };
-    setAlbums([newAlbum, ...albums]);
-    setShowCreate(false);
-    setNewTitle('');
-    setNewPhotos([]);
+  const handleCreateAlbum = async () => {
+    // User authentication check
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      Alert.alert('Not Authenticated', 'You must be logged in to create an album.');
+      return;
+    }
+    // Admin requires cover image, employee/trainee don't
+    const requiresCover = userRole === 'admin';
+    if (!newTitle.trim() || newPhotos.length === 0 || (requiresCover && !coverImage)) return;
+    
+    try {
+      setLoading(true);
+      setUploadProgress(0);
+      
+      console.log('🚀 Starting ULTRA-FAST album creation with', newPhotos.length, 'photos');
+      
+      // Step 1: Create album immediately with local cover image (no upload wait)
+      setUploadProgress(30);
+      const tempAlbumId = `temp-${Date.now()}`;
+      
+      // Use separate cover image, all photos go into album
+      let albumPhotos = newPhotos;
+      console.log('📸 Original photos selected:', newPhotos.length);
+      console.log('📸 Cover image:', coverImage ? coverImage.uri : 'None');
+      
+      if (userRole === 'admin' && coverImage) {
+        // Remove the cover image from the album photos if present
+        const beforeFilter = albumPhotos.length;
+        console.log('🖼️ Cover image URI:', coverImage.uri);
+        console.log('📸 Album photos URIs:', albumPhotos.map(p => p.uri));
+        
+        albumPhotos = newPhotos.filter(photo => {
+          const isCoverImage = photo.uri === coverImage.uri;
+          if (isCoverImage) {
+            console.log('🚫 Removing cover image from album photos:', photo.uri);
+          }
+          return !isCoverImage;
+        });
+        
+        const afterFilter = albumPhotos.length;
+        console.log(`📸 Filtered photos: ${beforeFilter} → ${afterFilter} (removed ${beforeFilter - afterFilter} cover image)`);
+        console.log('📸 Remaining album photos:', albumPhotos.map(p => p.uri));
+      }
+      
+      console.log('📸 Final album photos to upload:', albumPhotos.length);
+      
+      const tempAlbum = {
+        id: tempAlbumId,
+        title: newTitle.trim(),
+        cover_image: userRole === 'admin' && coverImage ? coverImage.uri : undefined, // Use local URI for temp display
+        photos: albumPhotos.map((photo, index) => ({
+          id: `temp-${index}`,
+          uri: photo.uri,
+          image_url: photo.uri,
+          created_at: new Date().toISOString()
+        })),
+        photoCount: albumPhotos.length // Count without cover photo
+      };
+      
+      console.log('📸 Temporary album created:', {
+        id: tempAlbum.id,
+        title: tempAlbum.title,
+        cover_image: tempAlbum.cover_image,
+        photoCount: tempAlbum.photoCount,
+        photos: tempAlbum.photos.map(p => p.uri)
+      });
+      
+      // Add album to UI IMMEDIATELY (no waiting)
+      setAlbums(prevAlbums => [tempAlbum, ...prevAlbums]);
+      
+      // Close modal and reset form IMMEDIATELY
+      setShowCreateModal(false);
+      setNewTitle('');
+      setNewPhotos([]);
+      setCoverImage(null);
+      setUploadProgress(0);
+      setLoading(false);
+      
+      // Show success message IMMEDIATELY
+      const photoCountText = albumPhotos.length === 1 ? '1 photo' : `${albumPhotos.length} photos`;
+      const coverText = userRole === 'admin' && coverImage ? ' with cover image' : '';
+      Alert.alert('Success', `Album created${coverText}! ${photoCountText} uploading in the background.`);
+      
+      // Step 2: Do all the heavy lifting in background (user doesn't wait)
+      try {
+        setUploadProgress(50);
+        
+        // Upload cover image in background (only for admin)
+        let coverImageUrl = null;
+        if (userRole === 'admin' && coverImage) {
+          console.log('🖼️ Uploading cover image...');
+          console.log('🖼️ Cover image URI:', coverImage.uri);
+          coverImageUrl = await uploadCoverImageToStorage(coverImage.uri);
+          console.log('✅ Cover image uploaded:', coverImageUrl);
+          if (!coverImageUrl) {
+            console.error('❌ Cover image upload failed!');
+          }
+        } else {
+          console.log('⚠️ No cover image to upload (userRole:', userRole, ', coverImage:', !!coverImage, ')');
+        }
+        
+        // Create real album in database
+        console.log('📝 Creating album in database...');
+        console.log('📝 Album title:', newTitle.trim());
+        console.log('📝 Cover image URL for database:', coverImageUrl || '');
+        const realAlbumId = await createAlbum(newTitle.trim(), coverImageUrl || '');
+        console.log('✅ Album created in database with ID:', realAlbumId);
+        
+        // Upload album photos (excluding cover photo)
+        console.log('📸 Album photos to upload:', albumPhotos.length, 'photos');
+        console.log('📸 Album photos data:', albumPhotos);
+        
+        if (albumPhotos.length > 0) {
+          console.log('📸 Starting photo upload process...');
+          const uploadedPhotos = await uploadPhotosToAlbum(realAlbumId, albumPhotos);
+          console.log('✅ All photos uploaded successfully:', uploadedPhotos.length);
+          console.log('✅ Uploaded photos data:', uploadedPhotos);
+          
+          // Replace temp album with real album
+          setAlbums(prevAlbums => 
+            prevAlbums.map(album => 
+              album.id === tempAlbumId 
+                ? { 
+                    ...album, 
+                    id: realAlbumId,
+                    cover_image: coverImageUrl || undefined, // Preserve the cover image
+                    photos: uploadedPhotos 
+                  }
+                : album
+            )
+          );
+          console.log('✅ Album updated in UI with real data');
+        } else {
+          // No photos to upload, just update the album ID
+          console.log('⚠️ No photos to upload for this album');
+          setAlbums(prevAlbums => 
+            prevAlbums.map(album => 
+              album.id === tempAlbumId 
+                ? { 
+                    ...album, 
+                    id: realAlbumId,
+                    cover_image: coverImageUrl || undefined, // Preserve the cover image
+                    photos: [] // Ensure empty photos array
+                  }
+                : album
+            )
+          );
+          console.log('✅ Album updated in UI (no photos)');
+        }
+        
+        setUploadProgress(100);
+        console.log('🎉 Album creation completed successfully!');
+        
+      } catch (error) {
+        console.error('❌ Error in background album creation:', error);
+        
+        // Remove the temporary album from UI since it failed
+        setAlbums(prevAlbums => prevAlbums.filter(album => album.id !== tempAlbumId));
+        
+        // Show error message
+        Alert.alert('Error', 'Failed to save album. Please try again.');
+      }
+        
+    } catch (error) {
+      console.error('Error creating album:', error);
+      Alert.alert('Error', 'Failed to create album. Please try again.');
+      setLoading(false);
+      setUploadProgress(0);
+    }
   };
 
   // Delete an album
   const handleDeleteAlbum = (albumId: string) => {
-    Alert.alert('Delete Album', 'Are you sure you want to delete this album?', [
+    Alert.alert('Delete Album', 'Are you sure you want to delete this album? This action cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => setAlbums(albums.filter((a) => a.id !== albumId)),
+        onPress: async () => {
+          try {
+            setLoading(true);
+            
+            // Check if this is a temporary album (starts with 'temp-')
+            if (albumId.startsWith('temp-')) {
+              // For temporary albums, just remove from local state (no database deletion needed)
+              console.log('🗑️ Deleting temporary album:', albumId);
+              const updatedAlbums = albums.filter(a => a.id !== albumId);
+              setAlbums(updatedAlbums);
+              
+              // If we're in album view, go back to albums list
+              if (selectedAlbumId === albumId) {
+                setSelectedAlbumId(null);
+              }
+              
+              Alert.alert('Success', 'Album deleted successfully!');
+            } else {
+              // For real albums, delete from database
+              console.log('🗑️ Deleting real album from database:', albumId);
+              await deleteAlbum(albumId);
+              
+              // Update local state immediately for better UX
+              const updatedAlbums = albums.filter(a => a.id !== albumId);
+              setAlbums(updatedAlbums);
+              
+              // If we're in album view, go back to albums list
+              if (selectedAlbumId === albumId) {
+                setSelectedAlbumId(null);
+              }
+              
+              Alert.alert('Success', 'Album deleted successfully!');
+            }
+          } catch (error) {
+            console.error('Error deleting album:', error);
+            Alert.alert('Error', 'Failed to delete album. Please try again.');
+          } finally {
+            setLoading(false);
+          }
+        },
       },
     ]);
   };
 
-  // Delete a photo from an album
-  const handleDeletePhoto = (album: Album, photoIdx: number) => {
-    const updatedPhotos = album.photos.filter((_, idx) => idx !== photoIdx);
-    setAlbums(albums.map((a) => (a.id === album.id ? { ...a, photos: updatedPhotos } : a)));
-    setSelectedAlbumId(album.id);
+  // Delete a photo from an album (optimized)
+  const handleDeletePhoto = async (album: Album, photoIdx: number) => {
+    const photo = album.photos[photoIdx];
+    if (!photo || !photo.id) {
+      console.error('Photo not found or missing ID');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Check if this is a temporary photo (starts with 'temp-')
+      if (photo.id.startsWith('temp-')) {
+        // For temporary photos, just remove from local state (no database deletion needed)
+        console.log('🗑️ Deleting temporary photo:', photo.id);
+        
+        // Update local state immediately for better UX
+        const updatedAlbums = albums.map(a => {
+          if (a.id === album.id) {
+            const updatedPhotos = [...a.photos];
+            updatedPhotos.splice(photoIdx, 1);
+            return { ...a, photos: updatedPhotos };
+          }
+          return a;
+        });
+        setAlbums(updatedAlbums);
+        
+        // If we're viewing this album, update the current view
+        if (selectedAlbumId === album.id) {
+          const currentAlbum = updatedAlbums.find(a => a.id === album.id);
+          if (currentAlbum) {
+            // Update the current album view
+            setSelectedAlbumId(null); // Force refresh
+            setTimeout(() => setSelectedAlbumId(album.id), 100);
+          }
+        }
+        
+        Alert.alert('Success', 'Photo deleted successfully!');
+      } else {
+        // For real photos, delete from database
+        console.log('🗑️ Deleting real photo from database:', photo.id);
+        await deletePhoto(photo.id, photo.uri);
+        
+        // Update local state immediately for better UX
+        const updatedAlbums = albums.map(a => {
+          if (a.id === album.id) {
+            const updatedPhotos = [...a.photos];
+            updatedPhotos.splice(photoIdx, 1);
+            return { ...a, photos: updatedPhotos };
+          }
+          return a;
+        });
+        setAlbums(updatedAlbums);
+        
+        // If we're viewing this album, update the current view
+        if (selectedAlbumId === album.id) {
+          const currentAlbum = updatedAlbums.find(a => a.id === album.id);
+          if (currentAlbum) {
+            // Update the current album view
+            setSelectedAlbumId(null); // Force refresh
+            setTimeout(() => setSelectedAlbumId(album.id), 100);
+          }
+        }
+        
+        Alert.alert('Success', 'Photo deleted successfully!');
+      }
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      Alert.alert('Error', 'Failed to delete photo. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Filtered albums for search
@@ -164,29 +536,22 @@ export default function GalleryManagement() {
     const insets = useSafeAreaInsets();
     return (
       <View style={{ flex: 1, backgroundColor }}>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-        <View style={{
-          paddingTop: insets.top,
-          backgroundColor: cardBackground,
-          borderBottomColor: borderColor,
-          borderBottomWidth: 1,
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 16,
-          paddingBottom: 12,
-        }}>
-          <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
-            <Ionicons name="arrow-back" size={24} color={isDarkMode ? '#fff' : '#222'} />
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={textColor} />
           </TouchableOpacity>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{
-              fontSize: 20,
-              fontWeight: 'bold',
-              letterSpacing: 0.5,
-              color: isDarkMode ? '#fff' : '#222',
-            }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
-          </View>
-          <View style={{ width: 32 }} />
+          <Text style={[styles.headerTitle, { color: textColor }]}>
+            MIT<Text style={{ color: '#3CB371' }}>Connect</Text>
+          </Text>
+          <TouchableOpacity 
+            style={[styles.addButton, { backgroundColor: '#3CB371' }]}
+            onPress={() => setShowCreate(true)}
+          >
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
         </View>
         <View style={[styles.mainContainer, { backgroundColor }]}>
           {/* Search Bar */}
@@ -220,28 +585,40 @@ export default function GalleryManagement() {
             ) : (
               <View style={styles.albumGrid}>
                 {filteredAlbums.map((item) => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={[styles.albumCard, { backgroundColor: cardBackground, borderColor }]}
-                    onPress={() => setSelectedAlbumId(item.id)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.albumCoverBox}>
-                      {item.photos[0] ? (
-                        <Image source={{ uri: item.photos[0].uri }} style={styles.albumCoverImg} />
-                      ) : (
-                        <View style={[styles.albumCoverPlaceholder, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]} />
-                      )}
-                      <View style={[styles.albumOverlay, { 
-                        backgroundColor: isDarkMode ? 'rgba(0,0,0,0.8)' : 'rgba(34,34,34,0.9)',
-                        borderBottomLeftRadius: 24,
-                        borderBottomRightRadius: 24,
-                      }]}>
-                        <Text style={[styles.albumTitle, { color: '#fff' }]}>{item.title}</Text>
-                        <Text style={[styles.albumCount, { color: '#fff' }]}>{item.photos.length} {item.photos.length === 1 ? 'photo' : 'photos'}</Text>
+                  <View key={item.id} style={[styles.albumCard, { backgroundColor: cardBackground, borderColor }]}>
+                    <TouchableOpacity
+                      style={styles.albumCardContent}
+                      onPress={() => setSelectedAlbumId(item.id)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.albumCoverBox}>
+                        {item.cover_image ? (
+                          <Image source={{ uri: item.cover_image }} style={styles.albumCoverImg} />
+                        ) : item.photos[0] ? (
+                          <Image source={{ uri: item.photos[0].uri }} style={styles.albumCoverImg} />
+                        ) : (
+                          <View style={[styles.albumCoverPlaceholder, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]} />
+                        )}
+                        <View style={[styles.albumOverlay, { 
+                          backgroundColor: isDarkMode ? 'rgba(0,0,0,0.8)' : 'rgba(34,34,34,0.9)',
+                          borderBottomLeftRadius: 24,
+                          borderBottomRightRadius: 24,
+                        }]}>
+                          <Text style={[styles.albumTitle, { color: '#fff' }]}>{item.title}</Text>
+                          <Text style={[styles.albumCount, { color: '#fff' }]}>{item.photos.length} {item.photos.length === 1 ? 'photo' : 'photos'}</Text>
+                        </View>
                       </View>
-                    </View>
-                  </TouchableOpacity>
+                    </TouchableOpacity>
+                    
+                    {/* Delete Button */}
+                    <TouchableOpacity
+                      style={styles.deleteAlbumButton}
+                      onPress={() => handleDeleteAlbum(item.id)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
                 ))}
                 {filteredAlbums.length === 0 && searchQuery.length > 0 && (
                   <View style={styles.emptySearchState}>
@@ -257,7 +634,7 @@ export default function GalleryManagement() {
           </ScrollView>
 
           {/* Bottom Tab Bar */}
-          <AdminTabBar activeTab="gallery" isDarkMode={isDarkMode} />
+  
           {AddAlbumFAB}
 
           {/* Create Album Modal */}
@@ -287,6 +664,41 @@ export default function GalleryManagement() {
                     value={newTitle}
                     onChangeText={setNewTitle}
                   />
+                  
+                  {/* Cover Image Selection - Only for Admin */}
+                  {userRole === 'admin' && (
+                    <>
+                      <TouchableOpacity 
+                        style={[styles.addPhotosBtn, { backgroundColor: searchBackground, borderColor }]}
+                        onPress={async () => {
+                          const cover = await pickCoverImage();
+                          if (cover) {
+                            setCoverImage(cover);
+                          }
+                        }}
+                      >
+                        <Ionicons name="image" size={20} color={secondaryTextColor} />
+                        <Text style={[styles.addPhotosText, { color: textColor }]}>
+                          {coverImage ? 'Change Cover Image' : 'Select Cover Image'}
+                        </Text>
+                      </TouchableOpacity>
+                      
+                      {coverImage && (
+                        <View style={styles.coverImageContainer}>
+                          <Text style={[styles.selectedPhotosTitle, { color: textColor }]}>Cover Image</Text>
+                          <View style={styles.selectedPhotoItem}>
+                            <Image source={{ uri: coverImage.uri }} style={styles.selectedPhoto} />
+                            <TouchableOpacity 
+                              style={styles.removePhotoBtn}
+                              onPress={() => setCoverImage(null)}
+                            >
+                              <Ionicons name="close" size={16} color="#fff" />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+                    </>
+                  )}
                   
                   <TouchableOpacity 
                     style={[styles.addPhotosBtn, { backgroundColor: searchBackground, borderColor }]}
@@ -326,21 +738,33 @@ export default function GalleryManagement() {
                       setShowCreateModal(false);
                       setNewTitle('');
                       setNewPhotos([]);
+                      setCoverImage(null);
                     }}
                   >
                     <Text style={[styles.cancelBtnText, { color: textColor }]}>Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.createBtn, { 
-                      backgroundColor: newTitle.trim() && newPhotos.length > 0 ? '#3CB371' : (isDarkMode ? '#2A2A2A' : '#E5E5EA'),
-                      opacity: newTitle.trim() && newPhotos.length > 0 ? 1 : 0.6
+                      backgroundColor: newTitle.trim() && newPhotos.length > 0 && (userRole !== 'admin' || coverImage) ? '#3CB371' : (isDarkMode ? '#2A2A2A' : '#E5E5EA'),
+                      opacity: newTitle.trim() && newPhotos.length > 0 && (userRole !== 'admin' || coverImage) ? 1 : 0.6
                     }]} 
                     onPress={handleCreateAlbum}
-                    disabled={!newTitle.trim() || newPhotos.length === 0}
+                    disabled={!newTitle.trim() || newPhotos.length === 0 || (userRole === 'admin' && !coverImage) || loading}
                   >
-                    <Text style={[styles.createBtnText, { 
-                      color: newTitle.trim() && newPhotos.length > 0 ? '#fff' : (isDarkMode ? '#666' : '#999')
-                    }]}>Create Album</Text>
+                    {loading ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={[styles.createBtnText, { color: '#fff', marginRight: 8 }]}>
+                          Creating...
+                        </Text>
+                        <Text style={[styles.createBtnText, { color: '#fff', fontSize: 12 }]}>
+                          {uploadProgress}%
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={[styles.createBtnText, { 
+                        color: newTitle.trim() && newPhotos.length > 0 ? '#fff' : (isDarkMode ? '#666' : '#999')
+                      }]}>Create Album</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -355,7 +779,7 @@ export default function GalleryManagement() {
   if (showCreate) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor }}>
-        <AdminHeader title="New Album" />
+        <AdminHeader title="New Album" backDestination={undefined} />
         {/* Form */}
         <ScrollView 
           style={styles.scrollContainer}
@@ -403,7 +827,7 @@ export default function GalleryManagement() {
             </TouchableOpacity>
           </View>
         </ScrollView>
-        <AdminTabBar activeTab="gallery" />
+
       </SafeAreaView>
     );
   }
@@ -411,18 +835,38 @@ export default function GalleryManagement() {
   // Album Detail View: Widget style
   if (selectedAlbumId) {
     const handleAddPhotosToAlbum = async () => {
-      const newImgs = await pickImagesFromLibrary();
-      console.log('Picked images:', newImgs);
-      if (newImgs.length > 0) {
-        const current = albums.find(a => a.id === selectedAlbumId);
-        const updatedAlbum = {
-          ...current,
-          photos: [...(current?.photos || []), ...newImgs] as Photo[],
-        } as Album;
-        setAlbums(albums.map((a) => (a.id === selectedAlbumId ? updatedAlbum : a)));
-        setSelectedAlbumId(selectedAlbumId);
-        console.log('Updated album photos:', updatedAlbum.photos);
-        ToastAndroid.show('Photos added!', ToastAndroid.SHORT);
+      try {
+        const newImgs = await pickImagesFromLibrary();
+        console.log('Picked images:', newImgs);
+        
+        if (newImgs.length > 0) {
+          // Show loading state
+          Alert.alert('Uploading', 'Uploading photos...');
+          
+          // Upload photos to Supabase
+          const uploadedPhotos = await uploadPhotosToAlbum(selectedAlbumId, newImgs);
+          console.log('Uploaded photos:', uploadedPhotos);
+          
+          if (uploadedPhotos && uploadedPhotos.length > 0) {
+            // Update local state with uploaded photos
+            const current = albums.find(a => a.id === selectedAlbumId);
+            if (current) {
+              const updatedAlbum = {
+                ...current,
+                photos: [...current.photos, ...uploadedPhotos],
+              } as Album;
+              setAlbums(albums.map((a) => (a.id === selectedAlbumId ? updatedAlbum : a)));
+              setSelectedAlbumId(selectedAlbumId);
+              console.log('Updated album photos:', updatedAlbum.photos);
+              Alert.alert('Success', `${uploadedPhotos.length} photos added successfully!`);
+            }
+          } else {
+            Alert.alert('Error', 'Failed to upload photos');
+          }
+        }
+      } catch (error) {
+        console.error('Error adding photos to album:', error);
+        Alert.alert('Error', 'Error uploading photos');
       }
     };
     const handleAnimatedDeletePhoto = (album: Album, photoIdx: number) => {
@@ -439,26 +883,89 @@ export default function GalleryManagement() {
       });
     };
     const openEditModal = () => {
-      setEditTitle(albums.find(a => a.id === selectedAlbumId)?.title || '');
+      const currentAlbum = albums.find(a => a.id === selectedAlbumId);
+      setEditTitle(currentAlbum?.title || '');
+      // Initialize edit cover image with current cover if it exists
+      if (currentAlbum?.cover_image) {
+        setEditCoverImage({ uri: currentAlbum.cover_image });
+      } else {
+        setEditCoverImage(null);
+      }
       setShowEditModal(true);
     };
-    const handleSaveEdit = () => {
+    
+    const pickEditCoverImage = async () => {
+      const newCoverImage = await pickCoverImage();
+      if (newCoverImage) {
+        setEditCoverImage(newCoverImage);
+      }
+    };
+    const handleSaveEdit = async () => {
       if (!editTitle.trim()) return;
-      const current = albums.find(a => a.id === selectedAlbumId);
-      if (!current) return;
-      const updatedAlbum: Album = { ...current, title: editTitle.trim() };
-      setAlbums(albums.map((a) => (a.id === selectedAlbumId ? updatedAlbum : a)));
-      setSelectedAlbumId(selectedAlbumId);
-      setShowEditModal(false);
-      Keyboard.dismiss();
-      ToastAndroid.show('Album updated!', ToastAndroid.SHORT);
+      
+      try {
+        const current = albums.find(a => a.id === selectedAlbumId);
+        if (!current) return;
+        
+        let newCoverImageUrl = current.cover_image;
+        
+        // Upload new cover image if selected
+        if (editCoverImage && editCoverImage.uri !== current.cover_image) {
+          Alert.alert('Uploading', 'Uploading cover image...');
+          const coverImageUrl = await uploadCoverImageToStorage(editCoverImage.uri);
+          if (coverImageUrl) {
+            newCoverImageUrl = coverImageUrl;
+            console.log('✅ New cover image uploaded:', coverImageUrl);
+          } else {
+            Alert.alert('Error', 'Failed to upload cover image');
+            return;
+          }
+        }
+        
+        // Update album in database
+        const { data, error } = await supabase
+          .from('gallery_albums')
+          .update({ 
+            name: editTitle.trim(),
+            cover_image: newCoverImageUrl 
+          })
+          .eq('id', selectedAlbumId)
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Error updating album:', error);
+          Alert.alert('Error', 'Failed to update album. Please try again.');
+          return;
+        }
+        
+        // Update local state
+        const updatedAlbum: Album = { 
+          ...current, 
+          title: editTitle.trim(),
+          cover_image: newCoverImageUrl
+        };
+        setAlbums(albums.map((a) => (a.id === selectedAlbumId ? updatedAlbum : a)));
+        setSelectedAlbumId(selectedAlbumId);
+        setShowEditModal(false);
+        setEditCoverImage(null);
+        Keyboard.dismiss();
+        Alert.alert('Success', 'Album updated successfully!');
+        
+      } catch (error) {
+        console.error('Error saving album edit:', error);
+        Alert.alert('Error', 'Error updating album');
+      }
     };
     const currentAlbum = albums.find(a => a.id === selectedAlbumId);
     if (selectedAlbumId && currentAlbum) {
       return (
         <SafeAreaView style={{ flex: 1, backgroundColor }}>
           <AdminHeader 
-            title=""
+            title={currentAlbum.title}
+            backDestination={undefined}
+            onBackPress={() => setSelectedAlbumId(null)}
+            showLogo={false}
             rightComponent={
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <TouchableOpacity
@@ -470,12 +977,20 @@ export default function GalleryManagement() {
                   <Ionicons name="add" size={20} color="#fff" />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.addBtn}
+                  style={[styles.editBtn, { marginRight: 8 }]}
                   onPress={openEditModal}
                   accessibilityLabel="Edit album"
                   activeOpacity={0.7}
                 >
                   <Ionicons name="create-outline" size={20} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.deleteBtn]}
+                  onPress={() => handleDeleteAlbum(selectedAlbumId!)}
+                  accessibilityLabel="Delete album"
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="trash-outline" size={20} color="#fff" />
                 </TouchableOpacity>
               </View>
             }
@@ -487,14 +1002,14 @@ export default function GalleryManagement() {
             numColumns={1}
             contentContainerStyle={styles.photoWidgetList}
             renderItem={({ item, index }) => {
-              let loadError = false;
+              const hasError = imageErrors.has(item.uri);
               return (
                 <Animated.View style={[styles.photoWidgetListItem, deleteAnimIdx === index && { opacity: deleteAnim, transform: [{ scale: deleteAnim }] }]}>
-                  {!loadError ? (
+                  {!hasError ? (
                     <Image
                       source={{ uri: item.uri }}
                       style={styles.photoWidgetListImg}
-                      onError={() => { loadError = true; }}
+                      onError={() => handleImageError(item.uri)}
                     />
                   ) : (
                     <View style={[styles.photoWidgetListImg, { alignItems: 'center', justifyContent: 'center' }]}>
@@ -537,7 +1052,10 @@ export default function GalleryManagement() {
                 <View style={styles.modalSheet}>
                   <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>Edit Album</Text>
-                    <TouchableOpacity onPress={() => setShowEditModal(false)} style={styles.modalCloseBtn}>
+                    <TouchableOpacity onPress={() => {
+                      setShowEditModal(false);
+                      setEditCoverImage(null);
+                    }} style={styles.modalCloseBtn}>
                       <Ionicons name="close" size={28} color="#fff" />
                     </TouchableOpacity>
                   </View>
@@ -550,6 +1068,33 @@ export default function GalleryManagement() {
                       placeholderTextColor="#aaa"
                       autoFocus
                     />
+                    
+                    {/* Cover Image Selection */}
+                    <View style={{ marginTop: 20 }}>
+                      <Text style={[styles.formLabel, { color: textColor }]}>Album Cover</Text>
+                      <TouchableOpacity
+                        style={styles.coverImageSelector}
+                        onPress={pickEditCoverImage}
+                        activeOpacity={0.8}
+                      >
+                        {editCoverImage && !imageErrors.has(editCoverImage.uri) ? (
+                          <Image 
+                            source={{ uri: editCoverImage.uri }} 
+                            style={styles.coverImagePreview}
+                            onError={() => handleImageError(editCoverImage.uri)}
+                          />
+                        ) : (
+                          <View style={[styles.coverImagePlaceholder, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]}>
+                            <Ionicons name="image-outline" size={32} color="#bbb" />
+                            <Text style={{ color: '#bbb', fontSize: 14, marginTop: 8 }}>Select Cover Image</Text>
+                          </View>
+                        )}
+                        <View style={styles.coverImageOverlay}>
+                          <Ionicons name="camera" size={20} color="#fff" />
+                        </View>
+                      </TouchableOpacity>
+                    </View>
+                    
                     <TouchableOpacity
                       style={[styles.createBtn, { backgroundColor: '#222' }]}
                       onPress={handleSaveEdit}
@@ -568,7 +1113,244 @@ export default function GalleryManagement() {
     }
   }
 
-  return null;
+  // Main Gallery Management View (Album List)
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor }}>
+      <AdminHeader 
+        title="Gallery Management"
+        backDestination={undefined}
+        showLogo={false}
+        rightComponent={
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => setShowCreateModal(true)}
+            accessibilityLabel="Create new album"
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add" size={20} color="#fff" />
+          </TouchableOpacity>
+        }
+      />
+      
+      {/* Search Bar */}
+      <View style={[styles.searchBarContainer, { backgroundColor: searchBackground }]}>
+        <Ionicons name="search" size={20} color={secondaryTextColor} style={{ marginRight: 8 }} />
+        <TextInput
+          style={[styles.searchBar, { color: textColor }]}
+          placeholder="Search albums..."
+          placeholderTextColor={secondaryTextColor}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
+
+      {/* Albums List */}
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.albumGrid}>
+          {albums.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="images-outline" size={64} color="#bbb" />
+              <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Albums Yet</Text>
+              <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+                Create your first album to start organizing photos
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyStateButton}
+                onPress={() => setShowCreateModal(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add" size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.emptyStateButtonText}>Create Album</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            albums.map((album) => (
+              <TouchableOpacity
+                key={album.id}
+                style={[styles.albumCard, { backgroundColor: cardBackground, borderColor: borderColor }]}
+                onPress={() => setSelectedAlbumId(album.id)}
+                activeOpacity={0.9}
+              >
+                <View style={styles.albumCardContent}>
+                  <View style={styles.albumCoverBox}>
+                    {album.cover_image && !imageErrors.has(album.cover_image) ? (
+                      <Image 
+                        source={{ uri: album.cover_image }} 
+                        style={styles.albumCoverImg}
+                        onError={() => album.cover_image && handleImageError(album.cover_image)}
+                      />
+                    ) : album.photos[0] && !imageErrors.has(album.photos[0].uri) ? (
+                      <Image 
+                        source={{ uri: album.photos[0].uri }} 
+                        style={styles.albumCoverImg}
+                        onError={() => handleImageError(album.photos[0].uri)}
+                      />
+                    ) : (
+                      <View style={[styles.albumCoverPlaceholder, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]}>
+                        <Ionicons name="image-outline" size={32} color="#bbb" />
+                      </View>
+                    )}
+                    <View style={styles.albumOverlay}>
+                      <Text style={[styles.albumTitle, { color: '#fff' }]}>{album.title}</Text>
+                      <Text style={[styles.albumCount, { color: '#fff' }]}>
+                        {album.photos.length} photo{album.photos.length !== 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={styles.deleteAlbumButton}
+                  onPress={() => handleDeleteAlbum(album.id)}
+                  accessibilityLabel="Delete album"
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#fff" />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Create Album Modal */}
+      <Modal
+        visible={showCreateModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowCreateModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalSheet, { backgroundColor: modalBackground }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: textColor }]}>Create New Album</Text>
+                <TouchableOpacity onPress={() => setShowCreateModal(false)} style={styles.modalCloseBtn}>
+                  <Ionicons name="close" size={28} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.formContainer}>
+                <TextInput
+                  style={[styles.formInput, { color: textColor, borderColor: borderColor }]}
+                  placeholder="Album Title"
+                  value={newTitle}
+                  onChangeText={setNewTitle}
+                  placeholderTextColor="#aaa"
+                  autoFocus
+                />
+                
+                {/* Cover Image Selection for Admin */}
+                {userRole === 'admin' && (
+                  <View style={{ marginTop: 20 }}>
+                    <Text style={[styles.formLabel, { color: textColor }]}>Album Cover</Text>
+                    <TouchableOpacity
+                      style={styles.coverImageSelector}
+                      onPress={async () => {
+                        const cover = await pickCoverImage();
+                        if (cover) setCoverImage(cover);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      {coverImage && !imageErrors.has(coverImage.uri) ? (
+                        <Image 
+                          source={{ uri: coverImage.uri }} 
+                          style={styles.coverImagePreview}
+                          onError={() => handleImageError(coverImage.uri)}
+                        />
+                      ) : (
+                        <View style={[styles.coverImagePlaceholder, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]}>
+                          <Ionicons name="image-outline" size={32} color="#bbb" />
+                          <Text style={{ color: '#bbb', fontSize: 14, marginTop: 8 }}>Select Cover Image</Text>
+                        </View>
+                      )}
+                      <View style={styles.coverImageOverlay}>
+                        <Ionicons name="camera" size={20} color="#fff" />
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Photo Selection */}
+                <View style={{ marginTop: 20 }}>
+                  <Text style={[styles.formLabel, { color: textColor }]}>Photos</Text>
+                  <TouchableOpacity
+                    style={styles.coverImageSelector}
+                    onPress={async () => {
+                      const photos = await pickImagesFromLibrary();
+                      if (photos.length > 0) setNewPhotos(photos);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    {newPhotos.length > 0 ? (
+                      <View style={styles.selectedPhotosContainer}>
+                        <Text style={[styles.selectedPhotosTitle, { color: textColor }]}>
+                          {newPhotos.length} photo{newPhotos.length !== 1 ? 's' : ''} selected
+                        </Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          {newPhotos.map((photo, index) => (
+                            <View key={index} style={styles.selectedPhotoItem}>
+                              {!imageErrors.has(photo.uri) ? (
+                                <Image 
+                                  source={{ uri: photo.uri }} 
+                                  style={styles.selectedPhoto}
+                                  onError={() => handleImageError(photo.uri)}
+                                />
+                              ) : (
+                                <View style={[styles.selectedPhoto, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0' }]}>
+                                  <Ionicons name="alert-circle-outline" size={20} color="#f00" />
+                                </View>
+                              )}
+                              <TouchableOpacity
+                                style={styles.cancelBtn}
+                                onPress={() => setNewPhotos(newPhotos.filter((_, i) => i !== index))}
+                              >
+                                <Ionicons name="close" size={16} color="#f00" />
+                              </TouchableOpacity>
+                            </View>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    ) : (
+                      <View style={[styles.coverImagePlaceholder, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]}>
+                        <Ionicons name="images-outline" size={32} color="#bbb" />
+                        <Text style={{ color: '#bbb', fontSize: 14, marginTop: 8 }}>Select Photos</Text>
+                      </View>
+                    )}
+                    <View style={styles.coverImageOverlay}>
+                      <Ionicons name="images" size={20} color="#fff" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.createBtn,
+                    {
+                      backgroundColor: newTitle.trim() && newPhotos.length > 0 && (userRole !== 'admin' || coverImage) ? '#3CB371' : (isDarkMode ? '#2A2A2A' : '#E5E5EA'),
+                      opacity: newTitle.trim() && newPhotos.length > 0 && (userRole !== 'admin' || coverImage) ? 1 : 0.6
+                    }
+                  ]}
+                  onPress={handleCreateAlbum}
+                  activeOpacity={0.85}
+                  disabled={!newTitle.trim() || newPhotos.length === 0 || (userRole === 'admin' && !coverImage) || loading}
+                >
+                  <Text style={[styles.createBtnText, { color: newTitle.trim() && newPhotos.length > 0 && (userRole !== 'admin' || coverImage) ? '#fff' : secondaryTextColor }]}>
+                    Create Album
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </SafeAreaView>
+  );
 }
 
 const albumColors = [
@@ -584,6 +1366,29 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     borderRadius: 24,
     padding: 10,
+    backgroundColor: 'rgba(0, 122, 255, 0.9)',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  editBtn: {
+    marginLeft: 8,
+    borderRadius: 24,
+    padding: 10,
+    backgroundColor: 'rgba(255, 149, 0, 0.9)',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  deleteBtn: {
+    marginLeft: 8,
+    borderRadius: 24,
+    padding: 10,
+    backgroundColor: 'rgba(255, 59, 48, 0.9)',
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 10,
@@ -633,6 +1438,27 @@ const styles = StyleSheet.create({
     elevation: 8,
     overflow: 'hidden',
     borderWidth: 1,
+    position: 'relative',
+  },
+  albumCardContent: {
+    flex: 1,
+  },
+  deleteAlbumButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(255, 59, 48, 0.9)',
+    borderRadius: 20,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+    zIndex: 10,
   },
   albumCoverBox: {
     width: '100%',
@@ -945,6 +1771,50 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingBottom: 16,
   },
+  coverImageContainer: {
+    marginTop: 16,
+    paddingBottom: 16,
+  },
+  formLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    fontFamily: Platform.OS === 'ios' ? 'System' : undefined,
+  },
+  coverImageSelector: {
+    position: 'relative',
+    width: '100%',
+    height: 120,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  coverImagePreview: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  coverImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderStyle: 'dashed',
+  },
+  coverImageOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   selectedPhotosTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -1025,5 +1895,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 32,
     paddingTop: 40,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 }); 

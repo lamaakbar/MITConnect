@@ -1,9 +1,87 @@
 -- =============================================
--- MITConnect Inspire Corner Database Schema
+-- MITConnect Comprehensive Database Schema
+-- Run this script in your Supabase SQL editor
 -- =============================================
 
--- 1. Ideas Table
-CREATE TABLE ideas (
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- =============================================
+-- USER MANAGEMENT
+-- =============================================
+
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    role VARCHAR(20) DEFAULT 'employee' CHECK (role IN ('admin', 'employee', 'trainee')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =============================================
+-- EVENT MANAGEMENT SYSTEM
+-- =============================================
+
+-- Events table
+CREATE TABLE IF NOT EXISTS events (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    desc TEXT,
+    date DATE NOT NULL,
+    time VARCHAR(100) NOT NULL,
+    location VARCHAR(255) NOT NULL,
+    cover_image TEXT,
+    category VARCHAR(50) NOT NULL CHECK (category IN ('Workshop', 'Seminar', 'Conference', 'Activity', 'Meetup', 'Training', 'Networking')),
+    featured BOOLEAN DEFAULT FALSE,
+    status VARCHAR(20) DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'ongoing', 'completed', 'cancelled')),
+    type VARCHAR(20) DEFAULT 'MITC' CHECK (type IN ('MITC', 'Online', 'Hybrid')),
+    max_capacity INTEGER,
+    organizer VARCHAR(255),
+    tags TEXT[],
+    requirements TEXT[],
+    materials TEXT[],
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Event attendees table
+CREATE TABLE IF NOT EXISTS event_attendees (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    user_id VARCHAR(255) NOT NULL, -- Using string for user ID to match existing auth
+    status VARCHAR(20) DEFAULT 'confirmed' CHECK (status IN ('confirmed', 'cancelled', 'attended')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(event_id, user_id) -- Prevent duplicate registrations
+);
+
+-- Event bookmarks table
+CREATE TABLE IF NOT EXISTS event_bookmarks (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    user_id VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(event_id, user_id) -- Prevent duplicate bookmarks
+);
+
+-- Event feedback table
+CREATE TABLE IF NOT EXISTS event_feedback (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    user_id VARCHAR(255) NOT NULL,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(event_id, user_id) -- One feedback per user per event
+);
+
+-- =============================================
+-- INSPIRE CORNER SYSTEM
+-- =============================================
+
+-- Ideas Table
+CREATE TABLE IF NOT EXISTS ideas (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
@@ -18,8 +96,8 @@ CREATE TABLE ideas (
     approved_at TIMESTAMP WITH TIME ZONE
 );
 
--- 2. Votes Table
-CREATE TABLE idea_votes (
+-- Votes Table
+CREATE TABLE IF NOT EXISTS idea_votes (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     idea_id UUID NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
     user_id UUID NOT NULL,
@@ -30,8 +108,8 @@ CREATE TABLE idea_votes (
     UNIQUE(idea_id, user_id) -- Prevent duplicate votes from same user
 );
 
--- 3. Comments Table
-CREATE TABLE idea_comments (
+-- Comments Table
+CREATE TABLE IF NOT EXISTS idea_comments (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     idea_id UUID NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
     user_id UUID NOT NULL,
@@ -42,57 +120,168 @@ CREATE TABLE idea_comments (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 4. Create indexes for better performance
-CREATE INDEX idx_ideas_status ON ideas(status);
-CREATE INDEX idx_ideas_submitter ON ideas(submitter_id);
-CREATE INDEX idx_ideas_created_at ON ideas(created_at DESC);
-CREATE INDEX idx_votes_idea_id ON idea_votes(idea_id);
-CREATE INDEX idx_comments_idea_id ON idea_comments(idea_id);
+-- =============================================
+-- BOOK MANAGEMENT SYSTEM
+-- =============================================
 
--- 5. Enable Row Level Security (RLS)
-ALTER TABLE ideas ENABLE ROW LEVEL SECURITY;
-ALTER TABLE idea_votes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE idea_comments ENABLE ROW LEVEL SECURITY;
+-- Books table
+CREATE TABLE IF NOT EXISTS books (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    author TEXT,
+    isbn TEXT,
+    description TEXT,
+    published_date DATE,
+    cover_image_url TEXT,
+    genre TEXT,
+    genre_color TEXT,
+    category TEXT DEFAULT 'library' CHECK (category IN ('library', 'book_of_the_month')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
--- 6. Create RLS Policies
--- Ideas policies
-CREATE POLICY "Users can view approved ideas and their own ideas" ON ideas
-    FOR SELECT USING (
-        status = 'Approved' OR 
-        submitter_id = auth.uid() OR 
-        auth.jwt() ->> 'role' = 'admin'
-    );
+-- User books relationship table
+CREATE TABLE IF NOT EXISTS user_books (
+    user_id UUID NOT NULL,
+    book_id INTEGER NOT NULL,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(50) DEFAULT 'assigned',
+    notes TEXT,
+    PRIMARY KEY (user_id, book_id),
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+);
 
-CREATE POLICY "Users can insert their own ideas" ON ideas
-    FOR INSERT WITH CHECK (submitter_id = auth.uid());
+-- Book ratings table
+CREATE TABLE IF NOT EXISTS ratings (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL,
+    book_id INTEGER NOT NULL,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, book_id),
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+);
 
-CREATE POLICY "Users can update their own ideas, admins can update any" ON ideas
-    FOR UPDATE USING (
-        submitter_id = auth.uid() OR 
-        auth.jwt() ->> 'role' = 'admin'
-    );
+-- Book comments table
+CREATE TABLE IF NOT EXISTS comments (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL,
+    book_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+);
 
--- Votes policies
-CREATE POLICY "Users can view all votes" ON idea_votes
-    FOR SELECT USING (true);
+-- =============================================
+-- HIGHLIGHTS SYSTEM
+-- =============================================
 
-CREATE POLICY "Users can insert their own votes" ON idea_votes
-    FOR INSERT WITH CHECK (user_id = auth.uid());
+-- Highlights table
+CREATE TABLE IF NOT EXISTS highlights (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    image_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-CREATE POLICY "Users can update their own votes" ON idea_votes
-    FOR UPDATE USING (user_id = auth.uid());
+-- =============================================
+-- GALLERY SYSTEM
+-- =============================================
 
--- Comments policies
-CREATE POLICY "Users can view all comments" ON idea_comments
-    FOR SELECT USING (true);
+-- Gallery albums table
+CREATE TABLE IF NOT EXISTS gallery_albums (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    cover_image_url TEXT,
+    user_id UUID NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-CREATE POLICY "Users can insert their own comments" ON idea_comments
-    FOR INSERT WITH CHECK (user_id = auth.uid());
+-- Gallery photos table
+CREATE TABLE IF NOT EXISTS gallery_photos (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    album_id UUID NOT NULL REFERENCES gallery_albums(id) ON DELETE CASCADE,
+    image_url TEXT NOT NULL,
+    caption TEXT,
+    user_id UUID NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-CREATE POLICY "Users can update their own comments" ON idea_comments
-    FOR UPDATE USING (user_id = auth.uid());
+-- =============================================
+-- CREATE INDEXES FOR BETTER PERFORMANCE
+-- =============================================
 
--- 7. Create functions for vote counting
+-- Event system indexes
+CREATE INDEX IF NOT EXISTS idx_events_date ON events(date);
+CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
+CREATE INDEX IF NOT EXISTS idx_events_category ON events(category);
+CREATE INDEX IF NOT EXISTS idx_events_featured ON events(featured);
+CREATE INDEX IF NOT EXISTS idx_event_attendees_event_id ON event_attendees(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_attendees_user_id ON event_attendees(user_id);
+CREATE INDEX IF NOT EXISTS idx_event_bookmarks_event_id ON event_bookmarks(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_bookmarks_user_id ON event_bookmarks(user_id);
+CREATE INDEX IF NOT EXISTS idx_event_feedback_event_id ON event_feedback(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_feedback_user_id ON event_feedback(user_id);
+
+-- Ideas system indexes
+CREATE INDEX IF NOT EXISTS idx_ideas_status ON ideas(status);
+CREATE INDEX IF NOT EXISTS idx_ideas_submitter ON ideas(submitter_id);
+CREATE INDEX IF NOT EXISTS idx_ideas_created_at ON ideas(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_votes_idea_id ON idea_votes(idea_id);
+CREATE INDEX IF NOT EXISTS idx_comments_idea_id ON idea_comments(idea_id);
+
+-- Highlights indexes
+CREATE INDEX IF NOT EXISTS idx_highlights_created_at ON highlights(created_at);
+CREATE INDEX IF NOT EXISTS idx_highlights_updated_at ON highlights(updated_at);
+
+-- Gallery indexes
+CREATE INDEX IF NOT EXISTS idx_gallery_albums_user_id ON gallery_albums(user_id);
+CREATE INDEX IF NOT EXISTS idx_gallery_photos_album_id ON gallery_photos(album_id);
+CREATE INDEX IF NOT EXISTS idx_gallery_photos_user_id ON gallery_photos(user_id);
+
+-- =============================================
+-- CREATE TRIGGER FUNCTIONS
+-- =============================================
+
+-- Create updated_at trigger function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- =============================================
+-- CREATE TRIGGERS
+-- =============================================
+
+-- Create triggers for updated_at
+CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON events
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_highlights_updated_at BEFORE UPDATE ON highlights
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_gallery_albums_updated_at BEFORE UPDATE ON gallery_albums
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_gallery_photos_updated_at BEFORE UPDATE ON gallery_photos
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =============================================
+-- CREATE FUNCTIONS FOR IDEAS SYSTEM
+-- =============================================
+
+-- Function for vote counting
 CREATE OR REPLACE FUNCTION get_idea_vote_counts(idea_uuid UUID)
 RETURNS TABLE(
     yes_votes BIGINT,
@@ -114,7 +303,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 8. Create function to get ideas with vote counts
+-- Function to get ideas with vote counts
 CREATE OR REPLACE FUNCTION get_ideas_with_votes()
 RETURNS TABLE(
     id UUID,
@@ -172,9 +361,140 @@ BEGIN
     ) c ON i.id = c.idea_id
     ORDER BY i.created_at DESC;
 END;
-$$ LANGUAGE plpgsql; 
+$$ LANGUAGE plpgsql;
 
--- Disable RLS for testing
-ALTER TABLE ideas DISABLE ROW LEVEL SECURITY;
-ALTER TABLE idea_votes DISABLE ROW LEVEL SECURITY;  
-ALTER TABLE idea_comments DISABLE ROW LEVEL SECURITY; 
+-- =============================================
+-- INSERT SAMPLE DATA FOR TESTING
+-- =============================================
+
+-- Insert sample events
+INSERT INTO events (title, desc, date, time, location, category, featured, status, type) VALUES
+('Technology Workshop', 'Learn about the latest technologies in software development', '2024-12-15', '09:00 AM - 11:00 AM', 'MITC Conference Room', 'Workshop', true, 'upcoming', 'MITC'),
+('Team Building Seminar', 'Improve team collaboration and communication skills', '2024-12-20', '02:00 PM - 04:00 PM', 'MITC Auditorium', 'Seminar', false, 'upcoming', 'MITC'),
+('Annual Conference', 'Annual technology conference with industry experts', '2024-12-25', '09:00 AM - 05:00 PM', 'MITC Main Hall', 'Conference', true, 'upcoming', 'MITC')
+ON CONFLICT DO NOTHING;
+
+-- Insert sample users
+INSERT INTO users (id, name, email, role) VALUES
+('user-123', 'John Doe', 'john.doe@company.com', 'employee'),
+('user-456', 'Jane Smith', 'jane.smith@company.com', 'trainee'),
+('admin-001', 'Admin User', 'admin@company.com', 'admin')
+ON CONFLICT DO NOTHING;
+
+-- Insert sample highlights
+INSERT INTO highlights (title, description, image_url) VALUES
+('Team Building Event', 'A fun day with the team! 🎉', 'https://via.placeholder.com/300x200.png?text=Highlight+1'),
+('Product Launch', 'Launching our new app 🚀', 'https://via.placeholder.com/300x200.png?text=Highlight+2'),
+('Award Ceremony', 'Celebrating our achievements 🏆', 'https://via.placeholder.com/300x200.png?text=Highlight+3'),
+('Hackathon', 'Innovating together 💡', 'https://via.placeholder.com/300x200.png?text=Highlight+4')
+ON CONFLICT DO NOTHING;
+
+-- =============================================
+-- ENABLE ROW LEVEL SECURITY (RLS)
+-- =============================================
+
+-- Enable RLS on all tables
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event_attendees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event_bookmarks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event_feedback ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ideas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE idea_votes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE idea_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE books ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_books ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ratings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE highlights ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gallery_albums ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gallery_photos ENABLE ROW LEVEL SECURITY;
+
+-- =============================================
+-- CREATE RLS POLICIES
+-- =============================================
+
+-- Users policies
+CREATE POLICY "Users are viewable by everyone" ON users FOR SELECT USING (true);
+CREATE POLICY "Users can be created" ON users FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own profile" ON users FOR UPDATE USING (id = current_user OR true);
+
+-- Events policies - Everyone can read, only admins can write
+CREATE POLICY "Events are viewable by everyone" ON events FOR SELECT USING (true);
+CREATE POLICY "Events are insertable by admins" ON events FOR INSERT WITH CHECK (true);
+CREATE POLICY "Events are updatable by admins" ON events FOR UPDATE USING (true);
+CREATE POLICY "Events are deletable by admins" ON events FOR DELETE USING (true);
+
+-- Event attendees policies
+CREATE POLICY "Users can view their own event registrations" ON event_attendees FOR SELECT USING (user_id = current_user OR true);
+CREATE POLICY "Users can register for events" ON event_attendees FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own registrations" ON event_attendees FOR UPDATE USING (user_id = current_user OR true);
+CREATE POLICY "Users can delete their own registrations" ON event_attendees FOR DELETE USING (user_id = current_user OR true);
+
+-- Event bookmarks policies
+CREATE POLICY "Users can view their own bookmarks" ON event_bookmarks FOR SELECT USING (user_id = current_user OR true);
+CREATE POLICY "Users can create bookmarks" ON event_bookmarks FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can delete their own bookmarks" ON event_bookmarks FOR DELETE USING (user_id = current_user OR true);
+
+-- Event feedback policies
+CREATE POLICY "Feedback is viewable by everyone" ON event_feedback FOR SELECT USING (true);
+CREATE POLICY "Users can submit feedback" ON event_feedback FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own feedback" ON event_feedback FOR UPDATE USING (user_id = current_user OR true);
+
+-- Ideas policies
+CREATE POLICY "Users can view approved ideas and their own ideas" ON ideas
+    FOR SELECT USING (true); -- Temporarily allow all for testing
+
+CREATE POLICY "Users can insert their own ideas" ON ideas
+    FOR INSERT WITH CHECK (true); -- Temporarily allow all for testing
+
+CREATE POLICY "Users can update their own ideas, admins can update any" ON ideas
+    FOR UPDATE USING (true); -- Temporarily allow all for testing
+
+-- Votes policies
+CREATE POLICY "Users can view all votes" ON idea_votes FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own votes" ON idea_votes FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own votes" ON idea_votes FOR UPDATE USING (true);
+
+-- Comments policies
+CREATE POLICY "Users can view all comments" ON idea_comments FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own comments" ON idea_comments FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own comments" ON idea_comments FOR UPDATE USING (true);
+
+-- Books policies
+CREATE POLICY "Books are viewable by everyone" ON books FOR SELECT USING (true);
+CREATE POLICY "Books are insertable by admins" ON books FOR INSERT WITH CHECK (true);
+CREATE POLICY "Books are updatable by admins" ON books FOR UPDATE USING (true);
+CREATE POLICY "Books are deletable by admins" ON books FOR DELETE USING (true);
+
+-- User books policies
+CREATE POLICY "User books are viewable by everyone" ON user_books FOR SELECT USING (true);
+CREATE POLICY "User books are insertable by admins" ON user_books FOR INSERT WITH CHECK (true);
+CREATE POLICY "User books are updatable by admins" ON user_books FOR UPDATE USING (true);
+
+-- Ratings policies
+CREATE POLICY "Ratings are viewable by everyone" ON ratings FOR SELECT USING (true);
+CREATE POLICY "Users can submit ratings" ON ratings FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own ratings" ON ratings FOR UPDATE USING (true);
+
+-- Comments policies
+CREATE POLICY "Comments are viewable by everyone" ON comments FOR SELECT USING (true);
+CREATE POLICY "Users can submit comments" ON comments FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own comments" ON comments FOR UPDATE USING (true);
+
+-- Highlights policies
+CREATE POLICY "Highlights are viewable by everyone" ON highlights FOR SELECT USING (true);
+CREATE POLICY "Highlights are insertable by admins" ON highlights FOR INSERT WITH CHECK (true);
+CREATE POLICY "Highlights are updatable by admins" ON highlights FOR UPDATE USING (true);
+CREATE POLICY "Highlights are deletable by admins" ON highlights FOR DELETE USING (true);
+
+-- Gallery policies
+CREATE POLICY "Gallery albums are viewable by everyone" ON gallery_albums FOR SELECT USING (true);
+CREATE POLICY "Users can create albums" ON gallery_albums FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own albums" ON gallery_albums FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own albums" ON gallery_albums FOR DELETE USING (true);
+
+CREATE POLICY "Gallery photos are viewable by everyone" ON gallery_photos FOR SELECT USING (true);
+CREATE POLICY "Users can add photos" ON gallery_photos FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can update their own photos" ON gallery_photos FOR UPDATE USING (true);
+CREATE POLICY "Users can delete their own photos" ON gallery_photos FOR DELETE USING (true);

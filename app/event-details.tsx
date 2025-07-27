@@ -1,20 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Share, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Share, Alert, ActivityIndicator, ScrollView, StatusBar } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
+import { useUserContext } from '../components/UserContext';
+import { useTheme } from '../components/ThemeContext';
+import { Colors } from '../constants/Colors';
 import { Ionicons, Feather } from '@expo/vector-icons';
-import EventsTabBar from '../components/EventsTabBar';
 import eventService from '../services/EventService';
 import { Event } from '../types/events';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EventDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { registerEvent, registered, bookmarks, bookmarkEvent, unbookmarkEvent, getUserEventStatus, fetchUserEvents } = useEventContext();
+  const { userRole } = useUserContext();
+  const { isDarkMode } = useTheme();
+  const insets = useSafeAreaInsets();
   
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Theme-aware colors
+  const colors = isDarkMode ? Colors.dark : Colors.light;
+  const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
+  const textColor = colors.text;
+  const secondaryTextColor = isDarkMode ? '#B0B0B0' : '#666666';
+  const borderColor = isDarkMode ? '#333333' : '#E5E5E5';
 
   // Fetch event data from database
   useEffect(() => {
@@ -58,9 +71,10 @@ export default function EventDetailsScreen() {
   // Show loading state
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, { backgroundColor: cardBackground }]}>
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
         <ActivityIndicator size="large" color="#43C6AC" />
-        <Text style={styles.loadingText}>Loading event details...</Text>
+        <Text style={[styles.loadingText, { color: secondaryTextColor }]}>Loading event details...</Text>
       </View>
     );
   }
@@ -68,12 +82,15 @@ export default function EventDetailsScreen() {
   // Show error state
   if (error || !event) {
     return (
-      <View style={styles.center}>
-        <Ionicons name="alert-circle-outline" size={64} color="#ff6b6b" />
-        <Text style={styles.errorText}>{error || 'Event not found'}</Text>
-        <Text style={styles.errorText}>Event ID: {id}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => router.back()}>
-          <Text style={styles.retryBtnText}>Go Back</Text>
+      <View style={[styles.center, { backgroundColor: cardBackground }]}>
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
+        <Ionicons name="alert-circle-outline" size={64} color="#F44336" />
+        <Text style={[styles.errorText, { color: textColor }]}>{error || 'Event not found'}</Text>
+        <TouchableOpacity 
+          style={styles.retryBtn} 
+          onPress={() => router.push('/events')}
+        >
+          <Text style={styles.retryBtnText}>Go Back to Events</Text>
         </TouchableOpacity>
       </View>
     );
@@ -114,9 +131,9 @@ export default function EventDetailsScreen() {
 
   // Get button state
   const getButtonState = () => {
-    if (isRegistered) return { text: 'Registered', disabled: true };
-    if (isEventInPast()) return { text: 'Event Passed', disabled: true };
-    return { text: 'Register', disabled: false };
+    if (isRegistered) return { text: 'Registered', disabled: true, color: '#4CAF50' };
+    if (isEventInPast()) return { text: 'Event Passed', disabled: true, color: '#FF9800' };
+    return { text: 'Register Now', disabled: false, color: isDarkMode ? '#3B82F6' : '#2563EB' };
   };
 
   const buttonState = getButtonState();
@@ -124,176 +141,209 @@ export default function EventDetailsScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `${event.title}\n${event.description}\n${formatDate(event.date)} ${event.time} @ ${event.location}`,
+        message: `🎉 ${event.title}\n\n${event.description}\n\n📅 ${formatDate(event.date)} at ${event.time}\n📍 ${event.location}\n\nJoin us for this amazing event!`,
+        title: event.title,
       });
-    } catch (error) {}
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
   };
 
   const handleRegister = () => {
-    console.log('Event Details: Register button pressed for event:', event.id);
-    console.log('Current registered events:', registered);
-    
     if (isEventInPast()) {
-      console.log('Event has passed, showing alert');
       Alert.alert('Event Passed', 'You cannot register for events that have already passed.');
       return;
     }
     
     if (isRegistered) {
-      console.log('Already registered, showing alert');
-      Alert.alert('You\'re already registered');
+      Alert.alert('Already Registered', 'You\'re already registered for this event!');
       return;
     }
     
-    console.log('Registering event...');
     registerEvent(event.id);
-    console.log('After registration, navigating to success screen');
     router.push('registration-success' as any);
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      {/* Header with back and share */}
-      <View style={styles.headerRow}>
+    <View style={{ flex: 1, backgroundColor: cardBackground }}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
+      
+      {/* Header */}
+      <View style={[styles.headerRow, { borderBottomColor: borderColor }]}>
         <TouchableOpacity onPress={() => router.replace('/events')} style={styles.iconBtn}>
-          <Ionicons name="arrow-back" size={24} color="#222" />
+          <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Event Details</Text>
+        <Text style={[styles.headerTitle, { color: textColor }]}>Event Details</Text>
         <TouchableOpacity style={styles.iconBtn} onPress={handleShare}>
-          <Feather name="share-2" size={22} color="#222" />
+          <Feather name="share-2" size={22} color={textColor} />
         </TouchableOpacity>
       </View>
-      {/* Event Image and Bookmark */}
-      <View style={styles.imageContainer}>
-        <Image 
-          source={event.coverImage ? { uri: event.coverImage } : event.image} 
-          style={styles.eventImage} 
-        />
-        <TouchableOpacity
-          style={styles.bookmarkBtn}
-          onPress={() => isBookmarked ? unbookmarkEvent(event.id) : bookmarkEvent(event.id)}
-        >
-          <Ionicons
-            name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
-            size={24}
-            color={isBookmarked ? '#43C6AC' : '#888'}
+      
+      {/* Content */}
+      <ScrollView 
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Event Image and Bookmark */}
+        <View style={styles.imageContainer}>
+          <Image 
+            source={event.coverImage ? { uri: event.coverImage } : event.image} 
+            style={styles.eventImage} 
+            resizeMode="cover"
           />
-        </TouchableOpacity>
-      </View>
-      {/* Event Info */}
-      <View style={{ paddingHorizontal: 20 }}>
-        <Text style={styles.eventCategory}>{event.category}</Text>
-        <Text style={styles.eventTitle}>{event.title}</Text>
-        <Text style={styles.eventDesc}>{event.description}</Text>
-        <View style={styles.infoRow}>
-          <Ionicons name="calendar-outline" size={20} color="#43C6AC" style={styles.infoIcon} />
-          <Text style={styles.infoText}>{formatDate(event.date)}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Ionicons name="time-outline" size={20} color="#43C6AC" style={styles.infoIcon} />
-          <Text style={styles.infoText}>{event.time}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Ionicons name="location-outline" size={20} color="#43C6AC" style={styles.infoIcon} />
-          <Text style={styles.infoText}>{event.location}</Text>
+          {userRole !== 'admin' && (
+            <TouchableOpacity
+              style={[styles.bookmarkBtn, { backgroundColor: cardBackground }]}
+              onPress={() => isBookmarked ? unbookmarkEvent(event.id) : bookmarkEvent(event.id)}
+            >
+              <Ionicons
+                name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+                size={24}
+                color={isBookmarked ? '#43C6AC' : secondaryTextColor}
+              />
+            </TouchableOpacity>
+          )}
         </View>
         
-        {/* New Event Details */}
-        {event.organizer && (
+        {/* Event Info */}
+        <View style={styles.contentContainer}>
+          {/* Category Badge */}
+          <View style={[styles.categoryBadge, { backgroundColor: isDarkMode ? '#2A3A2A' : '#e0f7f4' }]}>
+            <Text style={[styles.categoryText, { color: '#43C6AC' }]}>{event.category}</Text>
+          </View>
+          
+          {/* Event Title */}
+          <Text style={[styles.eventTitle, { color: textColor }]}>{event.title}</Text>
+          
+          {/* Event Description */}
+          <Text style={[styles.eventDesc, { color: secondaryTextColor }]}>{event.description}</Text>
+          
+          {/* Event Details */}
+          <View style={styles.infoContainer}>
+            <View style={styles.infoRow}>
+              <Ionicons name="calendar-outline" size={20} color="#43C6AC" style={styles.infoIcon} />
+              <Text style={[styles.infoText, { color: textColor }]}>{formatDate(event.date)}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Ionicons name="time-outline" size={20} color="#43C6AC" style={styles.infoIcon} />
+              <Text style={[styles.infoText, { color: textColor }]}>{event.time}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Ionicons name="location-outline" size={20} color="#43C6AC" style={styles.infoIcon} />
+              <Text style={[styles.infoText, { color: textColor }]}>{event.location}</Text>
+            </View>
+          </View>
+          
+          {/* Additional Event Details */}
+          {event.organizer && (
+            <View style={styles.infoRow}>
+              <Ionicons name="person-outline" size={18} color="#43C6AC" style={styles.infoIcon} />
+              <Text style={[styles.infoText, { color: secondaryTextColor }]}>Organizer: </Text>
+              <Text style={[styles.infoText, { color: textColor }]}>{event.organizer}</Text>
+            </View>
+          )}
+          
           <View style={styles.infoRow}>
-            <Ionicons name="person-outline" size={20} color="#43C6AC" style={styles.infoIcon} />
-            <Text style={styles.infoText}>Organizer: {event.organizer}</Text>
+            <Ionicons name="flag-outline" size={18} color="#43C6AC" style={styles.infoIcon} />
+            <Text style={[styles.infoText, { color: secondaryTextColor }]}>Status: </Text>
+            <Text style={[styles.infoText, { color: textColor }]}>{event.status}</Text>
           </View>
-        )}
-        
-        <View style={styles.infoRow}>
-          <Ionicons name="flag-outline" size={20} color="#43C6AC" style={styles.infoIcon} />
-          <Text style={styles.infoText}>Status: {event.status}</Text>
-        </View>
-        
-        <View style={styles.infoRow}>
-          <Ionicons name="globe-outline" size={20} color="#43C6AC" style={styles.infoIcon} />
-          <Text style={styles.infoText}>Type: {event.type}</Text>
-        </View>
-        
-
-        
-        {event.maxCapacity && (
-          <View style={styles.infoRow}>
-            <Ionicons name="people-outline" size={20} color="#43C6AC" style={styles.infoIcon} />
-            <Text style={styles.infoText}>Capacity: {event.maxCapacity} people</Text>
-          </View>
-        )}
-        
-        {event.featured && (
-          <View style={styles.featuredBadge}>
-            <Ionicons name="star" size={16} color="#FFD700" />
-            <Text style={styles.featuredText}>Featured Event</Text>
-          </View>
-        )}
-        
-        {event.tags && event.tags.length > 0 && (
-          <View style={styles.tagsContainer}>
-            <Text style={styles.tagsTitle}>Tags:</Text>
-            <View style={styles.tagsList}>
-              {event.tags.map((tag, index) => (
-                <View key={index} style={styles.tagItem}>
-                  <Text style={styles.tagText}>{tag}</Text>
+          
+          {event.maxCapacity && (
+            <View style={styles.infoRow}>
+              <Ionicons name="people-outline" size={18} color="#43C6AC" style={styles.infoIcon} />
+              <Text style={[styles.infoText, { color: secondaryTextColor }]}>Capacity: </Text>
+              <Text style={[styles.infoText, { color: textColor }]}>{event.maxCapacity} people</Text>
+            </View>
+          )}
+          
+          {/* Featured Badge */}
+          {event.featured && (
+            <View style={[styles.featuredBadge, { backgroundColor: isDarkMode ? '#2A3A2A' : '#fff3cd' }]}>
+              <Ionicons name="star" size={16} color="#FFD700" />
+              <Text style={[styles.featuredText, { color: '#FFD700' }]}>Featured Event</Text>
+            </View>
+          )}
+          
+          {/* Tags */}
+          {event.tags && event.tags.length > 0 && (
+            <View style={styles.tagsContainer}>
+              <Text style={[styles.tagsTitle, { color: textColor }]}>Tags</Text>
+              <View style={styles.tagsList}>
+                {event.tags.map((tag, index) => (
+                  <View key={index} style={[styles.tagItem, { backgroundColor: isDarkMode ? '#2A2A2A' : '#f0f0f0' }]}>
+                    <Text style={[styles.tagText, { color: textColor }]}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+          
+          {/* Requirements */}
+          {event.requirements && event.requirements.length > 0 && (
+            <View style={styles.requirementsContainer}>
+              <Text style={[styles.requirementsTitle, { color: textColor }]}>Requirements</Text>
+              {event.requirements.map((req, index) => (
+                <View key={index} style={styles.requirementItem}>
+                  <Ionicons name="checkmark-circle-outline" size={16} color="#4CAF50" />
+                  <Text style={[styles.requirementText, { color: textColor }]}>{req}</Text>
                 </View>
               ))}
             </View>
-          </View>
-        )}
-        
-        {event.requirements && event.requirements.length > 0 && (
-          <View style={styles.requirementsContainer}>
-            <Text style={styles.requirementsTitle}>Requirements:</Text>
-            {event.requirements.map((req, index) => (
-              <View key={index} style={styles.requirementItem}>
-                <Ionicons name="checkmark-circle-outline" size={16} color="#43C6AC" />
-                <Text style={styles.requirementText}>{req}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-        
-        {event.materials && event.materials.length > 0 && (
-          <View style={styles.materialsContainer}>
-            <Text style={styles.materialsTitle}>Materials:</Text>
-            {event.materials.map((material, index) => (
-              <View key={index} style={styles.materialItem}>
-                <Ionicons name="document-outline" size={16} color="#43C6AC" />
-                <Text style={styles.materialText}>{material}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-        
-        <TouchableOpacity
-          style={[styles.registerBtn, buttonState.disabled && styles.registerBtnDisabled]}
-          onPress={handleRegister}
-          disabled={buttonState.disabled}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.registerBtnText, buttonState.disabled && styles.registerBtnTextDisabled]}>
-            {buttonState.text}
-          </Text>
-        </TouchableOpacity>
-        
-        {/* Temporary refresh button for debugging */}
-        <TouchableOpacity
-          style={[styles.registerBtn, { marginTop: 8, backgroundColor: '#666' }]}
-          onPress={async () => {
-            console.log('Refreshing user events...');
-            // Force refresh user events by calling the context function
-            await fetchUserEvents();
-            Alert.alert('Refresh', 'User events refreshed. Check console for details.');
-          }}
-        >
-          <Text style={styles.registerBtnText}>Refresh Status</Text>
-        </TouchableOpacity>
-      </View>
-      <EventsTabBar />
+          )}
+          
+          {/* Materials */}
+          {event.materials && event.materials.length > 0 && (
+            <View style={styles.materialsContainer}>
+              <Text style={[styles.materialsTitle, { color: textColor }]}>Materials</Text>
+              {event.materials.map((material, index) => (
+                <View key={index} style={styles.materialItem}>
+                  <Ionicons name="document-outline" size={16} color="#43C6AC" />
+                  <Text style={[styles.materialText, { color: textColor }]}>{material}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+          
+          {/* Register Button */}
+          <TouchableOpacity
+            style={[
+              styles.registerBtn, 
+              { 
+                backgroundColor: buttonState.color,
+                shadowColor: buttonState.color,
+                borderColor: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(37, 99, 235, 0.2)'
+              },
+              buttonState.disabled && styles.registerBtnDisabled
+            ]}
+            onPress={handleRegister}
+            disabled={buttonState.disabled}
+          >
+            <Text style={styles.registerBtnText}>{buttonState.text}</Text>
+          </TouchableOpacity>
+
+          {/* Feedback Button */}
+          <TouchableOpacity
+            style={[
+              styles.feedbackBtn,
+              { 
+                backgroundColor: isDarkMode ? '#2A2A2A' : '#F5F5F5',
+                borderColor: isDarkMode ? '#444' : '#E0E0E0'
+              }
+            ]}
+            onPress={() => router.push(`/event-feedback?id=${event.id}`)}
+          >
+            <Ionicons name="chatbubble-outline" size={20} color={isDarkMode ? '#43C6AC' : '#43C6AC'} />
+            <Text style={[styles.feedbackBtnText, { color: isDarkMode ? '#43C6AC' : '#43C6AC' }]}>
+              Submit Feedback
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+      
+      {/* EventsTabBar at the very bottom */}
+      {/* Removed EventsTabBar import, so this section is removed */}
     </View>
   );
 }
@@ -309,16 +359,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingTop: 32,
-    paddingBottom: 8,
-    backgroundColor: '#fff',
+    paddingTop: 80,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#222',
   },
   iconBtn: {
     padding: 8,
@@ -330,23 +377,23 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   eventImage: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+    width: 320,
+    height: 200,
     marginBottom: 8,
   },
   bookmarkBtn: {
     position: 'absolute',
-    top: 10,
-    right: 30,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 4,
-    elevation: 2,
+    top: 12,
+    right: 12,
+    borderRadius: 20,
+    padding: 8,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
-  eventCategory: {
-    backgroundColor: '#e0f7f4',
-    color: '#222',
+  categoryBadge: {
     alignSelf: 'flex-start',
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -356,15 +403,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 8,
   },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
   eventTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#222',
   },
   eventDesc: {
     fontSize: 15,
-    color: '#444',
+    marginBottom: 16,
+  },
+  infoContainer: {
     marginBottom: 16,
   },
   infoRow: {
@@ -377,30 +429,40 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 15,
-    color: '#222',
   },
   registerBtn: {
-    backgroundColor: '#43C6AC',
-    paddingVertical: 12,
-    borderRadius: 10,
+    backgroundColor: '#2563EB',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 16,
     alignItems: 'center',
-    marginTop: 18,
+    marginTop: 24,
+    marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.2)',
   },
   registerBtnDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#E0E0E0',
+    shadowColor: '#E0E0E0',
+    shadowOpacity: 0.2,
+    borderColor: 'rgba(224, 224, 224, 0.3)',
   },
   registerBtnText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  registerBtnTextDisabled: {
-    color: '#888',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   featuredBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF8DC',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 15,
@@ -409,7 +471,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   featuredText: {
-    color: '#DAA520',
     fontSize: 14,
     fontWeight: 'bold',
     marginLeft: 4,
@@ -420,7 +481,6 @@ const styles = StyleSheet.create({
   tagsTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#222',
     marginBottom: 8,
   },
   tagsList: {
@@ -429,13 +489,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tagItem: {
-    backgroundColor: '#e0f7f4',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   tagText: {
-    color: '#222',
     fontSize: 12,
     fontWeight: '500',
   },
@@ -445,7 +503,6 @@ const styles = StyleSheet.create({
   requirementsTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#222',
     marginBottom: 8,
   },
   requirementItem: {
@@ -455,7 +512,6 @@ const styles = StyleSheet.create({
   },
   requirementText: {
     fontSize: 14,
-    color: '#444',
     marginLeft: 8,
   },
   materialsContainer: {
@@ -464,7 +520,6 @@ const styles = StyleSheet.create({
   materialsTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#222',
     marginBottom: 8,
   },
   materialItem: {
@@ -474,18 +529,15 @@ const styles = StyleSheet.create({
   },
   materialText: {
     fontSize: 14,
-    color: '#444',
     marginLeft: 8,
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
     marginTop: 16,
     textAlign: 'center',
   },
   errorText: {
     fontSize: 18,
-    color: '#ff6b6b',
     marginTop: 16,
     marginBottom: 24,
     textAlign: 'center',
@@ -501,5 +553,33 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  scrollContent: {
+    paddingBottom: 10, // Reduced from 20 to move tab bar even higher for better UX
+  },
+  contentContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  feedbackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(37, 99, 235, 0.2)',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  feedbackBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 8,
   },
 }); 

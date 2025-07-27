@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView, ScrollView as RNScrollView, Alert, Modal, TextInput } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { useState, useMemo, useEffect } from 'react';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
@@ -60,6 +60,7 @@ const featuredNews = [
 
 export default function TraineeHome() {
   const router = useRouter();
+  const pathname = usePathname();
   const { fromLogin } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState('home');
   const { events, registered } = useEventContext();
@@ -286,7 +287,7 @@ export default function TraineeHome() {
             </TouchableOpacity> 
           </View> 
         </View>
-        <ScrollView contentContainerStyle={[styles.scrollContent, {alignItems: 'center', justifyContent: 'center', flexGrow: 1}]} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, {flexGrow: 1}]} showsVerticalScrollIndicator={false}>
           {highlightCards.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="star-outline" size={64} color="#ccc" />
@@ -297,7 +298,12 @@ export default function TraineeHome() {
             </View>
           ) : (
             <>
-              <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
+              <View style={styles.sectionHeaderContainer}>
+                <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+                  <Ionicons name="star" size={20} color="#43C6AC" />
+                </View>
+                <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
+              </View>
               <AutoCarousel
                 data={highlightCards}
                 cardWidth={320}
@@ -340,7 +346,12 @@ export default function TraineeHome() {
             </View>
           ) : (
             <>
-              <Text style={[styles.sectionTitle, { color: textColor }]}>Upcoming Events</Text>
+              <View style={styles.sectionHeaderContainer}>
+                <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+                  <Ionicons name="calendar" size={20} color="#7B61FF" />
+                </View>
+                <Text style={[styles.sectionTitle, { color: textColor }]}>Upcoming Events</Text>
+              </View>
               <FlatList
                 data={upcomingEvents}
                 keyExtractor={item => item.id}
@@ -378,7 +389,12 @@ export default function TraineeHome() {
             />
             </>
           )}
-          <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Portal Access</Text>
+          <View style={styles.sectionHeaderContainer}>
+            <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+              <Ionicons name="grid" size={20} color="#FF6B35" />
+            </View>
+            <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Portal Access</Text>
+          </View>
           <View style={styles.portalRow}>
             {portalLinks.map(link => (
               <TouchableOpacity
@@ -386,12 +402,31 @@ export default function TraineeHome() {
                 style={[styles.portalIconBox, { backgroundColor: cardBackground }]}
                 activeOpacity={0.8}
                 onPress={() => {
-                  if (link.key === 'events') router.push('/events?noHeader=1');
-                  else if (link.key === 'hub') router.push('/trainee-hub');
-                  else if (link.key === 'gallery') router.push('/gallery');
-                  else if (link.key === 'inspire') router.push('/inspirer-corner');
-                  else if (link.key === 'bookclub') router.push('/bookclub');
-                  else if (link.key === 'checklist') router.push('/trainee-checklist');
+                  if (link.key === 'events') {
+                    if (pathname !== '/events?noHeader=1') {
+                      router.push('/events?noHeader=1');
+                    }
+                  } else if (link.key === 'hub') {
+                    if (pathname !== '/trainee-hub') {
+                      router.push('/trainee-hub');
+                    }
+                  } else if (link.key === 'gallery') {
+                    if (pathname !== '/gallery') {
+                      router.push('/gallery');
+                    }
+                  } else if (link.key === 'inspire') {
+                    if (pathname !== '/inspirer-corner') {
+                      router.push('/inspirer-corner');
+                    }
+                  } else if (link.key === 'bookclub') {
+                    if (pathname !== '/bookclub') {
+                      router.push('/bookclub');
+                    }
+                  } else if (link.key === 'checklist') {
+                    if (pathname !== '/trainee-checklist') {
+                      router.push('/trainee-checklist');
+                    }
+                  }
                 }}
               >
                 {link.icon}
@@ -399,7 +434,12 @@ export default function TraineeHome() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Book of the Month</Text>
+                      <View style={styles.sectionHeaderContainer}>
+              <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
+                <Ionicons name="book" size={20} color="#1abc9c" />
+              </View>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#222' }]}>Book of the Month</Text>
+            </View>
           {loadingBookOfMonth ? (
             <View style={[styles.emptyState, { backgroundColor: cardBackground }]}>
               <Ionicons name="book-outline" size={64} color={secondaryTextColor} />
@@ -479,16 +519,36 @@ export default function TraineeHome() {
           minWidth: 400,
           paddingHorizontal: 12,
         }}>
-          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { setActiveTab('home'); router.push('/trainee-home'); }}>
+          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { 
+            setActiveTab('home'); 
+            if (pathname !== '/trainee-home') {
+              router.push('/trainee-home'); 
+            }
+          }}>
             <Ionicons name="home" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'home' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'home' ? '#43C6AC' : '#bbb')} />
           </TouchableOpacity>
-          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { setActiveTab('hub'); router.push('/trainee-hub'); }}>
+          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { 
+            setActiveTab('hub'); 
+            if (pathname !== '/trainee-hub') {
+              router.push('/trainee-hub'); 
+            }
+          }}>
             <MaterialIcons name="dashboard" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'hub' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'hub' ? '#43C6AC' : '#bbb')} />
           </TouchableOpacity>
-          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { setActiveTab('bookclub'); router.push('/bookclub'); }}>
+          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { 
+            setActiveTab('bookclub'); 
+            if (pathname !== '/bookclub') {
+              router.push('/bookclub'); 
+            }
+          }}>
             <Ionicons name="book-outline" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'bookclub' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'bookclub' ? '#43C6AC' : '#bbb')} />
           </TouchableOpacity>
-          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { setActiveTab('checklist'); router.push('/trainee-checklist'); }}>
+          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { 
+            setActiveTab('checklist'); 
+            if (pathname !== '/trainee-checklist') {
+              router.push('/trainee-checklist'); 
+            }
+          }}>
             <Ionicons name="checkmark-done-circle-outline" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'checklist' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'checklist' ? '#43C6AC' : '#bbb')} />
           </TouchableOpacity>
         </View>
@@ -537,13 +597,34 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 90,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#222',
-    marginLeft: 18,
+  sectionHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 16,
     marginTop: 18,
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  sectionIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#222',
+    marginLeft: 0,
+    marginTop: 0,
+    marginBottom: 0,
+    letterSpacing: 0.5,
   },
   subtitle: {
     fontSize: 15,

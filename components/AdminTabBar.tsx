@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { useUserContext } from './UserContext';
 import { useTheme } from './ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AdminTabBarProps {
   activeTab: string;
@@ -12,8 +13,10 @@ interface AdminTabBarProps {
 
 export default function AdminTabBar({ activeTab }: AdminTabBarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { getHomeRoute } = useUserContext();
   const { isDarkMode } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const getThemeColors = () => {
     return isDarkMode ? {
@@ -36,22 +39,35 @@ export default function AdminTabBar({ activeTab }: AdminTabBarProps) {
   const handleTabPress = (tabName: string) => {
     switch (tabName) {
       case 'home':
-        router.push(getHomeRoute() as any);
+        const homeRoute = getHomeRoute();
+        if (pathname !== homeRoute) {
+          router.push(homeRoute as any);
+        }
         break;
       case 'events':
-        router.push('/admin-events');
+        if (pathname !== '/admin-events') {
+          router.push('/admin-events');
+        }
         break;
       case 'ideas':
-        router.push('/ideas-management');
+        if (pathname !== '/ideas-management') {
+          router.push('/ideas-management');
+        }
         break;
       case 'trainees':
-        router.push('/trainee-management');
+        if (pathname !== '/trainee-management') {
+          router.push('/trainee-management');
+        }
         break;
       case 'gallery':
-        router.push('/gallery-management');
+        if (pathname !== '/gallery-management') {
+          router.push('/gallery-management');
+        }
         break;
       case 'books':
-        router.push('/books-management');
+        if (pathname !== '/books-management') {
+          router.push('/books-management');
+        }
         break;
     }
   };
@@ -81,7 +97,13 @@ export default function AdminTabBar({ activeTab }: AdminTabBarProps) {
   const iconColor = colors.icon; // Use the default icon color for all tabs
 
   return (
-    <View style={[styles.tabBar, { backgroundColor: colors.cardBackground }]}>
+    <View style={[
+      styles.tabBar, 
+      { 
+        backgroundColor: colors.cardBackground,
+        paddingBottom: insets.bottom + (Platform.OS === 'ios' ? 8 : 12)
+      }
+    ]}>
       {TABS.map((tab) => (
         <TouchableOpacity 
           key={tab.key}
@@ -107,14 +129,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    borderTopLeftRadius: Platform.OS === 'ios' ? 20 : 18,
+    borderTopRightRadius: Platform.OS === 'ios' ? 20 : 18,
     shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 8,
-    paddingVertical: 12,
-    paddingBottom: 20,
+    shadowOpacity: Platform.OS === 'ios' ? 0.08 : 0.06,
+    shadowRadius: Platform.OS === 'ios' ? 10 : 8,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: Platform.OS === 'ios' ? 0 : 8,
+    paddingVertical: Platform.OS === 'ios' ? 14 : 12,
     position: 'absolute',
     bottom: 0,
     left: 0,
@@ -123,11 +145,11 @@ const styles = StyleSheet.create({
   tabItem: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: Platform.OS === 'ios' ? 6 : 4,
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: Platform.OS === 'ios' ? 11 : 10,
     fontWeight: '500',
-    marginTop: 2,
+    marginTop: Platform.OS === 'ios' ? 4 : 2,
   },
 }); 

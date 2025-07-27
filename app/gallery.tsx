@@ -19,6 +19,7 @@ import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '../hooks/useThemeColor';
 import { useUserContext } from '../components/UserContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { supabase } from '../services/supabase';
 
 // Try to import required modules
 let MediaLibrary: any = null;
@@ -31,52 +32,6 @@ try {
 }
 
 const { width: screenWidth } = Dimensions.get('window');
-
-// Mock albums data with actual image URLs for proper saving
-const albums = [
-  {
-    id: '1',
-    title: 'MIT Events',
-    photoCount: 2,
-    coverImage: { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop' },
-    photos: [
-      { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop' },
-      { uri: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=400&h=300&fit=crop' },
-    ],
-  },
-  {
-    id: '2',
-    title: 'Book Club',
-    photoCount: 1,
-    coverImage: { uri: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop' },
-    photos: [
-      { uri: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop' },
-    ],
-  },
-  {
-    id: '3',
-    title: 'Team Building',
-    photoCount: 3,
-    coverImage: { uri: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=300&fit=crop' },
-    photos: [
-      { uri: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=300&fit=crop' },
-      { uri: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop' },
-      { uri: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400&h=300&fit=crop' },
-    ],
-  },
-  {
-    id: '4',
-    title: 'Workshop Sessions',
-    photoCount: 4,
-    coverImage: { uri: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=300&fit=crop' },
-    photos: [
-      { uri: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&h=300&fit=crop' },
-      { uri: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=400&h=300&fit=crop' },
-      { uri: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=400&h=300&fit=crop' },
-      { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop' },
-    ],
-  },
-];
 
 export default function GalleryScreen() {
   const router = useRouter();
@@ -99,6 +54,198 @@ export default function GalleryScreen() {
   const darkSecondary = '#AEB6C1';
   const darkHighlight = '#43C6AC';
 
+  const [albums, setAlbums] = useState<any[]>([]);
+  const [albumPhotos, setAlbumPhotos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [photosLoading, setPhotosLoading] = useState(false);
+
+  const fetchAlbums = async () => {
+    try {
+      setLoading(true);
+      console.log('🔄 Fetching albums...');
+      
+      const { data, error } = await supabase
+        .from('gallery_albums')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('❌ Error fetching albums:', error.message);
+        return;
+      }
+      
+      console.log('📚 Raw albums data:', data);
+      
+      // Get photo counts for each album
+      const albumsWithCounts = await Promise.all(
+        (data ?? []).map(async (a: any) => {
+          const { data: photoData, error: countError } = await supabase
+            .from('gallery_photos')
+            .select('id')
+            .eq('album_id', a.id);
+          
+          const count = photoData ? photoData.length : 0;
+          
+          return {
+            id: a.id,
+            title: a.name,
+            photoCount: count || 0,
+            coverImage: { uri: a.cover_image },
+            photos: [], // Will be populated when album is opened
+          };
+        })
+      );
+      
+      console.log('✅ Albums with counts:', albumsWithCounts);
+      setAlbums(albumsWithCounts);
+    } catch (error) {
+      console.error('❌ Error in fetchAlbums:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPhotosForAlbum = async (albumId: string) => {
+    try {
+      console.log('🔍 Fetching photos for album:', albumId);
+      
+      const { data, error } = await supabase
+        .from('gallery_photos')
+        .select('*')
+        .eq('album_id', albumId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('❌ Error fetching photos:', error.message);
+        return [];
+      }
+
+      console.log('📸 Raw photos data:', data);
+
+      const mappedPhotos = (data ?? []).map((photo: any) => ({ 
+        id: photo.id,
+        uri: photo.image_url,
+        image_url: photo.image_url 
+      }));
+
+      console.log('✅ Mapped photos:', mappedPhotos);
+      return mappedPhotos;
+    } catch (error) {
+      console.error('❌ Error in fetchPhotosForAlbum:', error);
+      return [];
+    }
+  };
+
+  // Delete photo from database and storage (for admin users)
+  const deletePhotoFromDatabase = async (photoId: string, imageUrl: string) => {
+    try {
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('gallery_photos')
+        .delete()
+        .eq('id', photoId);
+
+      if (dbError) {
+        console.error('Error deleting photo from database:', dbError);
+        throw dbError;
+      }
+
+      // Delete from storage (extract filename from URL)
+      const urlParts = imageUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      
+      if (fileName) {
+        const { error: storageError } = await supabase.storage
+          .from('images')
+          .remove([fileName]);
+
+        if (storageError) {
+          console.error('Error deleting photo from storage:', storageError);
+          // Don't throw error for storage deletion as database deletion succeeded
+        }
+      }
+
+      console.log('Photo deleted successfully:', photoId);
+      return true;
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      throw error;
+    }
+  };
+
+  // Update album selection to fetch photos
+  const handleAlbumSelect = async (albumId: string) => {
+    try {
+      setSelectedAlbum(albumId);
+      setPhotosLoading(true);
+      
+      console.log('🎯 Selecting album:', albumId);
+      const photos = await fetchPhotosForAlbum(albumId);
+      setAlbumPhotos(photos);
+      
+      console.log('📸 Photos loaded:', photos.length);
+      
+      // Update album with photo count
+      setAlbums(prevAlbums => 
+        prevAlbums.map(album => 
+          album.id === albumId 
+            ? { ...album, photos, photoCount: photos.length }
+            : album
+        )
+      );
+    } catch (error) {
+      console.error('❌ Error selecting album:', error);
+      Alert.alert('Error', 'Failed to load album photos. Please try again.');
+    } finally {
+      setPhotosLoading(false);
+    }
+  };
+
+  // Handle photo deletion (for admin users) - optimized
+  const handleDeletePhoto = async (photoId: string, imageUrl: string) => {
+    Alert.alert(
+      'Delete Photo',
+      'Are you sure you want to delete this photo?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Remove photo from local state immediately for better UX
+              setAlbumPhotos(prevPhotos => prevPhotos.filter(photo => photo.id !== photoId));
+              
+              // Update album photo count immediately
+              setAlbums(prevAlbums => 
+                prevAlbums.map(album => 
+                  album.id === selectedAlbum 
+                    ? { ...album, photoCount: (album.photoCount || 0) - 1 }
+                    : album
+                )
+              );
+              
+              // Delete from database in background
+              await deletePhotoFromDatabase(photoId, imageUrl);
+              
+              Alert.alert('Success', 'Photo deleted successfully!');
+            } catch (error) {
+              console.error('Error deleting photo:', error);
+              Alert.alert('Error', 'Failed to delete photo. Please try again.');
+              
+              // Revert local state if deletion failed
+              // Note: In a production app, you might want to refetch the data instead
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  React.useEffect(() => {
+    fetchAlbums();
+  }, []);
+
   const album = albums.find(a => a.id === selectedAlbum);
   
   // Filter albums based on search query
@@ -107,6 +254,14 @@ export default function GalleryScreen() {
   );
 
   const handleBack = () => {
+    // If we're in album view, go back to main gallery
+    if (selectedAlbum) {
+      setSelectedAlbum(null);
+      setAlbumPhotos([]);
+      return;
+    }
+    
+    // If we're in main gallery view, go to home
     if (window?.history?.length > 1) {
       router.back();
     } else {
@@ -186,7 +341,7 @@ export default function GalleryScreen() {
   const renderAlbumCard = ({ item }: { item: typeof albums[0] }) => (
     <TouchableOpacity 
       style={styles.albumCard} 
-      onPress={() => setSelectedAlbum(item.id)}
+      onPress={() => handleAlbumSelect(item.id)}
       activeOpacity={0.8}
     >
       <Image source={item.coverImage} style={styles.albumCoverImage} />
@@ -197,25 +352,50 @@ export default function GalleryScreen() {
     </TouchableOpacity>
   );
 
-  const renderPhoto = ({ item }: { item: any }) => (
-    <View style={styles.photoContainer}>
-      <TouchableOpacity 
-        style={styles.photoWrapper}
-        onPress={() => setSelectedPhoto(item)}
-        activeOpacity={0.9}
-      >
-        <Image source={item} style={styles.photo} />
-      </TouchableOpacity>
-      <TouchableOpacity 
-        style={styles.downloadPhotoButton}
-        onPress={() => handleDownloadPhoto(item)}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="save-outline" size={16} color="#fff" />
-        <Text style={styles.downloadPhotoText}>Save</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const renderPhoto = ({ item }: { item: any }) => {
+    console.log("📸 Rendering gallery photo:", item.image_url);
+    return (
+      <View style={styles.photoContainer}>
+        <TouchableOpacity 
+          style={styles.photoWrapper}
+          onPress={() => setSelectedPhoto(item)}
+          activeOpacity={0.9}
+        >
+          <Image 
+            source={{ uri: item.uri }} 
+            style={styles.photo}
+            resizeMode="cover"
+            onError={() => {
+              console.error('❌ Image load error for:', item.uri);
+            }}
+            onLoad={() => {
+              console.log('✅ Image loaded successfully:', item.uri);
+            }}
+          />
+        </TouchableOpacity>
+              <View style={styles.photoButtonsContainer}>
+          <TouchableOpacity 
+            style={styles.downloadPhotoButton}
+            onPress={() => handleDownloadPhoto(item)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="save-outline" size={16} color="#fff" />
+            <Text style={styles.downloadPhotoText}>Save</Text>
+          </TouchableOpacity>
+          {userRole === 'admin' && (
+            <TouchableOpacity 
+              style={styles.deletePhotoButton}
+              onPress={() => handleDeletePhoto(item.id, item.image_url)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="trash-outline" size={16} color="#fff" />
+              <Text style={styles.deletePhotoText}>Delete</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
+  };
 
   // For text and background colors
   const searchBarBackground = isDarkMode ? '#232323' : '#F2F2F7';
@@ -263,14 +443,28 @@ export default function GalleryScreen() {
         )}
 
         {/* Photos Grid */}
-        <FlatList
-          data={album.photos}
-          keyExtractor={(item, index) => `photo-${index}`}
-          numColumns={2}
-          renderItem={renderPhoto}
-          contentContainerStyle={styles.photosGrid}
-          showsVerticalScrollIndicator={false}
-        />
+        {photosLoading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={[styles.loadingText, { color: textColor }]}>Loading photos...</Text>
+          </View>
+        ) : albumPhotos.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="images-outline" size={64} color={secondaryTextColor} />
+            <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Photos</Text>
+            <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+              This album doesn't have any photos yet.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={albumPhotos}
+            keyExtractor={(item, index) => `photo-${index}`}
+            numColumns={2}
+            renderItem={renderPhoto}
+            contentContainerStyle={styles.photosGrid}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
 
         {/* Photo Modal */}
         <Modal
@@ -300,7 +494,17 @@ export default function GalleryScreen() {
               activeOpacity={1}
             >
               {selectedPhoto && (
-                <Image source={selectedPhoto} style={styles.fullScreenPhoto} />
+                <Image 
+                  source={{ uri: selectedPhoto.uri }} 
+                  style={styles.fullScreenPhoto}
+                  resizeMode="contain"
+                  onError={() => {
+                    console.error('❌ Modal image load error for:', selectedPhoto.uri);
+                  }}
+                  onLoad={() => {
+                    console.log('✅ Modal image loaded successfully:', selectedPhoto.uri);
+                  }}
+                />
               )}
             </TouchableOpacity>
           </View>
@@ -356,27 +560,41 @@ export default function GalleryScreen() {
       </View>
 
       {/* Albums Grid */}
-      <FlatList
-        data={filteredAlbums}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity 
-            style={[styles.albumCard, { backgroundColor: albumCardBackground }]}
-            onPress={() => setSelectedAlbum(item.id)}
-            activeOpacity={0.8}
-          >
-            <Image source={item.coverImage} style={styles.albumCoverImage} />
-            <View style={[styles.albumOverlay, { backgroundColor: albumOverlayBackground }]}>
-              <Text style={styles.albumTitle}>{item.title}</Text>
-              <Text style={styles.albumPhotoCount}>{item.photoCount} photo{item.photoCount !== 1 ? 's' : ''}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-        contentContainerStyle={styles.albumsGrid}
-        showsVerticalScrollIndicator={false}
-        numColumns={2}
-        columnWrapperStyle={styles.albumRow}
-      />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.loadingText, { color: textColor }]}>Loading albums...</Text>
+        </View>
+      ) : filteredAlbums.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="images-outline" size={64} color={secondaryTextColor} />
+          <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Albums</Text>
+          <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
+            {searchQuery ? 'No albums match your search.' : 'No albums have been created yet.'}
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredAlbums}
+          keyExtractor={item => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity 
+              style={[styles.albumCard, { backgroundColor: albumCardBackground }]}
+              onPress={() => handleAlbumSelect(item.id)}
+              activeOpacity={0.8}
+            >
+              <Image source={item.coverImage} style={styles.albumCoverImage} />
+              <View style={[styles.albumOverlay, { backgroundColor: albumOverlayBackground }]}>
+                <Text style={styles.albumTitle}>{item.title}</Text>
+                <Text style={styles.albumPhotoCount}>{item.photoCount} photo{item.photoCount !== 1 ? 's' : ''}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={styles.albumsGrid}
+          showsVerticalScrollIndicator={false}
+          numColumns={2}
+          columnWrapperStyle={styles.albumRow}
+        />
+      )}
 
       
     </View>
@@ -482,9 +700,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   downloadPhotoButton: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     borderRadius: 16,
     paddingHorizontal: 8,
@@ -493,6 +708,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   downloadPhotoText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  photoButtonsContainer: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  deletePhotoButton: {
+    backgroundColor: 'rgba(255, 59, 48, 0.8)',
+    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deletePhotoText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
@@ -570,5 +806,15 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 60,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
 }); 

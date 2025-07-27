@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
 import { Ionicons } from '@expo/vector-icons';
-import EventsTabBar from '../components/EventsTabBar';
 
 export default function RegistrationSuccessScreen() {
   const router = useRouter();
@@ -42,7 +41,6 @@ export default function RegistrationSuccessScreen() {
       <TouchableOpacity style={styles.doneBtn} onPress={() => router.replace(getHomeRoute() as any)}>
         <Text style={styles.doneBtnText}>Done</Text>
       </TouchableOpacity>
-      <EventsTabBar />
     </View>
   );
 }
