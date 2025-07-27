@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../components/ThemeContext';
-import AdminTabBar from '../components/AdminTabBar';
+
 import AdminHeader from '../components/AdminHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -246,7 +246,7 @@ export default function IdeasManagement() {
         </View>
       </ScrollView>
       {/* Bottom Tab Bar */}
-      <AdminTabBar activeTab="ideas" isDarkMode={isDarkMode} />
+      
       {/* Create Poll Modal - Fullscreen, scrollable, with close icon */}
       <Modal visible={!!pollModalIdea} animationType="slide" transparent>
         <View style={styles.pollModalOverlay}>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
 import { useTheme } from '../components/ThemeContext';
@@ -40,6 +40,7 @@ const portalLinks = [
 
 export default function EmployeeHome() {
   const router = useRouter();
+  const pathname = usePathname();
   const { fromLogin } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState('home');
   const { events, registered } = useEventContext();
@@ -360,10 +361,23 @@ export default function EmployeeHome() {
                 style={[styles.portalIconBox, { backgroundColor: cardBackground }]}
                 activeOpacity={0.8}
                 onPress={() => {
-                  if (link.key === 'events') router.push('/events?noHeader=1');
-                  else if (link.key === 'gallery') router.push('/gallery');
-                  else if (link.key === 'inspire') router.push('/inspirer-corner');
-                  else if (link.key === 'bookclub') router.push('/bookclub');
+                  if (link.key === 'events') {
+                    if (pathname !== '/events?noHeader=1') {
+                      router.push('/events?noHeader=1');
+                    }
+                  } else if (link.key === 'gallery') {
+                    if (pathname !== '/gallery') {
+                      router.push('/gallery');
+                    }
+                  } else if (link.key === 'inspire') {
+                    if (pathname !== '/inspirer-corner') {
+                      router.push('/inspirer-corner');
+                    }
+                  } else if (link.key === 'bookclub') {
+                    if (pathname !== '/bookclub') {
+                      router.push('/bookclub');
+                    }
+                  }
                 }}
               >
                 {link.icon}

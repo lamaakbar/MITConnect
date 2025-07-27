@@ -70,7 +70,11 @@ export default function EventsTabBar() {
           <TouchableOpacity
             key={tab.key}
             style={styles.tabBtn}
-            onPress={() => router.replace(route as any)}
+            onPress={() => {
+              if (pathname !== route) {
+                router.replace(route as any);
+              }
+            }}
             activeOpacity={0.7}
           >
             {tab.icon(colors.icon)}

@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../components/ThemeContext';
-import AdminTabBar from '../components/AdminTabBar';
+
 import AdminHeader from '../components/AdminHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'react-native';
@@ -395,7 +395,7 @@ export default function HighlightManagement() {
       />
       
       {/* Bottom Tab Bar */}
-      <AdminTabBar activeTab="highlights" isDarkMode={isDarkMode} />
+      
     </KeyboardAvoidingView>
   </View>
   );

@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, StatusBar } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../components/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AdminHeaderProps {
   title: string;
@@ -34,6 +35,7 @@ export default function AdminHeader({
   const router = useRouter();
   const colorScheme = useColorScheme();
   const { isDarkMode } = useTheme();
+  const insets = useSafeAreaInsets();
   const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
   const logoCircleBg = isDarkMode ? '#2A2A2A' : '#E8F8F5';
   const textColor = useThemeColor({}, 'text');
@@ -73,9 +75,9 @@ export default function AdminHeader({
       { 
         backgroundColor: cardBackground,
         borderBottomColor: 'transparent',
-        paddingTop: 48,
-        paddingBottom: 10,
-        paddingHorizontal: 20,
+        paddingTop: insets.top + (Platform.OS === 'ios' ? 8 : 12),
+        paddingBottom: 12,
+        paddingHorizontal: 16,
       }
     ]}>
       {/* Left Section */}
@@ -122,10 +124,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 20 : 28,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    minHeight: 80,
+    minHeight: Platform.OS === 'ios' ? 88 : 80,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 60,
     right: 60,
-    top: Platform.OS === 'ios' ? 20 : 28,
+    top: 0,
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
@@ -179,11 +180,11 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   headerTitle: {
-    fontSize: 16, // reduced from 20
-    fontWeight: '600', // reduced from 'bold'
+    fontSize: Platform.OS === 'ios' ? 17 : 16,
+    fontWeight: '600',
     textAlign: 'center',
     letterSpacing: 0.5,
     maxWidth: '100%',
-    marginTop: 18, // add margin to separate from logo
+    marginTop: Platform.OS === 'ios' ? 16 : 18,
   },
 }); 

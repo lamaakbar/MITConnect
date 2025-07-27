@@ -25,7 +25,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../../components/ThemeContext';
 import { useEventContext } from '../../components/EventContext';
-import AdminTabBar from '../../components/AdminTabBar';
+
 import AdminHeader from '../../components/AdminHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DatePickerModal from '../../components/DatePickerModal';
@@ -783,7 +783,7 @@ const AdminEventListScreen: React.FC = () => {
       </ScrollView>
 
       {/* Bottom Tab Bar */}
-      <AdminTabBar activeTab="events" isDarkMode={isDarkMode} />
+      
       {AddEventFAB}
 
       {/* Add Event Modal */}

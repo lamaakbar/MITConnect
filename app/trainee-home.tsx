@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView, ScrollView as RNScrollView, Alert, Modal, TextInput } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { useState, useMemo, useEffect } from 'react';
 import { useEventContext } from '../components/EventContext';
 import { useUserContext } from '../components/UserContext';
@@ -60,6 +60,7 @@ const featuredNews = [
 
 export default function TraineeHome() {
   const router = useRouter();
+  const pathname = usePathname();
   const { fromLogin } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState('home');
   const { events, registered } = useEventContext();
@@ -401,12 +402,31 @@ export default function TraineeHome() {
                 style={[styles.portalIconBox, { backgroundColor: cardBackground }]}
                 activeOpacity={0.8}
                 onPress={() => {
-                  if (link.key === 'events') router.push('/events?noHeader=1');
-                  else if (link.key === 'hub') router.push('/trainee-hub');
-                  else if (link.key === 'gallery') router.push('/gallery');
-                  else if (link.key === 'inspire') router.push('/inspirer-corner');
-                  else if (link.key === 'bookclub') router.push('/bookclub');
-                  else if (link.key === 'checklist') router.push('/trainee-checklist');
+                  if (link.key === 'events') {
+                    if (pathname !== '/events?noHeader=1') {
+                      router.push('/events?noHeader=1');
+                    }
+                  } else if (link.key === 'hub') {
+                    if (pathname !== '/trainee-hub') {
+                      router.push('/trainee-hub');
+                    }
+                  } else if (link.key === 'gallery') {
+                    if (pathname !== '/gallery') {
+                      router.push('/gallery');
+                    }
+                  } else if (link.key === 'inspire') {
+                    if (pathname !== '/inspirer-corner') {
+                      router.push('/inspirer-corner');
+                    }
+                  } else if (link.key === 'bookclub') {
+                    if (pathname !== '/bookclub') {
+                      router.push('/bookclub');
+                    }
+                  } else if (link.key === 'checklist') {
+                    if (pathname !== '/trainee-checklist') {
+                      router.push('/trainee-checklist');
+                    }
+                  }
                 }}
               >
                 {link.icon}
@@ -499,16 +519,36 @@ export default function TraineeHome() {
           minWidth: 400,
           paddingHorizontal: 12,
         }}>
-          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { setActiveTab('home'); router.push('/trainee-home'); }}>
+          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { 
+            setActiveTab('home'); 
+            if (pathname !== '/trainee-home') {
+              router.push('/trainee-home'); 
+            }
+          }}>
             <Ionicons name="home" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'home' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'home' ? '#43C6AC' : '#bbb')} />
           </TouchableOpacity>
-          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { setActiveTab('hub'); router.push('/trainee-hub'); }}>
+          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { 
+            setActiveTab('hub'); 
+            if (pathname !== '/trainee-hub') {
+              router.push('/trainee-hub'); 
+            }
+          }}>
             <MaterialIcons name="dashboard" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'hub' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'hub' ? '#43C6AC' : '#bbb')} />
           </TouchableOpacity>
-          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { setActiveTab('bookclub'); router.push('/bookclub'); }}>
+          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { 
+            setActiveTab('bookclub'); 
+            if (pathname !== '/bookclub') {
+              router.push('/bookclub'); 
+            }
+          }}>
             <Ionicons name="book-outline" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'bookclub' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'bookclub' ? '#43C6AC' : '#bbb')} />
           </TouchableOpacity>
-          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { setActiveTab('checklist'); router.push('/trainee-checklist'); }}>
+          <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', flex: 1 }} onPress={() => { 
+            setActiveTab('checklist'); 
+            if (pathname !== '/trainee-checklist') {
+              router.push('/trainee-checklist'); 
+            }
+          }}>
             <Ionicons name="checkmark-done-circle-outline" size={28} color={userRole === 'trainee' && isDarkMode ? (activeTab === 'checklist' ? '#43C6AC' : '#AEB6C1') : (activeTab === 'checklist' ? '#43C6AC' : '#bbb')} />
           </TouchableOpacity>
         </View>

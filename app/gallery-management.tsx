@@ -28,7 +28,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useTheme } from '../components/ThemeContext';
 import { useUserContext } from '../components/UserContext';
-import AdminTabBar from '../components/AdminTabBar';
+
 import AdminHeader from '../components/AdminHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
@@ -641,7 +641,7 @@ export default function GalleryManagement() {
           </ScrollView>
 
           {/* Bottom Tab Bar */}
-          <AdminTabBar activeTab="gallery" isDarkMode={isDarkMode} />
+  
           {AddAlbumFAB}
 
           {/* Create Album Modal */}
@@ -834,7 +834,7 @@ export default function GalleryManagement() {
             </TouchableOpacity>
           </View>
         </ScrollView>
-        <AdminTabBar activeTab="gallery" />
+
       </SafeAreaView>
     );
   }
