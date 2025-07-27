@@ -255,7 +255,7 @@ export default function EmployeeHome() {
           </TouchableOpacity> 
         </View> 
       </View>
-        <ScrollView contentContainerStyle={[styles.scrollContent, {alignItems: 'center', justifyContent: 'center', flexGrow: 1}]} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, {flexGrow: 1}]} showsVerticalScrollIndicator={false}>
           <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
           <AutoCarousel
             data={highlightCards}
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#222',
-    marginLeft: 18,
+    marginLeft: 16,
     marginTop: 18,
     marginBottom: 8,
   },

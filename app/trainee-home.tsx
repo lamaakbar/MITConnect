@@ -286,7 +286,7 @@ export default function TraineeHome() {
             </TouchableOpacity> 
           </View> 
         </View>
-        <ScrollView contentContainerStyle={[styles.scrollContent, {alignItems: 'center', justifyContent: 'center', flexGrow: 1}]} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, {flexGrow: 1}]} showsVerticalScrollIndicator={false}>
           {highlightCards.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="star-outline" size={64} color="#ccc" />
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#222',
-    marginLeft: 18,
+    marginLeft: 16,
     marginTop: 18,
     marginBottom: 8,
   },
