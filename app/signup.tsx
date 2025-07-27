@@ -15,6 +15,7 @@ export default function SignupScreen() {
   const { role: initialRole } = useLocalSearchParams();
   const router = useRouter();
   const { setUserRole, getHomeRoute } = useUserContext();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -22,11 +23,15 @@ export default function SignupScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState(initialRole || 'employee');
-  const [errors, setErrors] = useState({ email: '', password: '', confirm: '' });
+  const [errors, setErrors] = useState({ name: '', email: '', password: '', confirm: '' });
 
   const validate = () => {
     let valid = true;
-    let errs = { email: '', password: '', confirm: '' };
+    let errs = { name: '', email: '', password: '', confirm: '' };
+    if (!name.trim()) {
+      errs.name = 'Name is required.';
+      valid = false;
+    }
     if (!email) {
       errs.email = 'Email is required.';
       valid = false;
@@ -81,8 +86,8 @@ export default function SignupScreen() {
         {
           id: data.user.id,
           email: email,
+          name: name.trim(),
           role: role,
-          name: email, // Or change to a real name field if collected
         },
       ]);
 
@@ -128,6 +133,18 @@ export default function SignupScreen() {
               </Pressable>
             ))}
           </View>
+          <View style={styles.inputGroup}>
+            <Ionicons name="person" size={20} color="#1976D2" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Full name"
+              placeholderTextColor="#9BA1A6"
+              autoCapitalize="words"
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
+          {errors.name ? <Text style={styles.error}>{errors.name}</Text> : null}
           <View style={styles.inputGroup}>
             <Ionicons name="mail" size={20} color="#1976D2" style={styles.inputIcon} />
             <TextInput

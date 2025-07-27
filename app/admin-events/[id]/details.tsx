@@ -71,6 +71,20 @@ const EventDetailsScreen: React.FC = () => {
           
           // Fetch attendees for this event
           const eventAttendees = await eventService.getEventAttendees(id as string);
+          console.log('📊 Admin Event Details - Raw Attendees Data:', eventAttendees);
+          console.log('📊 Admin Event Details - Processed Data:', {
+            eventId: id,
+            attendeeCount: eventAttendees.length,
+            attendees: eventAttendees.map(a => ({
+              id: a.id,
+              user_id: a.user_id,
+              name: a.users?.name || a.name,
+              email: a.users?.email || a.email,
+              role: a.users?.role || a.role,
+              status: a.status,
+              hasUsersData: !!a.users
+            }))
+          });
           setAttendees(eventAttendees);
           
           setError(null);
@@ -198,35 +212,48 @@ const EventDetailsScreen: React.FC = () => {
           <Text style={styles.infoText}>Type: {event.type}</Text>
         </View> */}
         
-        {/* REMOVED ATTENDEES SECTION */}
-        {/* <Text style={styles.attendeeTitle}>Event Attendees ({attendees.length})</Text>
-        {attendees.length > 0 ? (
-          <FlatList
-            data={attendees}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.attendeeRow}>
-                <View style={styles.attendeeInfo}>
-                  <Text style={styles.attendeeName}>{item.name}</Text>
-                  <Text style={styles.attendeeEmail}>{item.email}</Text>
-                  <Text style={styles.attendeeDate}>
-                    Registered: {new Date(item.registration_date).toLocaleDateString()}
-                  </Text>
+        {/* Event Attendees Section */}
+        <View style={styles.attendeesSection}>
+          <Text style={[styles.attendeeTitle, { color: textColor }]}>
+            Event Attendees ({attendees.length})
+          </Text>
+          {attendees.length > 0 ? (
+            <View style={[styles.attendeesContainer, { backgroundColor: statsBackground }]}>
+              {attendees.map((attendee) => (
+                <View key={attendee.id} style={[styles.attendeeRow, { borderBottomColor: borderColor }]}>
+                  <View style={styles.attendeeInfo}>
+                    <Text style={[styles.attendeeName, { color: textColor }]}>
+                      {attendee.users?.name || attendee.name || `User ${attendee.user_id?.substring(0, 8)}`}
+                    </Text>
+                    <Text style={[styles.attendeeEmail, { color: secondaryTextColor }]}>
+                      {attendee.users?.email || attendee.email || 'No email available'}
+                    </Text>
+                    <View style={styles.attendeeMeta}>
+                      <Text style={[styles.attendeeRole, { color: secondaryTextColor }]}>
+                        {(attendee.users?.role || attendee.role || 'Unknown')?.charAt(0).toUpperCase() + (attendee.users?.role || attendee.role || 'Unknown')?.slice(1)}
+                      </Text>
+                      <Text style={[styles.attendeeDate, { color: secondaryTextColor }]}>
+                        Registered: {new Date(attendee.registration_date || attendee.created_at).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={[styles.attendeeStatus, { backgroundColor: attendee.status === 'confirmed' ? '#4CAF50' : '#FF9800' }]}>
+                    <Text style={styles.statusText}>
+                      {attendee.status?.charAt(0).toUpperCase() + attendee.status?.slice(1)}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.attendeeStatus}>
-                  <Text style={styles.statusText}>{item.status}</Text>
-                </View>
-              </View>
-            )}
-            scrollEnabled={false}
-            style={{ marginBottom: 24 }}
-          />
-        ) : (
-          <View style={styles.emptyAttendees}>
-            <Ionicons name="people-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyAttendeesText}>No attendees registered yet</Text>
-          </View>
-        )} */}
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyAttendees}>
+              <Ionicons name="people-outline" size={48} color={secondaryTextColor} />
+              <Text style={[styles.emptyAttendeesText, { color: secondaryTextColor }]}>
+                No attendees registered yet
+              </Text>
+            </View>
+          )}
+        </View>
         
         {/* Registration Statistics */}
         <View style={[styles.statsContainer, { backgroundColor: statsBackground }]}>
@@ -306,25 +333,40 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 15,
   },
+  attendeesSection: {
+    marginTop: 24,
+    marginHorizontal: 16,
+  },
   attendeeTitle: {
     fontWeight: 'bold',
     fontSize: 16,
-    marginTop: 24,
-    marginBottom: 8,
-    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  attendeesContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   attendeeRow: {
-    borderTopWidth: 1,
-    borderTopColor: '#D6E3D7',
-    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#D6E3D7',
+    paddingVertical: 16,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   attendeeInfo: {
     flex: 1,
+  },
+  attendeeMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 12,
+  },
+  attendeeRole: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   attendeeName: {
     fontWeight: 'bold',
@@ -344,6 +386,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    minWidth: 80,
+    alignItems: 'center',
   },
   statusText: {
     fontSize: 12,

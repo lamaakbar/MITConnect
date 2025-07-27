@@ -11,12 +11,13 @@ import { Event, EventStats } from '../types/events';
 export default function EventFeedbackScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const { events, submitFeedback, getEventStats, getUserEventStatus, markUserAsAttended } = useEventContext();
+  const { events, submitFeedback, getEventStats, getUserEventStatus, getEventFeedback } = useEventContext();
   const { isDarkMode } = useTheme();
   
   const [event, setEvent] = useState<Event | null>(null);
   const [eventStats, setEventStats] = useState<EventStats | null>(null);
   const [userEventStatus, setUserEventStatus] = useState<any>(null);
+  const [existingFeedback, setExistingFeedback] = useState<any[]>([]);
   const [feedback, setFeedback] = useState('');
   const [userRating, setUserRating] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -46,20 +47,19 @@ export default function EventFeedbackScreen() {
         const userStatus = await getUserEventStatus(id as string);
         setUserEventStatus(userStatus);
         
-        // If user hasn't attended yet, mark them as attended (simulate attendance)
-        if (userStatus && userStatus.status === 'registered') {
-          const eventDate = new Date(foundEvent.date);
-          const today = new Date();
-          if (eventDate < today) {
-            await markUserAsAttended(id as string);
-            setUserEventStatus({ ...userStatus, status: 'attended' });
-          }
-        }
+        // Load existing feedback
+        const feedback = await getEventFeedback(id as string);
+        setExistingFeedback(feedback);
+        
+        console.log('Event Feedback - User Status:', userStatus);
+        console.log('Event Feedback - Event Date:', foundEvent.date);
+        console.log('Event Feedback - Is Past Event:', new Date(foundEvent.date) < new Date());
+        console.log('Event Feedback - Existing Feedback:', feedback);
       }
     };
 
     loadEventData();
-  }, [id, events, getEventStats, getUserEventStatus, markUserAsAttended]);
+  }, [id, events, getEventStats, getUserEventStatus, getEventFeedback]);
 
   const handleSubmitFeedback = async () => {
     if (!event || !id || userRating === 0) {
@@ -67,11 +67,37 @@ export default function EventFeedbackScreen() {
       return;
     }
 
-    // Check if user has attended the event
-    if (!userEventStatus || userEventStatus.status !== 'attended') {
+    // Check if user is registered and event is in the past
+    if (!userEventStatus) {
       Alert.alert(
         'Cannot Submit Feedback', 
-        'You can only submit feedback for events you have attended and that have already passed.',
+        'You must be registered for this event to submit feedback.',
+        [
+          { text: 'OK', onPress: () => {} }
+        ]
+      );
+      return;
+    }
+
+    // Check if event is in the past
+    const eventDate = new Date(event.date);
+    const today = new Date();
+    if (eventDate >= today) {
+      Alert.alert(
+        'Cannot Submit Feedback', 
+        'You can only submit feedback for events that have already passed.',
+        [
+          { text: 'OK', onPress: () => {} }
+        ]
+      );
+      return;
+    }
+
+    // Check if user already submitted feedback
+    if (userEventStatus.feedbackSubmitted) {
+      Alert.alert(
+        'Feedback Already Submitted', 
+        'You have already submitted feedback for this event.',
         [
           { text: 'OK', onPress: () => {} }
         ]
@@ -94,7 +120,7 @@ export default function EventFeedbackScreen() {
       } else {
         Alert.alert(
           'Submission Failed', 
-          'Unable to submit feedback. Please make sure you are registered for this event and it has already passed.',
+          'Unable to submit feedback. Please try again.',
           [
             { text: 'OK', onPress: () => {} }
           ]
@@ -135,6 +161,31 @@ export default function EventFeedbackScreen() {
         <View style={[styles.ratingBar, { width: `${percentage}%` }]} />
       </View>
       <Text style={[styles.ratingPercentage, { color: secondaryTextColor }]}>{percentage}%</Text>
+    </View>
+  );
+
+  const renderFeedbackItem = (feedbackItem: any, index: number) => (
+    <View key={feedbackItem.id || index} style={[styles.feedbackItem, { borderBottomColor: borderColor }]}>
+      <View style={styles.feedbackHeader}>
+        <View style={styles.feedbackStars}>
+          {[1, 2, 3, 4, 5].map(star => (
+            <Ionicons
+              key={star}
+              name={star <= feedbackItem.rating ? 'star' : 'star-outline'}
+              size={16}
+              color={star <= feedbackItem.rating ? '#FFD700' : '#ddd'}
+            />
+          ))}
+        </View>
+        <Text style={[styles.feedbackDate, { color: secondaryTextColor }]}>
+          {new Date(feedbackItem.submittedAt).toLocaleDateString()}
+        </Text>
+      </View>
+      {feedbackItem.comment && (
+        <Text style={[styles.feedbackComment, { color: textColor }]}>
+          {feedbackItem.comment}
+        </Text>
+      )}
     </View>
   );
 
@@ -201,6 +252,18 @@ export default function EventFeedbackScreen() {
                   renderRatingBar(rating, eventStats.ratingDistribution[rating as keyof typeof eventStats.ratingDistribution])
                 )}
               </View>
+            </View>
+          </View>
+        )}
+
+        {/* Existing Feedback */}
+        {existingFeedback.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>Recent Reviews</Text>
+            <View style={styles.feedbackList}>
+              {existingFeedback.slice(0, 3).map((feedbackItem, index) => 
+                renderFeedbackItem(feedbackItem, index)
+              )}
             </View>
           </View>
         )}
@@ -405,6 +468,29 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 12,
     textAlign: 'center',
+  },
+  feedbackList: {
+    marginTop: 8,
+  },
+  feedbackItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  feedbackHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  feedbackStars: {
+    flexDirection: 'row',
+  },
+  feedbackDate: {
+    fontSize: 12,
+  },
+  feedbackComment: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   starsContainer: {
     flexDirection: 'row',

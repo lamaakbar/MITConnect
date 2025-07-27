@@ -1,11 +1,24 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '../services/supabase';
 
 export type UserRole = 'employee' | 'trainee' | 'admin';
 
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  created_at?: string;
+  updated_at?: string;
+}
+
 interface UserContextType {
   userRole: UserRole;
+  userProfile: UserProfile | null;
   setUserRole: (role: UserRole) => Promise<void>;
+  setUserProfile: (profile: UserProfile) => void;
+  loadUserProfile: () => Promise<void>;
   getHomeRoute: () => string;
   isInitialized: boolean;
 }
@@ -14,6 +27,7 @@ const UserContext = createContext<UserContextType | null>(null);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [userRole, setUserRole] = useState<UserRole>('employee');
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Load user role from storage on app start
@@ -67,11 +81,40 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     return route;
   };
 
+  const loadUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.log('UserContext: No authenticated user found');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('UserContext: Error loading user profile:', error);
+        return;
+      }
+
+      setUserProfile(data);
+      console.log('UserContext: User profile loaded:', data);
+    } catch (error) {
+      console.error('UserContext: Error loading user profile:', error);
+    }
+  };
+
   return (
     <UserContext.Provider
       value={{
         userRole,
+        userProfile,
         setUserRole: setUserRoleWithStorage,
+        setUserProfile,
+        loadUserProfile,
         getHomeRoute,
         isInitialized,
       }}

@@ -514,17 +514,39 @@ const AdminEventListScreen: React.FC = () => {
 
   const fetchEventAttendees = async (eventId: string) => {
     try {
+      console.log('🔍 Modal - Fetching attendees for event:', eventId);
       const attendees = await eventService.getEventAttendees(eventId);
+      console.log('📊 Modal - Raw attendees data:', attendees);
+      console.log('📊 Modal - Processed data:', {
+        eventId,
+        attendeeCount: attendees.length,
+        attendees: attendees.map(a => ({
+          id: a.id,
+          user_id: a.user_id,
+          name: a.users?.name || a.name,
+          email: a.users?.email || a.email,
+          role: a.users?.role || a.role,
+          status: a.status,
+          hasUsersData: !!a.users
+        }))
+      });
       setCurrentEventAttendees(attendees);
     } catch (error) {
       console.error('Error fetching attendees:', error);
     }
   };
 
-  const filteredAttendees = currentEventAttendees.filter((a: any) => 
-    (a.auth_users?.email?.toLowerCase().includes(attendeesSearch.toLowerCase()) ||
-     a.user_id?.toLowerCase().includes(attendeesSearch.toLowerCase()))
-  ) || [];
+  const filteredAttendees = currentEventAttendees.filter((a: any) => {
+    const name = a.users?.name || a.name || '';
+    const email = a.users?.email || a.email || '';
+    const role = a.users?.role || a.role || '';
+    const searchTerm = attendeesSearch.toLowerCase();
+    
+    return name.toLowerCase().includes(searchTerm) ||
+           email.toLowerCase().includes(searchTerm) ||
+           role.toLowerCase().includes(searchTerm) ||
+           a.user_id?.toLowerCase().includes(searchTerm);
+  }) || [];
 
   // Floating action button for adding event (FAB)
   const AddEventFAB = (
@@ -1142,20 +1164,30 @@ const AdminEventListScreen: React.FC = () => {
             </View>
             <ScrollView style={styles.attendeesList}>
               {filteredAttendees.map((attendee: any, index: any) => (
-                <View key={index} style={[styles.attendeeItem, { borderBottomColor: borderColor }]}>
+                <View key={attendee.id || index} style={[styles.attendeeItem, { borderBottomColor: borderColor }]}>
                   <View style={styles.attendeeInfo}>
                     <Text style={[styles.attendeeName, { color: textColor }]}>
-                      {attendee.auth_users?.email || attendee.user_id}
+                      {attendee.users?.name || attendee.name || `User ${attendee.user_id?.substring(0, 8)}`}
                     </Text>
                     <Text style={[styles.attendeeEmail, { color: secondaryTextColor }]}>
-                      User ID: {attendee.user_id}
+                      {attendee.users?.email || attendee.email || 'No email available'}
                     </Text>
+                    <View style={styles.attendeeMeta}>
+                      <Text style={[styles.attendeeRole, { color: secondaryTextColor }]}>
+                        {(attendee.users?.role || attendee.role || 'Unknown')?.charAt(0).toUpperCase() + (attendee.users?.role || attendee.role || 'Unknown')?.slice(1)}
+                      </Text>
+                      <Text style={[styles.attendeeDate, { color: secondaryTextColor }]}>
+                        Registered: {new Date(attendee.registration_date || attendee.created_at).toLocaleDateString()}
+                      </Text>
+                    </View>
                   </View>
                   <View style={[
                     styles.statusBadge,
-                    { backgroundColor: '#3CB371' }
+                    { backgroundColor: attendee.status === 'confirmed' ? '#4CAF50' : '#FF9800' }
                   ]}>
-                    <Text style={styles.statusBadgeText}>Registered</Text>
+                    <Text style={styles.statusBadgeText}>
+                      {attendee.status?.charAt(0).toUpperCase() + attendee.status?.slice(1) || 'Registered'}
+                    </Text>
                   </View>
                 </View>
               ))}
@@ -1530,6 +1562,21 @@ const styles = StyleSheet.create({
   },
   attendeeEmail: {
     fontSize: 14,
+  },
+  attendeeMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 12,
+  },
+  attendeeRole: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  attendeeDate: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
   },
   statusBadge: {
     paddingHorizontal: 8,

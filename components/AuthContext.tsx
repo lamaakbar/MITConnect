@@ -35,11 +35,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('🔔 Auth state changed:', event, session?.user?.email);
         
         if (event === 'SIGNED_IN' && session?.user) {
+          // Fetch user data from users table
+          const { data: userProfile, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (error) {
+            console.log('⚠️ User not found in users table during sign in, using auth data:', error.message);
+          }
+          
           const userData: User = {
             id: session.user.id,
             email: session.user.email || '',
-            name: session.user.user_metadata?.full_name || session.user.email || '',
-            role: session.user.user_metadata?.role || 'trainee',
+            name: userProfile?.name || session.user.email || '',
+            role: userProfile?.role || 'trainee',
           };
           setUser(userData);
         } else if (event === 'SIGNED_OUT') {
@@ -70,13 +81,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         console.log('✅ Session restored for user:', session.user.email);
         
+        // Fetch user data from users table
+        const { data: userProfile, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (error) {
+          console.log('⚠️ User not found in users table, using auth data:', error.message);
+        }
+        
         // Convert Supabase user to our User format
-        // You might need to fetch additional user data from your database
         const userData: User = {
           id: session.user.id,
           email: session.user.email || '',
-          name: session.user.user_metadata?.full_name || session.user.email || '',
-          role: session.user.user_metadata?.role || 'trainee', // Default role
+          name: userProfile?.name || session.user.email || '',
+          role: userProfile?.role || 'trainee', // Default role
         };
         
         setUser(userData);

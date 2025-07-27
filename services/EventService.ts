@@ -444,7 +444,7 @@ class EventService {
       console.log('Fetching events for user:', userId);
 
       const { data, error } = await supabase
-        .from('event_registrations')
+        .from('event_attendees')
         .select(`
           event_id,
           events (*)
@@ -637,18 +637,65 @@ class EventService {
   }
 
   /**
-   * Get event attendees for admin
+   * Get event attendees for admin with user names
    */
   async getEventAttendees(eventId: string): Promise<any[]> {
     try {
-      // First, get all registrations for this event
+      console.log('🔍 Fetching attendees for event:', eventId);
+      
+      // Try JOIN query first
+      const { data: attendees, error } = await supabase
+        .from('event_attendees')
+        .select(`
+          id,
+          event_id,
+          user_id,
+          status,
+          created_at,
+          users (
+            id,
+            name,
+            email,
+            role
+          )
+        `)
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error with JOIN query, falling back to manual query:', error);
+        return await this.getEventAttendeesManual(eventId);
+      }
+
+      if (!attendees || attendees.length === 0) {
+        console.log('No attendees found for event:', eventId);
+        return [];
+      }
+
+      console.log('✅ Found', attendees.length, 'attendees with JOIN:', attendees);
+      return attendees;
+    } catch (error) {
+      console.error('Error fetching event attendees:', error);
+      return await this.getEventAttendeesManual(eventId);
+    }
+  }
+
+  /**
+   * Manual fallback method for getting attendees
+   */
+  private async getEventAttendeesManual(eventId: string): Promise<any[]> {
+    try {
+      console.log('🔄 Using manual fallback method');
+      
+      // Get all registrations for this event
       const { data: registrations, error: regError } = await supabase
-        .from('event_registrations')
+        .from('event_attendees')
         .select('*')
-        .eq('event_id', eventId);
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: true });
 
       if (regError) {
-        console.error('Error fetching event registrations:', regError);
+        console.error('Error fetching registrations:', regError);
         return [];
       }
 
@@ -656,54 +703,45 @@ class EventService {
         return [];
       }
 
-      // Get user details for each registration
-      const attendeePromises = registrations.map(async (registration) => {
-        try {
-          // Try to get user profile information
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', registration.user_id)
-            .single();
+      // Get all user IDs
+      const userIds = registrations.map(r => r.user_id);
+      console.log('👥 User IDs to fetch:', userIds);
 
-          if (profileError) {
-            console.log('No profile found for user:', registration.user_id);
-            // Return basic registration info if no profile
-            return {
-              id: registration.id,
-              user_id: registration.user_id,
-              name: `User ${registration.user_id.substring(0, 8)}`,
-              email: 'No email available',
-              registration_date: registration.created_at,
-              status: registration.status || 'confirmed'
-            };
-          }
+      // Get all users in one query
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, name, email, role')
+        .in('id', userIds);
 
-          return {
-            id: registration.id,
-            user_id: registration.user_id,
-            name: profile.full_name || profile.name || `User ${registration.user_id.substring(0, 8)}`,
-            email: profile.email || 'No email available',
-            registration_date: registration.created_at,
-            status: registration.status || 'confirmed'
-          };
-        } catch (error) {
-          console.error('Error fetching user profile:', error);
-          return {
-            id: registration.id,
-            user_id: registration.user_id,
-            name: `User ${registration.user_id.substring(0, 8)}`,
-            email: 'No email available',
-            registration_date: registration.created_at,
-            status: registration.status || 'confirmed'
-          };
-        }
+      if (usersError) {
+        console.error('Error fetching users:', usersError);
+        return [];
+      }
+
+      console.log('👤 Found users:', users);
+
+      // Create a map for quick lookup
+      const userMap = new Map();
+      users?.forEach(user => userMap.set(user.id, user));
+
+      // Combine the data
+      const formattedAttendees = registrations.map(registration => {
+        const user = userMap.get(registration.user_id);
+        return {
+          id: registration.id,
+          user_id: registration.user_id,
+          name: user?.name || `User ${registration.user_id.substring(0, 8)}`,
+          email: user?.email || 'No email available',
+          role: user?.role || 'Unknown',
+          registration_date: registration.created_at,
+          status: registration.status || 'confirmed'
+        };
       });
 
-      const attendees = await Promise.all(attendeePromises);
-      return attendees;
+      console.log('✅ Manual method result:', formattedAttendees);
+      return formattedAttendees;
     } catch (error) {
-      console.error('Error fetching event attendees:', error);
+      console.error('Error in manual method:', error);
       return [];
     }
   }
@@ -713,13 +751,10 @@ class EventService {
    */
   async getUserEventStatus(eventId: string): Promise<UserEventTracking | null> {
     try {
-      // Get the authenticated user
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !user?.id) {
+      // Get the authenticated user using the robust method
+      const userId = await this.getAuthenticatedUserId();
+      
+      if (!userId) {
         console.error('User not authenticated');
         return null;
       }
@@ -729,7 +764,7 @@ class EventService {
         .from('event_attendees')
         .select('*')
         .eq('event_id', eventId)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (error) {
@@ -739,6 +774,7 @@ class EventService {
 
       // If no registration found, return null
       if (!data) {
+        console.log('No registration found for user:', userId, 'event:', eventId);
         return null;
       }
 
@@ -746,12 +782,30 @@ class EventService {
       const event = await this.getEventById(eventId);
       const isEventInPast = event ? new Date(event.date) < new Date() : false;
 
+      // Check if user already submitted feedback
+      let feedbackSubmitted = false;
+      try {
+        const { data: existingFeedback } = await supabase
+          .from('event_feedback')
+          .select('id')
+          .eq('event_id', eventId)
+          .eq('user_id', userId)
+          .maybeSingle();
+        
+        feedbackSubmitted = !!existingFeedback;
+      } catch (feedbackError) {
+        console.log('Could not check existing feedback:', feedbackError);
+      }
+
+      const status = isEventInPast ? 'attended' : 'registered';
+      console.log('User event status:', { userId, eventId, status, feedbackSubmitted });
+
       return {
         eventId: data.event_id,
         userId: data.user_id,
-        status: isEventInPast ? 'attended' : 'registered',
+        status: status,
         registrationDate: new Date(data.created_at),
-        feedbackSubmitted: false
+        feedbackSubmitted: feedbackSubmitted
       };
     } catch (error) {
       console.error('Error fetching user event status:', error);
@@ -917,7 +971,7 @@ class EventService {
 
       // 2. Delete event registrations
       const { error: regError } = await supabase
-        .from('event_registrations')
+        .from('event_attendees')
         .delete()
         .eq('event_id', id);
       
@@ -998,7 +1052,7 @@ class EventService {
       
       // Delete orphaned registrations
       const { data: orphanedRegistrations } = await supabase
-        .from('event_registrations')
+        .from('event_attendees')
         .delete()
         .not('event_id', 'in', `(${existingEventIds.map(id => `'${id}'`).join(',')})`)
         .select();
@@ -1074,15 +1128,12 @@ class EventService {
   /**
    * Submit event feedback
    */
-  async submitEventFeedback(feedbackData: Omit<FeedbackData, 'userId'>): Promise<boolean> {
+  async submitEventFeedback(feedbackData: Omit<FeedbackData, 'userId' | 'submittedAt'>): Promise<boolean> {
     try {
-      // Get the authenticated user
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !user?.id) {
+      // Get the authenticated user using the robust method
+      const userId = await this.getAuthenticatedUserId();
+      
+      if (!userId) {
         console.error('User not authenticated');
         return false;
       }
@@ -1092,7 +1143,7 @@ class EventService {
         .from('event_attendees')
         .select('*')
         .eq('event_id', feedbackData.eventId)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (checkError) {
@@ -1124,7 +1175,7 @@ class EventService {
         .from('event_feedback')
         .select('*')
         .eq('event_id', feedbackData.eventId)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (feedbackCheckError) {
@@ -1143,10 +1194,10 @@ class EventService {
           .from('event_feedback')
           .insert({
             event_id: feedbackData.eventId,
-            user_id: user.id,
+            user_id: userId,
             rating: feedbackData.rating,
-            comment: feedbackData.comment,
-            submitted_at: feedbackData.submittedAt.toISOString()
+            comment: feedbackData.comment
+            // created_at will be automatically set by DEFAULT NOW()
           });
 
         if (error) {
@@ -1158,7 +1209,7 @@ class EventService {
         return false;
       }
 
-      console.log('Successfully submitted feedback:', { ...feedbackData, userId: user.id });
+      console.log('Successfully submitted feedback:', { ...feedbackData, userId: userId });
       return true;
     } catch (error) {
       console.error('Error submitting feedback:', error);
@@ -1244,7 +1295,7 @@ class EventService {
         userId: feedback.user_id,
         rating: feedback.rating,
         comment: feedback.comment,
-        submittedAt: new Date(feedback.submitted_at)
+        submittedAt: new Date(feedback.created_at)
       })) || [];
     } catch (error) {
       console.error('Error fetching event feedback (table may not exist):', error);
@@ -1257,24 +1308,21 @@ class EventService {
    */
   async markUserAsAttended(eventId: string): Promise<boolean> {
     try {
-      // Get the authenticated user
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !user?.id) {
+      // Get the authenticated user using the robust method
+      const userId = await this.getAuthenticatedUserId();
+      
+      if (!userId) {
         console.error('User not authenticated');
         return false;
       }
 
-      // Since your event_registrations table doesn't have a status field,
+      // Since your event_attendees table doesn't have a status field,
       // we'll just return true if the user is registered
       const { data, error } = await supabase
-        .from('event_registrations')
+        .from('event_attendees')
         .select('*')
         .eq('event_id', eventId)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (error) {
@@ -1283,7 +1331,7 @@ class EventService {
       }
 
       if (data) {
-        console.log('User is registered for event:', { eventId, userId: user.id });
+        console.log('User is registered for event:', { eventId, userId: userId });
         return true;
       }
 

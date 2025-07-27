@@ -399,10 +399,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
 
   const submitFeedback = async (feedback: Omit<EventFeedback, 'id' | 'submittedAt' | 'userId'>): Promise<boolean> => {
     try {
-      return await eventService.submitEventFeedback({
-        ...feedback,
-        submittedAt: new Date(),
-      });
+      return await eventService.submitEventFeedback(feedback);
     } catch (err) {
       setError('Failed to submit feedback');
       console.error('Error submitting feedback:', err);

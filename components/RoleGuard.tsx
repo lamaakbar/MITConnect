@@ -10,19 +10,22 @@ interface RoleGuardProps {
 export default function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { userRole, isInitialized, getHomeRoute } = useUserContext();
+  const { userRole, userProfile, isInitialized, getHomeRoute } = useUserContext();
 
   useEffect(() => {
     if (!isInitialized) {
-      console.log('RoleGuard: Waiting for initialization...');
+      const userName = userProfile?.name || 'Unknown User';
+      console.log('RoleGuard: Waiting for initialization for user:', userName);
       return;
     }
 
-    console.log('RoleGuard: Checking access, userRole:', userRole, 'allowedRoles:', allowedRoles, 'pathname:', pathname);
+    const userName = userProfile?.name || 'Unknown User';
+    console.log('RoleGuard: Checking access, user:', userName, 'userRole:', userRole, 'allowedRoles:', allowedRoles, 'pathname:', pathname);
 
     // Check if user has access to this screen
     if (!allowedRoles.includes(userRole)) {
-      console.log('RoleGuard: Access denied, redirecting to correct home');
+      const userName = userProfile?.name || 'Unknown User';
+      console.log('RoleGuard: Access denied for user:', userName, 'redirecting to correct home');
       const correctHome = getHomeRoute();
       if (pathname !== correctHome) {
         router.replace(correctHome as any);

@@ -24,7 +24,8 @@ export default function ProfileModal({ visible, onClose }: { visible: boolean; o
           </TouchableOpacity>
           <Ionicons name="person-circle-outline" size={64} color={iconColor} style={{ marginBottom: 12 }} />
           <Text style={{ fontSize: 20, fontWeight: 'bold', color: textColor, marginBottom: 8 }}>Profile</Text>
-          <Text style={{ fontSize: 16, color: secondaryTextColor, marginBottom: 24 }}>{user?.email || 'No email found'}</Text>
+          <Text style={{ fontSize: 16, color: secondaryTextColor, marginBottom: 4 }}>{user?.name || 'No name found'}</Text>
+          <Text style={{ fontSize: 14, color: secondaryTextColor, marginBottom: 24 }}>{user?.email || 'No email found'}</Text>
           <TouchableOpacity
             style={{ backgroundColor: '#ff6b6b', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 32, marginTop: 8 }}
             onPress={async () => { await logout(); onClose(); router.replace('/'); }}
