@@ -10,7 +10,8 @@ import {
   SafeAreaView,
   Alert,
   ActivityIndicator,
-  FlatList
+  FlatList,
+  Linking
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -33,6 +34,7 @@ type Book = {
   cover?: string;
   genre?: string;
   genreColor?: string;
+  pdf_path?: string;
 };
 
 type Rating = {
@@ -84,6 +86,37 @@ export default function LibraryBookDetailsScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState<any>(null);
 
+  // Function to open PDF
+  const openPDF = async (pdfPath: string) => {
+    try {
+      // Determine the bucket based on the path
+      const bucket = pdfPath.startsWith('pdfs/') ? 'images' : 'book-pdfs';
+      const { data } = supabase.storage.from(bucket).getPublicUrl(pdfPath);
+      const pdfUrl = data.publicUrl;
+      
+      console.log('📄 Opening PDF:', pdfUrl);
+      
+      // Check if the URL can be opened
+      const canOpen = await Linking.canOpenURL(pdfUrl);
+      if (canOpen) {
+        await Linking.openURL(pdfUrl);
+      } else {
+        Alert.alert(
+          'Cannot Open PDF',
+          'Unable to open the PDF file. Please try downloading it manually.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error opening PDF:', error);
+      Alert.alert(
+        'Error',
+        'Failed to open the PDF file. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   // Fetch book details
   const fetchBookDetails = async () => {
     if (!id) return;
@@ -105,11 +138,13 @@ export default function LibraryBookDetailsScreen() {
         cover_image_url: contextBook.cover,
         cover: contextBook.cover,
         genre: contextBook.genre,
-        genreColor: contextBook.genreColor
+        genreColor: contextBook.genreColor,
+        pdf_path: contextBook.pdf_path
       };
-      console.log('✅ Setting book from context:', bookData);
-      setBook(bookData);
-      return;
+          console.log('✅ Setting book from context:', bookData);
+    console.log('📄 PDF path from context:', bookData.pdf_path);
+    setBook(bookData);
+    return;
     }
     
     // Try with string ID comparison as well
@@ -125,11 +160,13 @@ export default function LibraryBookDetailsScreen() {
         cover_image_url: contextBookString.cover,
         cover: contextBookString.cover,
         genre: contextBookString.genre,
-        genreColor: contextBookString.genreColor
+        genreColor: contextBookString.genreColor,
+        pdf_path: contextBookString.pdf_path
       };
-      console.log('✅ Setting book from context (string match):', bookData);
-      setBook(bookData);
-      return;
+          console.log('✅ Setting book from context (string match):', bookData);
+    console.log('📄 PDF path from context (string match):', bookData.pdf_path);
+    setBook(bookData);
+    return;
     }
     
     // Fallback to database if not found in context
@@ -143,6 +180,7 @@ export default function LibraryBookDetailsScreen() {
       
       if (error) throw error;
       console.log('✅ Book data fetched from database:', data);
+      console.log('📄 PDF path from database:', data.pdf_path);
       setBook(data);
     } catch (error) {
       console.error('❌ Error fetching book from database:', error);
@@ -295,6 +333,48 @@ export default function LibraryBookDetailsScreen() {
     }
   };
 
+  // Delete comment (admin only)
+  const deleteComment = async (commentId: number) => {
+    try {
+      // Show confirmation dialog
+      Alert.alert(
+        'Delete Comment',
+        'Are you sure you want to delete this comment? This action cannot be undone.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const { error } = await supabase
+                  .from('comments')
+                  .delete()
+                  .eq('id', commentId);
+                
+                if (error) throw error;
+                
+                // Refresh comments after deletion
+                await fetchComments();
+                
+                Alert.alert('Success', 'Comment deleted successfully');
+              } catch (error) {
+                console.error('Error deleting comment:', error);
+                Alert.alert('Error', 'Failed to delete comment');
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error in delete comment:', error);
+      Alert.alert('Error', 'Failed to delete comment');
+    }
+  };
+
   // Calculate average rating
   const averageRating = ratings.length > 0 
     ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length 
@@ -418,6 +498,48 @@ export default function LibraryBookDetailsScreen() {
                   <Text style={{ color: isDarkMode ? '#ccc' : '#444', lineHeight: 20 }}>{book.description}</Text>
                 </View>
               )}
+
+              {/* PDF Section */}
+              <View style={{ backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9', marginBottom: 24, padding: 16, borderRadius: 12 }}>
+                <Text style={{ color: textColor, fontSize: 16, fontWeight: '600', marginBottom: 12 }}>
+                  <Ionicons name="document-text" size={20} color="#3CB371" style={{ marginRight: 8 }} />
+                  Book PDF
+                </Text>
+                {book.pdf_path ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: isDarkMode ? '#ccc' : '#444', fontSize: 14, marginBottom: 4 }}>
+                        {book.pdf_path.split('/').pop() || 'PDF Document'}
+                      </Text>
+                      <Text style={{ color: secondaryTextColor, fontSize: 12 }}>
+                        Available for download
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: '#3CB371',
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        flexDirection: 'row',
+                        alignItems: 'center'
+                      }}
+                      onPress={() => openPDF(book.pdf_path!)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="download" size={16} color="#fff" style={{ marginRight: 6 }} />
+                      <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>Download</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="document-text-outline" size={20} color={secondaryTextColor} style={{ marginRight: 8 }} />
+                    <Text style={{ color: secondaryTextColor, fontSize: 14 }}>
+                      No PDF available for this book
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
 
             {/* User Rating Section */}
@@ -513,16 +635,32 @@ export default function LibraryBookDetailsScreen() {
                         borderRadius: 12
                       }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                          <Text style={{ color: textColor, fontWeight: '600', fontSize: 14 }}>
-                            {comment.user_name || 'Anonymous'}
-                          </Text>
-                          <Text style={{ color: isDarkMode ? '#aaa' : '#888', fontSize: 12 }}>
-                            {new Date(comment.created_at).toLocaleDateString('en-US', { 
-                              year: 'numeric', 
-                              month: '2-digit', 
-                              day: '2-digit' 
-                            })}
-                          </Text>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: textColor, fontWeight: '600', fontSize: 14 }}>
+                              {comment.user_name || 'Anonymous'}
+                            </Text>
+                            <Text style={{ color: isDarkMode ? '#aaa' : '#888', fontSize: 12 }}>
+                              {new Date(comment.created_at).toLocaleDateString('en-US', { 
+                                year: 'numeric', 
+                                month: '2-digit', 
+                                day: '2-digit' 
+                              })}
+                            </Text>
+                          </View>
+                          {userRole === 'admin' && (
+                            <TouchableOpacity
+                              onPress={() => deleteComment(comment.id)}
+                              style={{
+                                padding: 8,
+                                backgroundColor: '#E74C3C',
+                                borderRadius: 6,
+                                marginLeft: 8
+                              }}
+                              activeOpacity={0.8}
+                            >
+                              <Ionicons name="trash-outline" size={16} color="#fff" />
+                            </TouchableOpacity>
+                          )}
                         </View>
                         <Text style={{ color: isDarkMode ? '#ccc' : '#444', lineHeight: 18 }}>
                           {comment.content}

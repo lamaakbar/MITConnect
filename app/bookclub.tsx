@@ -323,6 +323,60 @@ export default function BookClubScreen() {
     }
   }, [booksOfMonth]);
 
+  // Set up real-time subscription for Book of the Month ratings
+  useEffect(() => {
+    if (booksOfMonth.length === 0) return;
+
+    const bookId = booksOfMonth[0].id;
+    console.log('🔄 BookClub: Setting up real-time subscription for book ID:', bookId);
+    
+    // Set up real-time subscription for ratings
+    const ratingsSubscription = supabase
+      .channel('bookclub-ratings')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'ratings',
+          filter: `book_id=eq.${bookId}`
+        },
+        (payload) => {
+          console.log('🔄 BookClub: Real-time rating change detected:', payload);
+          
+          // Handle different types of changes
+          if (payload.eventType === 'INSERT') {
+            console.log('➕ BookClub: New rating added:', payload.new);
+            // Add the new rating to the list
+            setRatings(prevRatings => [payload.new, ...prevRatings]);
+          } else if (payload.eventType === 'UPDATE') {
+            console.log('✏️ BookClub: Rating updated:', payload.new);
+            // Update the existing rating in the list
+            setRatings(prevRatings => 
+              prevRatings.map(rating => 
+                rating.id === payload.new.id 
+                  ? { ...rating, ...payload.new }
+                  : rating
+              )
+            );
+          } else if (payload.eventType === 'DELETE') {
+            console.log('🗑️ BookClub: Rating deleted:', payload.old);
+            // Remove the deleted rating from the list
+            setRatings(prevRatings => 
+              prevRatings.filter(rating => rating.id !== payload.old.id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on component unmount or when book changes
+    return () => {
+      console.log('🔌 BookClub: Cleaning up real-time subscription');
+      ratingsSubscription.unsubscribe();
+    };
+  }, [booksOfMonth]); // Re-subscribe when books of month change
+
   const openBookModal = (book: any) => {
     setBook(book);
     setModal(true);

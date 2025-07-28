@@ -9,6 +9,7 @@ import { useUserContext } from '../components/UserContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useEffect } from 'react';
 import { FeedbackService, type TraineeFeedback, type CreateFeedbackInput } from '../services/FeedbackService';
+import { checklistProgressService } from '../services/ChecklistProgressService';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -32,6 +33,7 @@ export default function TraineeChecklist() {
   const router = useRouter();
   const navigation = useNavigation();
   const [checked, setChecked] = useState(Array(CHECKLIST_ITEMS.length).fill(false));
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
   const [scaleAnimations] = useState(() => 
     CHECKLIST_ITEMS.map(() => new Animated.Value(1))
   );
@@ -66,7 +68,7 @@ export default function TraineeChecklist() {
     return checked[index - 1];
   };
 
-  const toggleCheck = (idx: number) => {
+  const toggleCheck = async (idx: number) => {
     // Only allow checking if the item is eligible
     if (!canCheckItem(idx)) return;
 
@@ -84,7 +86,21 @@ export default function TraineeChecklist() {
       }),
     ]).start();
 
-    setChecked(prev => prev.map((v, i) => (i === idx ? !v : v)));
+    // Update local state
+    const newCheckedState = checked.map((v, i) => (i === idx ? !v : v));
+    setChecked(newCheckedState);
+
+    // Save to database
+    const isCompleted = !checked[idx];
+    const itemName = CHECKLIST_ITEMS[idx];
+    
+    try {
+      await checklistProgressService.saveChecklistItemProgress(idx, itemName, isCompleted);
+      console.log('✅ Checklist item progress saved');
+    } catch (error) {
+      console.error('❌ Failed to save checklist progress:', error);
+      // Optionally show an error message to the user
+    }
   };
 
   // File picker function (single file)
@@ -122,6 +138,34 @@ export default function TraineeChecklist() {
   const removeFile = () => {
     setSelectedFile(null);
   };
+
+  // Load checklist progress when component mounts
+  useEffect(() => {
+    const loadProgress = async () => {
+      try {
+        setIsLoadingProgress(true);
+        console.log('🔄 Loading checklist progress...');
+        
+        const savedProgress = await checklistProgressService.loadChecklistProgress();
+        if (savedProgress.length > 0) {
+          setChecked(savedProgress);
+          console.log('✅ Checklist progress loaded:', savedProgress);
+        } else {
+          console.log('ℹ️ No saved progress found, starting fresh');
+          // Initialize with all false if no progress found
+          setChecked(Array(CHECKLIST_ITEMS.length).fill(false));
+        }
+      } catch (error) {
+        console.error('❌ Failed to load checklist progress:', error);
+        // Fall back to fresh state if loading fails
+        setChecked(Array(CHECKLIST_ITEMS.length).fill(false));
+      } finally {
+        setIsLoadingProgress(false);
+      }
+    };
+
+    loadProgress();
+  }, []);
 
   // Handle file opening based on type
   const openFile = async (feedback: TraineeFeedback) => {
@@ -552,8 +596,27 @@ export default function TraineeChecklist() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Loading indicator */}
+        {isLoadingProgress && (
+          <View style={{ 
+            padding: 20, 
+            alignItems: 'center',
+            backgroundColor: isDarkMode ? darkCard : '#fff',
+            borderRadius: 16,
+            marginBottom: 16
+          }}>
+            <Text style={{ 
+              color: isDarkMode ? darkText : textColor,
+              fontSize: 16,
+              fontWeight: '600'
+            }}>
+              Loading your progress...
+            </Text>
+          </View>
+        )}
+        
         {/* Checklist Items */}
-        {CHECKLIST_ITEMS.map((item, index) => {
+        {!isLoadingProgress && CHECKLIST_ITEMS.map((item, index) => {
           const isCompleted = checked[index];
           const isAvailable = canCheckItem(index);
           const isLocked = !isAvailable && !isCompleted;

@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from './ThemeContext';
+import { useUserContext } from './UserContext';
 
 interface EventCardProps {
   event: {
@@ -13,6 +14,7 @@ interface EventCardProps {
     time: string;
     coverImage?: string;
     image: any;
+    status?: string;
   };
   isBookmarked: boolean;
   onBookmark: () => void;
@@ -34,6 +36,10 @@ const EventCard: React.FC<EventCardProps> = ({
   registrationCount
 }) => {
   const { isDarkMode } = useTheme();
+  const { viewAs } = useUserContext();
+
+  // Debug viewAs state
+  console.log('EventCard: viewAs state:', viewAs);
 
   // Helper function to format date and time
   const formatDateAndTime = (dateStr: string, timeStr: string) => {
@@ -96,9 +102,34 @@ const EventCard: React.FC<EventCardProps> = ({
       
       {/* Event Content */}
       <View style={styles.eventContent}>
-        {/* Category Badge */}
-        <View style={[styles.categoryBadge, { backgroundColor: categoryBadgeBg }]}>
-          <Text style={[styles.categoryText, { color: categoryTextColor }]}>{event.category}</Text>
+        {/* Category Badge and Status */}
+        <View style={styles.badgeContainer}>
+          <View style={[styles.categoryBadge, { backgroundColor: categoryBadgeBg }]}>
+            <Text style={[styles.categoryText, { color: categoryTextColor }]}>{event.category}</Text>
+          </View>
+          
+          {/* Event Status Badge */}
+          {event.status && (
+            <View style={[
+              styles.statusBadge, 
+              { 
+                backgroundColor: event.status === 'upcoming' 
+                  ? (isDarkMode ? '#2A3A2A' : '#E8F5E8') 
+                  : (isDarkMode ? '#3A2A2A' : '#F5E8E8')
+              }
+            ]}>
+              <Text style={[
+                styles.statusText, 
+                { 
+                  color: event.status === 'upcoming' 
+                    ? (isDarkMode ? '#4CAF50' : '#2E7D32') 
+                    : (isDarkMode ? '#F44336' : '#D32F2F')
+                }
+              ]}>
+                {event.status === 'upcoming' ? 'Upcoming' : 'Completed'}
+              </Text>
+            </View>
+          )}
         </View>
         
         {/* Title - Max 2 lines */}
@@ -145,7 +176,14 @@ const EventCard: React.FC<EventCardProps> = ({
             styles.registerBtn,
             buttonDisabled && [styles.registerBtnDisabled, { backgroundColor: disabledButtonBg }]
           ]}
-          onPress={onRegister}
+          onPress={() => {
+            // Prevent registration in "View As" mode
+            if (viewAs) {
+              Alert.alert('Preview Mode', 'You are in preview mode. Please return to Admin view to register for events.');
+              return;
+            }
+            onRegister();
+          }}
           disabled={buttonDisabled}
           activeOpacity={0.8}
         >
@@ -202,17 +240,36 @@ const styles = StyleSheet.create({
   eventContent: {
     padding: 12,
   },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 8,
+  },
   categoryBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
-    alignSelf: 'flex-start',
-    marginBottom: 6,
     shadowColor: '#43C6AC',
     shadowOpacity: 0.2,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   categoryText: {
     fontSize: 10,

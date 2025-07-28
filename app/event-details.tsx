@@ -14,13 +14,17 @@ export default function EventDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { registerEvent, registered, bookmarks, bookmarkEvent, unbookmarkEvent, getUserEventStatus, fetchUserEvents } = useEventContext();
-  const { userRole } = useUserContext();
+  const { userRole, viewAs, setViewAs } = useUserContext();
   const { isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
   
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Debug viewAs state
+  console.log('EventDetails: viewAs state:', viewAs);
+  console.log('EventDetails: userRole:', userRole);
 
   // Theme-aware colors
   const colors = isDarkMode ? Colors.dark : Colors.light;
@@ -40,6 +44,9 @@ export default function EventDetailsScreen() {
 
       try {
         setLoading(true);
+        
+        // Update event status first
+        await eventService.updateEventStatus(id as string);
         
         // First check if event exists
         const eventExists = await eventService.eventExists(id as string);
@@ -150,6 +157,12 @@ export default function EventDetailsScreen() {
   };
 
   const handleRegister = () => {
+    // Prevent registration in "View As" mode
+    if (viewAs) {
+      Alert.alert('Preview Mode', 'You are in preview mode. Please return to Admin view to register for events.');
+      return;
+    }
+    
     if (isEventInPast()) {
       Alert.alert('Event Passed', 'You cannot register for events that have already passed.');
       return;
@@ -173,7 +186,12 @@ export default function EventDetailsScreen() {
         <TouchableOpacity onPress={() => router.replace('/events')} style={styles.iconBtn}>
           <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: textColor }]}>Event Details</Text>
+        <Text style={[styles.headerTitle, { color: textColor }]}>
+          Event Details
+          {viewAs && (
+            <Text style={{ color: '#FF6B6B', fontSize: 12, fontWeight: 'normal' }}> (Preview Mode)</Text>
+          )}
+        </Text>
         <TouchableOpacity style={styles.iconBtn} onPress={handleShare}>
           <Feather name="share-2" size={22} color={textColor} />
         </TouchableOpacity>
@@ -247,7 +265,25 @@ export default function EventDetailsScreen() {
           <View style={styles.infoRow}>
             <Ionicons name="flag-outline" size={18} color="#43C6AC" style={styles.infoIcon} />
             <Text style={[styles.infoText, { color: secondaryTextColor }]}>Status: </Text>
-            <Text style={[styles.infoText, { color: textColor }]}>{event.status}</Text>
+            <View style={[
+              styles.statusBadge, 
+              { 
+                backgroundColor: event.status === 'upcoming' 
+                  ? (isDarkMode ? '#2A3A2A' : '#E8F5E8') 
+                  : (isDarkMode ? '#3A2A2A' : '#F5E8E8')
+              }
+            ]}>
+              <Text style={[
+                styles.statusText, 
+                { 
+                  color: event.status === 'upcoming' 
+                    ? (isDarkMode ? '#4CAF50' : '#2E7D32') 
+                    : (isDarkMode ? '#F44336' : '#D32F2F')
+                }
+              ]}>
+                {event.status === 'upcoming' ? 'Upcoming' : 'Completed'}
+              </Text>
+            </View>
           </View>
           
           {event.maxCapacity && (
@@ -323,22 +359,30 @@ export default function EventDetailsScreen() {
             <Text style={styles.registerBtnText}>{buttonState.text}</Text>
           </TouchableOpacity>
 
-          {/* Feedback Button */}
-          <TouchableOpacity
-            style={[
-              styles.feedbackBtn,
-              { 
-                backgroundColor: isDarkMode ? '#2A2A2A' : '#F5F5F5',
-                borderColor: isDarkMode ? '#444' : '#E0E0E0'
-              }
-            ]}
-            onPress={() => router.push(`/event-feedback?id=${event.id}`)}
-          >
-            <Ionicons name="chatbubble-outline" size={20} color={isDarkMode ? '#43C6AC' : '#43C6AC'} />
-            <Text style={[styles.feedbackBtnText, { color: isDarkMode ? '#43C6AC' : '#43C6AC' }]}>
-              Submit Feedback
-            </Text>
-          </TouchableOpacity>
+          {/* Return to Admin Button - Only show in View As mode */}
+          {viewAs && (
+            <TouchableOpacity
+              style={[
+                styles.returnToAdminBtn,
+                { 
+                  backgroundColor: '#FF6B6B',
+                  borderColor: '#FF6B6B'
+                }
+              ]}
+                             onPress={() => {
+                 // Reset viewAs and navigate back to admin
+                 setViewAs(null);
+                 router.replace('/admin-home');
+               }}
+            >
+              <Ionicons name="arrow-back-circle" size={20} color="#fff" />
+              <Text style={styles.returnToAdminBtnText}>
+                Return to Admin View
+              </Text>
+            </TouchableOpacity>
+          )}
+
+
         </View>
       </ScrollView>
       
@@ -561,25 +605,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
-  feedbackBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
+
+  returnToAdminBtn: {
+    backgroundColor: '#FF6B6B',
+    paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 16,
+    alignItems: 'center',
     marginTop: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.2)',
-    shadowColor: '#2563EB',
+    marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    shadowColor: '#FF6B6B',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.2)',
   },
-  feedbackBtnText: {
+  returnToAdminBtnText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '700',
     marginLeft: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 }); 

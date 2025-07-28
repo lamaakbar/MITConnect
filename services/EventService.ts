@@ -252,6 +252,79 @@ class EventService {
     }
   }
 
+  /**
+   * Calculate event status based on current date/time
+   */
+  static calculateEventStatus(eventDate: string, eventTime: string): EventStatus {
+    const now = new Date();
+    const eventDateTime = new Date(`${eventDate}T${eventTime}`);
+    
+    // If event date/time is in the past, it's 'completed'
+    if (eventDateTime < now) {
+      return 'completed';
+    }
+    
+    // If event date/time is in the future, it's 'upcoming'
+    return 'upcoming';
+  }
+
+  /**
+   * Update event status in database based on current date/time
+   */
+  async updateEventStatus(eventId: string): Promise<boolean> {
+    try {
+      const event = await this.getEventById(eventId);
+      if (!event) return false;
+      
+      const newStatus = EventService.calculateEventStatus(event.date, event.time);
+      
+      // Only update if status has changed
+      if (event.status !== newStatus) {
+        const { error } = await supabase
+          .from('events')
+          .update({ status: newStatus })
+          .eq('id', eventId);
+        
+        if (error) {
+          console.error('Error updating event status:', error);
+          return false;
+        }
+        
+        // Clear cache to ensure fresh data
+        this.clearCache();
+        return true;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating event status:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Update all events statuses based on current date/time
+   */
+  async updateAllEventStatuses(): Promise<number> {
+    try {
+      const events = await this.getAllEvents();
+      let updatedCount = 0;
+      
+      for (const event of events) {
+        const newStatus = EventService.calculateEventStatus(event.date, event.time);
+        if (event.status !== newStatus) {
+          const success = await this.updateEventStatus(event.id);
+          if (success) updatedCount++;
+        }
+      }
+      
+      return updatedCount;
+    } catch (error) {
+      console.error('Error updating all event statuses:', error);
+      return 0;
+    }
+  }
+
   // MARK: - Event CRUD Operations
 
   /**
@@ -1188,6 +1261,18 @@ class EventService {
         return false;
       }
 
+      // Get user info for username (required by database schema)
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        console.error('Error getting user data:', userError);
+        return false;
+      }
+
+      // Get username from metadata or use email as fallback
+      const username = userData.user.user_metadata?.username || 
+                      userData.user.email || 
+                      'Anonymous User';
+
       // Store feedback in event_feedback table
       try {
         const { error } = await supabase
@@ -1195,8 +1280,10 @@ class EventService {
           .insert({
             event_id: feedbackData.eventId,
             user_id: userId,
+            username: username,
             rating: feedbackData.rating,
-            comment: feedbackData.comment
+            comment: feedbackData.comment,
+            feedback_text: feedbackData.comment || ''
             // created_at will be automatically set by DEFAULT NOW()
           });
 
@@ -1209,7 +1296,7 @@ class EventService {
         return false;
       }
 
-      console.log('Successfully submitted feedback:', { ...feedbackData, userId: userId });
+              console.log('Successfully submitted feedback:', { ...feedbackData, userId: userId, username });
       return true;
     } catch (error) {
       console.error('Error submitting feedback:', error);
@@ -1282,7 +1369,7 @@ class EventService {
         .from('event_feedback')
         .select('*')
         .eq('event_id', eventId)
-        .order('submitted_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching event feedback:', error);
@@ -1293,9 +1380,13 @@ class EventService {
         id: feedback.id,
         eventId: feedback.event_id,
         userId: feedback.user_id,
+        username: feedback.username || 'Anonymous User',
         rating: feedback.rating,
-        comment: feedback.comment,
-        submittedAt: new Date(feedback.created_at)
+        comment: feedback.comment || feedback.feedback_text || '',
+        feedbackText: feedback.feedback_text || feedback.comment || '',
+        tags: feedback.tags || [],
+        submittedAt: new Date(feedback.created_at),
+        updatedAt: feedback.updated_at ? new Date(feedback.updated_at) : undefined
       })) || [];
     } catch (error) {
       console.error('Error fetching event feedback (table may not exist):', error);

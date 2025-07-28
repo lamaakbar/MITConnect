@@ -52,9 +52,10 @@ export default function AdminHeader({
     }
   };
 
+  const { toggleTheme } = useTheme();
+  
   const toggleDarkMode = () => {
-    // This would be implemented with a global theme context
-    console.log('Toggle dark mode');
+    toggleTheme();
   };
 
   const openAccount = () => {
@@ -75,7 +76,7 @@ export default function AdminHeader({
       { 
         backgroundColor: cardBackground,
         borderBottomColor: 'transparent',
-        paddingTop: insets.top + (Platform.OS === 'ios' ? 8 : 12),
+        paddingTop: 0,
         paddingBottom: 12,
         paddingHorizontal: 16,
       }
@@ -112,6 +113,18 @@ export default function AdminHeader({
       )}
       {/* Right Section for rightComponent */}
       <View style={styles.headerRight}>
+        {showDarkModeToggle && (
+          <TouchableOpacity 
+            style={[styles.themeButton, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]}
+            onPress={toggleDarkMode}
+          >
+            <Ionicons 
+              name={isDarkMode ? 'sunny' : 'moon'} 
+              size={20} 
+              color={isDarkMode ? '#FFD700' : '#666'} 
+            />
+          </TouchableOpacity>
+        )}
         {rightComponent}
       </View>
     </View>
@@ -126,7 +139,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    minHeight: Platform.OS === 'ios' ? 88 : 80,
+    minHeight: Platform.OS === 'ios' ? 60 : 56,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -186,5 +199,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     maxWidth: '100%',
     marginTop: Platform.OS === 'ios' ? 16 : 18,
+  },
+  themeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 }); 

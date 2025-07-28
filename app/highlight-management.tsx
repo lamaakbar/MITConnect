@@ -56,7 +56,7 @@ export default function HighlightManagement() {
   const [editImage, setEditImage] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
 
-  const numColumns = Dimensions.get('window').width > 500 ? 3 : 2;
+  const numColumns = Dimensions.get('window').width > 600 ? 4 : Dimensions.get('window').width > 400 ? 3 : 2;
 
   // Image upload function
   const uploadImageToSupabase = async (uri: string): Promise<string | null> => {
@@ -333,11 +333,11 @@ export default function HighlightManagement() {
         data={highlights}
         keyExtractor={(_, idx) => idx.toString()}
         numColumns={numColumns}
-        contentContainerStyle={{ gap: 20, paddingBottom: 40, paddingHorizontal: 8, flexGrow: 1 }}
-        columnWrapperStyle={{ gap: 16, justifyContent: 'space-between', flexWrap: 'wrap' }}
+        contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 8, flexGrow: 1 }}
+        columnWrapperStyle={{ gap: 12, justifyContent: 'space-between', flexWrap: 'wrap' }}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <View style={[styles.container, { backgroundColor }]}>
+          <View style={[styles.containerNoBottomPadding, { backgroundColor }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <Ionicons name="location" size={24} color="#3CB371" style={{ marginRight: 8 }} />
               <Text style={[styles.sectionTitle, { color: textColor }]}>Weekly Highlight</Text>
@@ -350,17 +350,17 @@ export default function HighlightManagement() {
             </TouchableOpacity>
             
             {/* Highlights List Section */}
-            <View style={styles.sectionHeader}>
+            <View style={styles.sectionHeaderTight}>
               <Text style={[styles.sectionTitle, { color: textColor }]}>Highlights List</Text>
               <Text style={[styles.sectionSubtitle, { color: secondaryTextColor }]}>Your current highlights</Text>
             </View>
-            {highlights.length === 0 && (
-              <View style={styles.emptyState}>
-                <Ionicons name="images-outline" size={48} color={secondaryTextColor} />
-                <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>No highlights submitted yet</Text>
-                <Text style={[styles.emptyStateSubtext, { color: secondaryTextColor }]}>Add your first highlight to get started</Text>
-              </View>
-            )}
+          </View>
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="images-outline" size={48} color={secondaryTextColor} />
+            <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>No highlights submitted yet</Text>
+            <Text style={[styles.emptyStateSubtext, { color: secondaryTextColor }]}>Add your first highlight to get started</Text>
           </View>
         }
         renderItem={({ item, index }) => {
@@ -374,21 +374,19 @@ export default function HighlightManagement() {
           console.log("📸 Rendering highlight:", item.title, "URL:", item.image_url);
           
           return (
-            <View style={[styles.highlightCard, { backgroundColor: cardBackground, borderColor }]}>
+            <View style={[styles.highlightCardCompact, { backgroundColor: cardBackground, borderColor }]}>
               {item.image_url ? (
-                <Image source={{ uri: item.image_url }} style={styles.highlightImg} resizeMode="cover" />
+                <Image source={{ uri: item.image_url }} style={styles.highlightImgCompact} resizeMode="cover" />
               ) : (
-                <View style={[styles.highlightImg, { backgroundColor: '#eee', justifyContent: 'center', alignItems: 'center' }]}> 
-                  <Ionicons name="image" size={32} color="#bbb" />
+                <View style={[styles.highlightImgCompact, { backgroundColor: '#eee', justifyContent: 'center', alignItems: 'center' }]}> 
+                  <Ionicons name="image" size={24} color="#bbb" />
                 </View>
               )}
-                          <Text style={[styles.highlightTitle, { color: textColor }]} numberOfLines={1}>{item.title}</Text>
-              <Text style={[styles.highlightDesc, { color: secondaryTextColor }]} numberOfLines={2}>{item.description}</Text>
-                          <View style={styles.highlightActions}>
-                <TouchableOpacity onPress={() => openEditModal(index)} style={[styles.actionBtn, { backgroundColor: searchBackground }]} activeOpacity={0.7}>
-                  <Ionicons name="create" size={18} color="#3CB371" />
-                </TouchableOpacity>
-              </View>
+              <Text style={[styles.highlightTitleCompact, { color: textColor }]} numberOfLines={1}>{item.title}</Text>
+              <Text style={[styles.highlightDescCompact, { color: secondaryTextColor }]} numberOfLines={2}>{item.description}</Text>
+              <TouchableOpacity onPress={() => openEditModal(index)} style={[styles.actionBtnCompact, { backgroundColor: searchBackground }]} activeOpacity={0.7}>
+                <Ionicons name="create" size={16} color="#3CB371" />
+              </TouchableOpacity>
             </View>
           );
         }}
@@ -411,6 +409,12 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     minHeight: '100%',
   },
+  containerNoBottomPadding: {
+    flex: 1,
+    padding: 16,
+    paddingBottom: 0,
+    minHeight: '100%',
+  },
 
   headerSubtitle: {
     fontSize: 14,
@@ -420,6 +424,14 @@ const styles = StyleSheet.create({
   sectionHeader: {
     marginTop: 32,
     marginBottom: 20,
+  },
+  sectionHeaderCompact: {
+    marginTop: 16,
+    marginBottom: 0,
+  },
+  sectionHeaderTight: {
+    marginTop: 12,
+    marginBottom: 4,
   },
   sectionTitle: {
     fontSize: 20,
@@ -518,12 +530,36 @@ const styles = StyleSheet.create({
     minHeight: 180,
     flexGrow: 1,
   },
+  highlightCardCompact: {
+    borderRadius: 12,
+    padding: 12,
+    flex: 1,
+    marginBottom: 12,
+    marginTop: 6,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+    minWidth: 120,
+    maxWidth: 200,
+    borderWidth: 1,
+    minHeight: 140,
+    flexGrow: 1,
+  },
   highlightImg: {
     width: '100%',
     height: 100,
     borderRadius: 16,
     marginBottom: 12,
     maxWidth: 150,
+  },
+  highlightImgCompact: {
+    width: '100%',
+    height: 70,
+    borderRadius: 10,
+    marginBottom: 8,
+    maxWidth: 120,
   },
   highlightTitle: {
     fontWeight: '600',
@@ -534,12 +570,29 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     flexShrink: 1,
   },
+  highlightTitleCompact: {
+    fontWeight: '600',
+    fontSize: 14,
+    marginBottom: 3,
+    textAlign: 'center',
+    maxWidth: '100%',
+    lineHeight: 18,
+    flexShrink: 1,
+  },
   highlightDesc: {
     fontSize: 14,
     marginBottom: 8,
     textAlign: 'center',
     maxWidth: '100%',
     lineHeight: 20,
+    flexShrink: 1,
+  },
+  highlightDescCompact: {
+    fontSize: 12,
+    marginBottom: 6,
+    textAlign: 'center',
+    maxWidth: '100%',
+    lineHeight: 16,
     flexShrink: 1,
   },
   highlightActions: {
@@ -556,6 +609,17 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
+  },
+  actionBtnCompact: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F2F4F7',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    marginTop: 4,
   },
   addBtn: {
     flexDirection: 'row',
@@ -626,15 +690,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   emptyStateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: 16,
+    fontWeight: '500',
+    marginTop: 12,
     textAlign: 'center',
   },
   emptyStateSubtext: {
     fontSize: 14,
+    marginTop: 4,
     textAlign: 'center',
-    lineHeight: 20,
+    opacity: 0.7,
   },
 });

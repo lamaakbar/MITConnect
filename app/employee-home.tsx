@@ -46,11 +46,14 @@ export default function EmployeeHome() {
   const { fromLogin } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState('home');
   const { events, registered } = useEventContext();
-  const { userRole, isInitialized } = useUserContext();
+  const { effectiveRole, isInitialized, viewAs, setViewAs } = useUserContext();
   const { user, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const [profileVisible, setProfileVisible] = useState(false);
   const insets = useSafeAreaInsets();
+
+  // Debug viewAs state
+  console.log('EmployeeHome: viewAs state:', viewAs);
 
   // Highlights state
   const [highlightCards, setHighlightCards] = useState<any[]>([]);
@@ -242,6 +245,71 @@ export default function EmployeeHome() {
     }
   }, [bookOfMonth]);
 
+  // Set up real-time subscription for Book of the Month ratings
+  useEffect(() => {
+    if (!bookOfMonth) return;
+
+    console.log('🔄 EmployeeHome: Setting up real-time subscription for book ID:', bookOfMonth.id);
+    
+    // Set up real-time subscription for ratings
+    const ratingsSubscription = supabase
+      .channel('employee-home-ratings')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'ratings',
+          filter: `book_id=eq.${bookOfMonth.id}`
+        },
+        (payload) => {
+          console.log('🔄 EmployeeHome: Real-time rating change detected:', payload);
+          
+          // Handle different types of changes
+          if (payload.eventType === 'INSERT') {
+            console.log('➕ EmployeeHome: New rating added:', payload.new);
+            // Add the new rating to the list
+            setRatings(prevRatings => [payload.new, ...prevRatings]);
+          } else if (payload.eventType === 'UPDATE') {
+            console.log('✏️ EmployeeHome: Rating updated:', payload.new);
+            // Update the existing rating in the list
+            setRatings(prevRatings => 
+              prevRatings.map(rating => 
+                rating.id === payload.new.id 
+                  ? { ...rating, ...payload.new }
+                  : rating
+              )
+            );
+          } else if (payload.eventType === 'DELETE') {
+            console.log('🗑️ EmployeeHome: Rating deleted:', payload.old);
+            // Remove the deleted rating from the list
+            setRatings(prevRatings => 
+              prevRatings.filter(rating => rating.id !== payload.old.id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on component unmount or when book changes
+    return () => {
+      console.log('🔌 EmployeeHome: Cleaning up real-time subscription');
+      ratingsSubscription.unsubscribe();
+    };
+  }, [bookOfMonth]); // Re-subscribe when book of the month changes
+
+  // Recalculate average rating when ratings change
+  useEffect(() => {
+    if (ratings.length > 0) {
+      const avg = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
+      setAverageRating(avg);
+      console.log('📊 EmployeeHome: Average rating updated to:', avg.toFixed(1), 'from', ratings.length, 'ratings');
+    } else {
+      setAverageRating(0);
+      console.log('📊 EmployeeHome: No ratings, average set to 0');
+    }
+  }, [ratings]);
+
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -253,7 +321,7 @@ export default function EmployeeHome() {
   const portalLabelColor = isDarkMode ? '#fff' : textColor;
 
   // Debug logging
-  console.log('EmployeeHome: Current userRole:', userRole, 'isInitialized:', isInitialized);
+  console.log('EmployeeHome: Current effectiveRole:', effectiveRole, 'isInitialized:', isInitialized);
 
   // Get upcoming events (events with future dates)
   const upcomingEvents = useMemo(() => {
@@ -286,7 +354,13 @@ export default function EmployeeHome() {
       <StatusBar style={isDarkMode ? 'light' : 'dark'} translucent backgroundColor="transparent" />
       <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: insets.top }]}> 
         <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} /> 
-        <Text style={[styles.appName, { color: textColor }]}><Text style={{ color: textColor }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text> 
+        <Text style={[styles.appName, { color: textColor }]}>
+          <Text style={{ color: textColor }}>MIT</Text>
+          <Text style={{ color: '#43C6AC' }}>Connect</Text>
+          {viewAs && (
+            <Text style={{ color: '#FF6B6B', fontSize: 12, fontWeight: 'normal' }}> (Preview Mode)</Text>
+          )}
+        </Text> 
         <View style={styles.headerIcons}> 
           <TouchableOpacity onPress={() => router.push('/library')} style={styles.headerIcon}> 
             <Ionicons name="library-outline" size={22} color={iconColor} /> 
@@ -297,8 +371,50 @@ export default function EmployeeHome() {
           <TouchableOpacity onPress={() => setProfileVisible(true)} style={styles.headerIcon}> 
             <Ionicons name="person-circle-outline" size={26} color={iconColor} /> 
           </TouchableOpacity> 
-        </View> 
+        </View>
       </View>
+
+      {/* Return to Admin View Banner - Show when in viewAs mode */}
+      {viewAs && (
+        <View style={{
+          backgroundColor: '#FF6B6B',
+          paddingVertical: 12,
+          paddingHorizontal: 16,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <Ionicons name="warning" size={20} color="#fff" />
+          <Text style={{
+            color: '#fff',
+            fontSize: 16,
+            fontWeight: '600',
+            marginLeft: 8,
+            flex: 1,
+            textAlign: 'center',
+          }}>
+            Preview Mode - Viewing as {viewAs}
+          </Text>
+          <TouchableOpacity
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 8,
+            }}
+            onPress={() => {
+              console.log('EmployeeHome Banner: Reset to Admin View pressed');
+              setViewAs(null);
+              router.replace('/admin-home');
+            }}
+          >
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
+              Exit Preview
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
         <ScrollView contentContainerStyle={[styles.scrollContent, {flexGrow: 1}]} showsVerticalScrollIndicator={false}>
           <View style={styles.sectionHeaderContainer}>
             <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>
@@ -422,8 +538,8 @@ export default function EmployeeHome() {
                       router.push('/inspirer-corner');
                     }
                   } else if (link.key === 'bookclub') {
-                    if (pathname !== '/bookclub') {
-                      router.push('/bookclub');
+                    if (pathname !== '/library') {
+                      router.push('/library');
                     }
                   }
                 }}

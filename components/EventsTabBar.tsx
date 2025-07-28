@@ -32,11 +32,11 @@ const INACTIVE_COLOR = '#6E7E6F';
 export default function EventsTabBar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { getHomeRoute, userRole } = useUserContext();
+  const { getHomeRoute, userRole, effectiveRole } = useUserContext();
   const { isDarkMode } = useTheme();
 
   // Friendly dark mode palette for employee/trainee
-  const isEmpOrTrainee = userRole === 'employee' || userRole === 'trainee';
+  const isEmpOrTrainee = effectiveRole === 'employee' || effectiveRole === 'trainee';
   const colors = isDarkMode && isEmpOrTrainee
     ? {
         background: '#23272b',
