@@ -58,11 +58,11 @@ export default function EventsScreen() {
   const lightTabBorder = '#E0E0E0';
   const lightEmptyStateBg = '#F8F9FA';
   
-  // Tab colors for better visibility - ensuring consistency
-  const activeTabBg = isDarkMode ? '#43C6AC' : '#2E7D32';
-  const activeTabText = isDarkMode ? '#FFFFFF' : '#FFFFFF';
+  // Tab colors for better visibility - much lighter and more open
+  const activeTabBg = isDarkMode ? '#81C784' : '#A5D6A7';
+  const activeTabText = isDarkMode ? '#FFFFFF' : '#2E7D32';
   const inactiveTabText = isDarkMode ? '#B0B0B0' : '#666666';
-  const activeTabBorder = isDarkMode ? '#43C6AC' : '#2E7D32';
+  const activeTabBorder = isDarkMode ? '#81C784' : '#A5D6A7';
   const inactiveTabBorder = isDarkMode ? '#404040' : '#E0E0E0';
   
   // Helper function for consistent tab styling
