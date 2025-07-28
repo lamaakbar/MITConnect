@@ -738,7 +738,12 @@ export default function TraineeHub() {
           )
         ))}
       </View>
-      <ScrollView style={{ flex: 1, backgroundColor: isDarkMode ? darkBg : backgroundColor }} contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView 
+        style={{ flex: 1, backgroundColor: isDarkMode ? darkBg : backgroundColor }} 
+        contentContainerStyle={{ paddingBottom: 32 }}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled={true}
+      >
         {tab === 'Departments' && (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
             {/* Welcome message and visuals from Welcome screen */}
@@ -808,7 +813,20 @@ export default function TraineeHub() {
         )}
         {tab === 'Registration' && (
           isEditing ? (
-            <View style={{ margin: 18, backgroundColor: isDarkMode ? darkCard : cardBackground, borderRadius: 18, padding: 22, borderWidth: 1, borderColor: isDarkMode ? darkBorder : borderColor, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 }}>
+            <View style={{ 
+              margin: 18, 
+              backgroundColor: isDarkMode ? darkCard : cardBackground, 
+              borderRadius: 18, 
+              padding: 22, 
+              borderWidth: 1, 
+              borderColor: isDarkMode ? darkBorder : borderColor, 
+              shadowColor: '#000', 
+              shadowOpacity: 0.06, 
+              shadowRadius: 12, 
+              shadowOffset: { width: 0, height: 4 }, 
+              elevation: 3,
+              overflow: 'visible',
+            }}>
               <Text style={{ textAlign: 'center', fontSize: 26, fontWeight: 'bold', color: isDarkMode ? darkHighlight : '#3CB6E3', marginBottom: 24, letterSpacing: 0.5 }}>Trainee Registration</Text>
               {/* Full Name Input */}
               <Text style={{ fontSize: 15, fontWeight: '500', color: isDarkMode ? darkText : textColor, marginBottom: 8, marginLeft: 2 }}>Full Name</Text>
@@ -820,20 +838,64 @@ export default function TraineeHub() {
               />
               {/* Program Name Dropdown */}
               <Text style={{ fontSize: 15, fontWeight: '500', color: isDarkMode ? darkText : textColor, marginBottom: 8, marginLeft: 2 }}>Program Name</Text>
-              <View style={{ position: 'relative', borderWidth: 1, borderColor: isDarkMode ? darkBorder : borderColor, borderRadius: 10, backgroundColor: isDarkMode ? darkCard : cardBackground, marginBottom: 18, paddingHorizontal: 12, paddingVertical: 2, justifyContent: 'center' }}>
+              <View style={{ 
+                position: 'relative', 
+                borderWidth: 1, 
+                borderColor: isDarkMode ? darkBorder : borderColor, 
+                borderRadius: 10, 
+                backgroundColor: isDarkMode ? darkCard : cardBackground, 
+                marginBottom: 18, 
+                paddingHorizontal: 12, 
+                paddingVertical: 2, 
+                justifyContent: 'center',
+                zIndex: 1,
+                elevation: 1,
+              }}>
                 <RNPickerSelect
                   onValueChange={setSelectedProgram}
                   value={selectedProgram}
                   placeholder={{ label: 'Select a program...', value: '', color: isDarkMode ? darkSecondary : secondaryTextColor }}
                   items={PROGRAM_OPTIONS.map(opt => ({ ...opt, color: isDarkMode ? darkText : textColor }))}
                   style={{
-                    inputIOS: { height: 40, fontSize: 16, color: isDarkMode ? darkText : textColor, paddingHorizontal: 4, fontWeight: '600', backgroundColor: isDarkMode ? darkCard : cardBackground },
-                    inputAndroid: { height: 40, fontSize: 16, color: isDarkMode ? darkText : textColor, paddingHorizontal: 4, fontWeight: '600', backgroundColor: isDarkMode ? darkCard : cardBackground },
+                    inputIOS: { 
+                      height: 40, 
+                      fontSize: 16, 
+                      color: isDarkMode ? darkText : textColor, 
+                      paddingHorizontal: 4, 
+                      fontWeight: '600', 
+                      backgroundColor: isDarkMode ? darkCard : cardBackground 
+                    },
+                    inputAndroid: { 
+                      height: 40, 
+                      fontSize: 16, 
+                      color: isDarkMode ? darkText : textColor, 
+                      paddingHorizontal: 4, 
+                      fontWeight: '600', 
+                      backgroundColor: isDarkMode ? darkCard : cardBackground 
+                    },
                     placeholder: { color: isDarkMode ? darkSecondary : secondaryTextColor },
+                    iconContainer: {
+                      top: 0,
+                      right: 8,
+                      height: 40,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      position: 'absolute',
+                      zIndex: 2,
+                    },
                   }}
                   useNativeAndroidPickerStyle={false}
                   Icon={() => (
-                    <View style={{ position: 'absolute', right: 8, top: 0, bottom: 0, height: 40, justifyContent: 'center', alignItems: 'center' }}>
+                    <View style={{ 
+                      position: 'absolute', 
+                      right: 8, 
+                      top: 0, 
+                      bottom: 0, 
+                      height: 40, 
+                      justifyContent: 'center', 
+                      alignItems: 'center',
+                      zIndex: 2,
+                    }}>
                       <Ionicons name="chevron-down" size={20} color={isDarkMode ? darkSecondary : secondaryTextColor} />
                     </View>
                   )}
@@ -892,12 +954,50 @@ export default function TraineeHub() {
                               </Text>
                               <Ionicons name="chevron-down" size={20} color="#888" />
                             </Pressable>
-                            <Modal visible={deptModalIdx === idx} transparent animationType="slide">
-                              <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.2)' }} onPress={() => setDeptModalIdx(null)} />
-                              <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, position: 'absolute', left: 0, right: 0, bottom: 0 }}>
+                            <Modal 
+                              visible={deptModalIdx === idx} 
+                              transparent 
+                              animationType="slide"
+                              statusBarTranslucent={true}
+                            >
+                              <Pressable 
+                                style={{ 
+                                  flex: 1, 
+                                  backgroundColor: 'rgba(0,0,0,0.5)',
+                                  justifyContent: 'flex-end'
+                                }} 
+                                onPress={() => setDeptModalIdx(null)} 
+                              />
+                              <View style={{ 
+                                backgroundColor: '#fff', 
+                                borderTopLeftRadius: 16, 
+                                borderTopRightRadius: 16, 
+                                position: 'absolute', 
+                                left: 0, 
+                                right: 0, 
+                                bottom: 0,
+                                maxHeight: '50%',
+                                minHeight: 200,
+                                zIndex: 1000,
+                                elevation: 10,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: -2 },
+                                shadowOpacity: 0.25,
+                                shadowRadius: 8,
+                              }}>
+                                <View style={{
+                                  height: 4,
+                                  width: 40,
+                                  backgroundColor: '#ddd',
+                                  borderRadius: 2,
+                                  alignSelf: 'center',
+                                  marginTop: 8,
+                                  marginBottom: 8
+                                }} />
                                 <Picker
                                   selectedValue={w.department}
                                   onValueChange={value => { handleWeekPlanChange(idx, 'department', value); setDeptModalIdx(null); }}
+                                  style={{ flex: 1 }}
                                 >
                                   <Picker.Item label="Select Department..." value="" color="#888" />
                                   <Picker.Item label="IT Services" value="IT Services" color="#222" />
@@ -911,17 +1011,50 @@ export default function TraineeHub() {
                             </Modal>
                           </>
                         ) : (
-                          <View style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 8, marginBottom: 4, flexDirection: 'row', alignItems: 'center', height: 54 }}>
+                          <View style={{ 
+                            borderWidth: 1, 
+                            borderColor: '#B2E6F7', 
+                            borderRadius: 8, 
+                            marginBottom: 4, 
+                            flexDirection: 'row', 
+                            alignItems: 'center', 
+                            height: 54,
+                            backgroundColor: '#fff',
+                            zIndex: 1,
+                            elevation: 1,
+                          }}>
                             <RNPickerSelect
                               onValueChange={value => handleWeekPlanChange(idx, 'department', value)}
                               value={w.department}
                               placeholder={{ label: 'Select Department...', value: '', color: '#888' }}
                               items={DEPARTMENTS.map(dep => ({ label: dep, value: dep }))}
                               style={{
-                                inputAndroid: { height: 44, padding: 10, color: '#222', flex: 1 },
+                                inputAndroid: { 
+                                  height: 44, 
+                                  padding: 10, 
+                                  color: '#222', 
+                                  flex: 1,
+                                  backgroundColor: 'transparent',
+                                },
+                                iconContainer: {
+                                  top: 0,
+                                  right: 10,
+                                  height: 54,
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                  position: 'absolute',
+                                  zIndex: 2,
+                                },
                               }}
                               useNativeAndroidPickerStyle={false}
-                              Icon={() => <Ionicons name="chevron-down" size={20} color="#888" style={{ marginRight: 10 }} />}
+                              Icon={() => (
+                                <Ionicons 
+                                  name="chevron-down" 
+                                  size={20} 
+                                  color="#888" 
+                                  style={{ marginRight: 10 }} 
+                                />
+                              )}
                             />
                           </View>
                         )}
