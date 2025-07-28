@@ -1282,7 +1282,7 @@ class EventService {
         .from('event_feedback')
         .select('*')
         .eq('event_id', eventId)
-        .order('submitted_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching event feedback:', error);
