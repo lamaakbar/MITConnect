@@ -65,7 +65,7 @@ export default function TraineeHome() {
   const navigation = useNavigation();
   const { fromLogin } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState('home');
-  const { events, registered } = useEventContext();
+  const { events, registered, registerEvent } = useEventContext();
   const { userRole, isInitialized, viewAs, setViewAs } = useUserContext();
   const { user, logout } = useAuth();
   const [profileVisible, setProfileVisible] = useState(false);
@@ -570,7 +570,7 @@ export default function TraineeHome() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
                 renderItem={({ item }) => (
-                  <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}>
+                  <TouchableOpacity onPress={() => router.push({ pathname: '/event-details', params: { id: item.id, from: 'trainee-home' } })}>
                   <View style={[styles.eventCard, { backgroundColor: cardBackground }]}>
                     <View style={styles.eventCardHeader}>
                       <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
@@ -581,7 +581,26 @@ export default function TraineeHome() {
                     {registered.includes(item.id) && (
                       <View style={styles.registeredBadge}><Text style={styles.registeredBadgeText}>Registered</Text></View>
                     )}
-                    <TouchableOpacity style={styles.eventBtn}><Text style={styles.eventBtnText}>Register Now!</Text></TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[
+                        styles.eventBtn, 
+                        registered.includes(item.id) && styles.eventBtnRegistered
+                      ]}
+                      onPress={(e) => {
+                        e.stopPropagation(); // Prevent navigation to event details
+                        if (!registered.includes(item.id)) {
+                          registerEvent(item.id);
+                        }
+                      }}
+                      disabled={registered.includes(item.id)}
+                    >
+                      <Text style={[
+                        styles.eventBtnText,
+                        registered.includes(item.id) && styles.eventBtnTextRegistered
+                      ]}>
+                        {registered.includes(item.id) ? '✅ Registered' : 'Register Now!'}
+                      </Text>
+                    </TouchableOpacity>
                     <View style={styles.eventCardFooter}>
                       <View style={styles.eventFooterItem}>
                         <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
@@ -992,6 +1011,13 @@ const styles = StyleSheet.create({
     color: '#2196F3',
     fontWeight: '700',
     fontSize: 14,
+  },
+  eventBtnRegistered: {
+    backgroundColor: '#43C6AC',
+    opacity: 0.7,
+  },
+  eventBtnTextRegistered: {
+    color: '#fff',
   },
   eventCardFooter: {
     flexDirection: 'row',

@@ -80,12 +80,74 @@ export default function BookDetails() {
   // Function to open PDF
   const openPDF = async (pdfPath: string) => {
     try {
-      // Determine the bucket based on the path
-      const bucket = pdfPath.startsWith('pdfs/') ? 'images' : 'book-pdfs';
-      const { data } = supabase.storage.from(bucket).getPublicUrl(pdfPath);
+      console.log('📄 Attempting to open PDF with path:', pdfPath);
+      
+      // Determine the correct bucket and path
+      let bucket = 'book-pdfs';
+      let storagePath = pdfPath;
+      
+      // If the path contains 'pdfs/', it's likely in the images bucket
+      if (pdfPath.includes('pdfs/')) {
+        bucket = 'images';
+        storagePath = pdfPath; // Keep the full path
+      } else if (pdfPath.includes('/')) {
+        // If it has slashes but doesn't contain 'pdfs/', it might be in book-pdfs
+        bucket = 'book-pdfs';
+        storagePath = pdfPath;
+      } else {
+        // If it's just a filename, try both buckets
+        bucket = 'images';
+        storagePath = `pdfs/${pdfPath}`;
+      }
+      
+      console.log('🔍 Trying bucket:', bucket, 'with path:', storagePath);
+      
+      // Get the public URL
+      const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath);
       const pdfUrl = data.publicUrl;
       
-      console.log('📄 Opening PDF:', pdfUrl);
+      console.log('📄 Generated PDF URL:', pdfUrl);
+      
+      // Test if the URL is accessible
+      try {
+        const response = await fetch(pdfUrl, { method: 'HEAD' });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        console.log('✅ PDF URL is accessible');
+      } catch (fetchError) {
+        console.error('❌ PDF URL not accessible:', fetchError);
+        
+        // Try alternative bucket if first attempt failed
+        if (bucket === 'images') {
+          console.log('🔄 Trying book-pdfs bucket as fallback...');
+          const altBucket = 'book-pdfs';
+          const altPath = pdfPath.includes('pdfs/') ? pdfPath.replace('pdfs/', '') : pdfPath;
+          const { data: altData } = supabase.storage.from(altBucket).getPublicUrl(altPath);
+          const altPdfUrl = altData.publicUrl;
+          
+          console.log('📄 Trying alternative URL:', altPdfUrl);
+          
+          // Test alternative URL
+          try {
+            const altResponse = await fetch(altPdfUrl, { method: 'HEAD' });
+            if (altResponse.ok) {
+              console.log('✅ Alternative PDF URL is accessible');
+              await Linking.openURL(altPdfUrl);
+              return;
+            }
+          } catch (altFetchError) {
+            console.error('❌ Alternative PDF URL also not accessible:', altFetchError);
+          }
+        }
+        
+        Alert.alert(
+          'PDF Not Found',
+          'The PDF file could not be found or accessed. It may have been deleted or moved.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
       
       // Check if the URL can be opened
       const canOpen = await Linking.canOpenURL(pdfUrl);
@@ -215,9 +277,29 @@ export default function BookDetails() {
     try {
       setSubmitting(true);
       
+      // First, check if user has already rated this book
+      const { data: existingRating, error: checkError } = await supabase
+        .from('ratings')
+        .select('rating')
+        .eq('user_id', user.id)
+        .eq('book_id', bookId)
+        .single();
+      
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 is "not found" error, which is expected if no rating exists
+        throw checkError;
+      }
+      
+      if (existingRating) {
+        // User has already rated this book
+        Alert.alert('Rating Already Submitted', 'You have already rated this book.');
+        return;
+      }
+      
+      // User has not rated this book yet, submit the rating
       const { error } = await supabase
         .from('ratings')
-        .upsert({
+        .insert({
           user_id: user.id,
           book_id: bookId,
           rating: rating
@@ -227,10 +309,10 @@ export default function BookDetails() {
       
       setUserRating(rating);
       await fetchRatings();
-      Alert.alert('Success', 'Rating submitted successfully!');
-    } catch (error) {
+      Alert.alert('Success', 'Thank you! Your rating has been submitted.');
+    } catch (error: any) {
       console.error('Error submitting rating:', error);
-      Alert.alert('Error', 'Failed to submit rating');
+      Alert.alert('Error', 'Failed to submit rating. Please try again.');
     } finally {
       setSubmitting(false);
     }

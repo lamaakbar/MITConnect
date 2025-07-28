@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EventDetailsScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id, from } = useLocalSearchParams();
   const { registerEvent, registered, bookmarks, bookmarkEvent, unbookmarkEvent, getUserEventStatus, fetchUserEvents } = useEventContext();
   const { userRole, viewAs, setViewAs } = useUserContext();
   const { isDarkMode } = useTheme();
@@ -25,6 +25,7 @@ export default function EventDetailsScreen() {
   // Debug viewAs state
   console.log('EventDetails: viewAs state:', viewAs);
   console.log('EventDetails: userRole:', userRole);
+  console.log('EventDetails: from parameter:', from);
 
   // Theme-aware colors
   const colors = isDarkMode ? Colors.dark : Colors.light;
@@ -32,6 +33,36 @@ export default function EventDetailsScreen() {
   const textColor = colors.text;
   const secondaryTextColor = isDarkMode ? '#B0B0B0' : '#666666';
   const borderColor = isDarkMode ? '#333333' : '#E5E5E5';
+
+  // Handle back navigation based on 'from' parameter
+  const handleBackNavigation = () => {
+    if (viewAs) {
+      // If in preview mode, return to admin home
+      setViewAs(null);
+      router.replace('/admin-home');
+    } else if (from === 'home') {
+      // If came from home page, go back to home
+      router.back();
+    } else if (from === 'trainee-home') {
+      // If came from trainee home, go back to trainee home
+      router.replace('/trainee-home');
+    } else if (from === 'employee-home') {
+      // If came from employee home, go back to employee home
+      router.replace('/employee-home');
+    } else if (from === 'admin-home') {
+      // If came from admin home, go back to admin home
+      router.replace('/admin-home');
+    } else if (from === 'my-events') {
+      // If came from my events, go back to my events
+      router.replace('/my-events');
+    } else if (from === 'events') {
+      // If came from events page, go back to events page
+      router.replace('/events');
+    } else {
+      // Default fallback to events page
+      router.replace('/events');
+    }
+  };
 
   // Fetch event data from database
   useEffect(() => {
@@ -183,7 +214,7 @@ export default function EventDetailsScreen() {
       
       {/* Header */}
       <View style={[styles.headerRow, { borderBottomColor: borderColor }]}>
-        <TouchableOpacity onPress={() => router.replace('/events')} style={styles.iconBtn}>
+        <TouchableOpacity onPress={handleBackNavigation} style={styles.iconBtn}>
           <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textColor }]}>

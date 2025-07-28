@@ -475,9 +475,29 @@ export default function BookClubScreen() {
     try {
       setSubmitting(true);
       
+      // First, check if user has already rated this book
+      const { data: existingRating, error: checkError } = await supabase
+        .from('ratings')
+        .select('rating')
+        .eq('user_id', currentUser.id)
+        .eq('book_id', booksOfMonth[0].id)
+        .single();
+      
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 is "not found" error, which is expected if no rating exists
+        throw checkError;
+      }
+      
+      if (existingRating) {
+        // User has already rated this book
+        Alert.alert('Rating Already Submitted', 'You have already rated this book.');
+        return;
+      }
+      
+      // User has not rated this book yet, submit the rating
       const { error } = await supabase
         .from('ratings')
-        .upsert({
+        .insert({
           user_id: currentUser.id,
           book_id: booksOfMonth[0].id,
           rating: rating
@@ -487,10 +507,10 @@ export default function BookClubScreen() {
       
       setUserRating(rating);
       await fetchRatings();
-      Alert.alert('Success', 'Rating submitted successfully!');
-    } catch (error) {
+      Alert.alert('Success', 'Thank you! Your rating has been submitted.');
+    } catch (error: any) {
       console.error('Error submitting rating:', error);
-      Alert.alert('Error', 'Failed to submit rating');
+      Alert.alert('Error', 'Failed to submit rating. Please try again.');
     } finally {
       setSubmitting(false);
     }
