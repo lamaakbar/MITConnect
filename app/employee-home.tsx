@@ -17,6 +17,7 @@ import { useAuth } from '../components/AuthContext';
 import { fetchHighlights } from '../services/supabase';
 import { supabase } from '../services/supabase';
 import { getGenreColor } from '../constants/Genres';
+import RoleGuard from '../components/RoleGuard';
 
 // BookOfMonth type definition
 // (copied from app/bookclub.tsx)
@@ -280,7 +281,8 @@ export default function EmployeeHome() {
   }, [events]);
 
   return (
-    <View style={[styles.safeArea, { backgroundColor }]}> 
+    <RoleGuard allowedRoles={['employee']}>
+      <View style={[styles.safeArea, { backgroundColor }]}> 
       <StatusBar style={isDarkMode ? 'light' : 'dark'} translucent backgroundColor="transparent" />
       <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: insets.top }]}> 
         <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} /> 
@@ -506,6 +508,7 @@ export default function EmployeeHome() {
         <ProfileModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
         <EventsTabBar />
       </View>
+    </RoleGuard>
   );
 };
 
