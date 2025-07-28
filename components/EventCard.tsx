@@ -14,6 +14,7 @@ interface EventCardProps {
     time: string;
     coverImage?: string;
     image: any;
+    status?: string;
   };
   isBookmarked: boolean;
   onBookmark: () => void;
@@ -101,9 +102,34 @@ const EventCard: React.FC<EventCardProps> = ({
       
       {/* Event Content */}
       <View style={styles.eventContent}>
-        {/* Category Badge */}
-        <View style={[styles.categoryBadge, { backgroundColor: categoryBadgeBg }]}>
-          <Text style={[styles.categoryText, { color: categoryTextColor }]}>{event.category}</Text>
+        {/* Category Badge and Status */}
+        <View style={styles.badgeContainer}>
+          <View style={[styles.categoryBadge, { backgroundColor: categoryBadgeBg }]}>
+            <Text style={[styles.categoryText, { color: categoryTextColor }]}>{event.category}</Text>
+          </View>
+          
+          {/* Event Status Badge */}
+          {event.status && (
+            <View style={[
+              styles.statusBadge, 
+              { 
+                backgroundColor: event.status === 'upcoming' 
+                  ? (isDarkMode ? '#2A3A2A' : '#E8F5E8') 
+                  : (isDarkMode ? '#3A2A2A' : '#F5E8E8')
+              }
+            ]}>
+              <Text style={[
+                styles.statusText, 
+                { 
+                  color: event.status === 'upcoming' 
+                    ? (isDarkMode ? '#4CAF50' : '#2E7D32') 
+                    : (isDarkMode ? '#F44336' : '#D32F2F')
+                }
+              ]}>
+                {event.status === 'upcoming' ? 'Upcoming' : 'Completed'}
+              </Text>
+            </View>
+          )}
         </View>
         
         {/* Title - Max 2 lines */}
@@ -214,17 +240,36 @@ const styles = StyleSheet.create({
   eventContent: {
     padding: 12,
   },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 8,
+  },
   categoryBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
-    alignSelf: 'flex-start',
-    marginBottom: 6,
     shadowColor: '#43C6AC',
     shadowOpacity: 0.2,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   categoryText: {
     fontSize: 10,

@@ -41,6 +41,9 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     fetchEvents();
     fetchUserEvents();
     
+    // Update event statuses automatically
+    updateEventStatuses();
+    
     // Set up Supabase Realtime subscription
     const channel = subscribeToEventChanges();
     
@@ -50,6 +53,21 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
       channel.unsubscribe();
     };
   }, []);
+
+  // Update event statuses based on current date/time
+  const updateEventStatuses = async () => {
+    try {
+      console.log('🔄 Updating event statuses...');
+      const updatedCount = await eventService.updateAllEventStatuses();
+      if (updatedCount > 0) {
+        console.log(`✅ Updated ${updatedCount} event statuses`);
+        // Refresh events to show updated statuses
+        await fetchEvents();
+      }
+    } catch (error) {
+      console.error('Error updating event statuses:', error);
+    }
+  };
 
   // Supabase Realtime subscription for events table
   const subscribeToEventChanges = () => {

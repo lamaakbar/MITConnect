@@ -252,6 +252,79 @@ class EventService {
     }
   }
 
+  /**
+   * Calculate event status based on current date/time
+   */
+  static calculateEventStatus(eventDate: string, eventTime: string): EventStatus {
+    const now = new Date();
+    const eventDateTime = new Date(`${eventDate}T${eventTime}`);
+    
+    // If event date/time is in the past, it's 'completed'
+    if (eventDateTime < now) {
+      return 'completed';
+    }
+    
+    // If event date/time is in the future, it's 'upcoming'
+    return 'upcoming';
+  }
+
+  /**
+   * Update event status in database based on current date/time
+   */
+  async updateEventStatus(eventId: string): Promise<boolean> {
+    try {
+      const event = await this.getEventById(eventId);
+      if (!event) return false;
+      
+      const newStatus = EventService.calculateEventStatus(event.date, event.time);
+      
+      // Only update if status has changed
+      if (event.status !== newStatus) {
+        const { error } = await supabase
+          .from('events')
+          .update({ status: newStatus })
+          .eq('id', eventId);
+        
+        if (error) {
+          console.error('Error updating event status:', error);
+          return false;
+        }
+        
+        // Clear cache to ensure fresh data
+        this.clearCache();
+        return true;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating event status:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Update all events statuses based on current date/time
+   */
+  async updateAllEventStatuses(): Promise<number> {
+    try {
+      const events = await this.getAllEvents();
+      let updatedCount = 0;
+      
+      for (const event of events) {
+        const newStatus = EventService.calculateEventStatus(event.date, event.time);
+        if (event.status !== newStatus) {
+          const success = await this.updateEventStatus(event.id);
+          if (success) updatedCount++;
+        }
+      }
+      
+      return updatedCount;
+    } catch (error) {
+      console.error('Error updating all event statuses:', error);
+      return 0;
+    }
+  }
+
   // MARK: - Event CRUD Operations
 
   /**

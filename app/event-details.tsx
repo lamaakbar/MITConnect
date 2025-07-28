@@ -45,6 +45,9 @@ export default function EventDetailsScreen() {
       try {
         setLoading(true);
         
+        // Update event status first
+        await eventService.updateEventStatus(id as string);
+        
         // First check if event exists
         const eventExists = await eventService.eventExists(id as string);
         if (!eventExists) {
@@ -262,7 +265,25 @@ export default function EventDetailsScreen() {
           <View style={styles.infoRow}>
             <Ionicons name="flag-outline" size={18} color="#43C6AC" style={styles.infoIcon} />
             <Text style={[styles.infoText, { color: secondaryTextColor }]}>Status: </Text>
-            <Text style={[styles.infoText, { color: textColor }]}>{event.status}</Text>
+            <View style={[
+              styles.statusBadge, 
+              { 
+                backgroundColor: event.status === 'upcoming' 
+                  ? (isDarkMode ? '#2A3A2A' : '#E8F5E8') 
+                  : (isDarkMode ? '#3A2A2A' : '#F5E8E8')
+              }
+            ]}>
+              <Text style={[
+                styles.statusText, 
+                { 
+                  color: event.status === 'upcoming' 
+                    ? (isDarkMode ? '#4CAF50' : '#2E7D32') 
+                    : (isDarkMode ? '#F44336' : '#D32F2F')
+                }
+              ]}>
+                {event.status === 'upcoming' ? 'Upcoming' : 'Completed'}
+              </Text>
+            </View>
           </View>
           
           {event.maxCapacity && (
@@ -608,5 +629,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginLeft: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 }); 

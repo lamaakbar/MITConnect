@@ -9,6 +9,7 @@ import { useThemeColor } from '../hooks/useThemeColor';
 import { useUserContext } from '../components/UserContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import EventCard from '../components/EventCard';
+import eventService from '../services/EventService';
 
 const EVENT_TABS = ['All', 'Upcoming', 'My Events'];
 
@@ -203,6 +204,19 @@ export default function EventsScreen() {
       loadUserEventStatuses();
     }
   }, [events, searchResults, search, getUserEventStatus]);
+
+  // Update event statuses when component mounts
+  useEffect(() => {
+    const updateStatuses = async () => {
+      try {
+        await eventService.updateAllEventStatuses();
+      } catch (error) {
+        console.error('Error updating event statuses:', error);
+      }
+    };
+    
+    updateStatuses();
+  }, []);
 
   // Helper function to check if event is in the past
   const isEventInPast = (eventDate: string, eventTime: string) => {
