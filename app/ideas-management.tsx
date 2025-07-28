@@ -55,6 +55,7 @@ export default function IdeasManagement() {
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
   const [pollError, setPollError] = useState<string | null>(null);
+  const [createPollLoading, setCreatePollLoading] = useState(false);
   const [pendingPoll, setPendingPoll] = useState<{ ideaId: string, question: string, options: string[] } | null>(null);
   const [manageMenuVisible, setManageMenuVisible] = useState<string | null>(null);
   const [manageModalVisible, setManageModalVisible] = useState<string | null>(null);
@@ -232,20 +233,50 @@ export default function IdeasManagement() {
       return;
     }
 
-    // TEMPORARILY DISABLED - Database schema cache needs refresh
-    Alert.alert(
-      'Database Setup Required', 
-      'Please run this SQL script in your Supabase SQL editor to refresh the schema cache:\n\n```sql\n-- Refresh schema cache\nSELECT pg_reload_conf();\n\n-- Verify tables exist\nSELECT table_name FROM information_schema.tables WHERE table_name IN (\'idea_polls\', \'poll_responses\');\n\n-- Check idea_polls structure\nSELECT column_name, data_type FROM information_schema.columns WHERE table_name = \'idea_polls\';\n```\n\nAfter running this, poll creation will work.',
-      [{ text: 'OK', style: 'default' }]
-    );
-
-    // Close modal and reset
-    setPollModalIdea(null);
-    setPollQuestion('');
-    setPollOptions(['', '']);
+    setCreatePollLoading(true);
     setPollError(null);
 
-    console.log('Poll creation requested but schema cache needs refresh');
+    try {
+      // Test database connectivity first
+      const dbTest = await IdeasService.testPollDatabase();
+      console.log('📋 Database test results:', dbTest);
+
+      if (!dbTest.success) {
+        setPollError('Database not properly configured. Please run the reset script.');
+        return;
+      }
+      const pollData = {
+        idea_id: pollModalIdea.id,
+        question: pollQuestion.trim(),
+        options: pollOptions.filter(opt => opt.trim()).map(opt => opt.trim())
+      };
+
+      const { data, error } = await IdeasService.createPoll(pollData);
+
+      if (error) {
+        console.error('Error creating poll:', error);
+        setPollError(`Failed to create poll: ${typeof error === 'object' ? JSON.stringify(error) : error}`);
+        return;
+      }
+
+      if (data) {
+        Alert.alert('Success', 'Poll created successfully!');
+        
+        // Close modal and reset
+        setPollModalIdea(null);
+        setPollQuestion('');
+        setPollOptions(['', '']);
+        setPollError(null);
+        
+        // Refresh ideas to show the new poll
+        await loadIdeas();
+      }
+    } catch (error) {
+      console.error('Error creating poll:', error);
+      setPollError('Failed to create poll. Please try again.');
+    } finally {
+      setCreatePollLoading(false);
+    }
   };
   const handleUpdateStatus = async (id: string, status: 'Pending' | 'In Progress' | 'Approved' | 'Rejected') => {
     setActionLoading(id + '-status');

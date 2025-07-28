@@ -1,4 +1,4 @@
--- Update the existing get_ideas_with_votes function to include poll data
+-- Update get_ideas_with_votes function to include poll data
 -- Run this in your Supabase SQL editor
 
 CREATE OR REPLACE FUNCTION get_ideas_with_votes()
@@ -8,7 +8,7 @@ RETURNS TABLE(
     description TEXT,
     category VARCHAR(100),
     status VARCHAR(50),
-    submitter_id UUID,
+    submitter_id TEXT,
     submitter_name VARCHAR(255),
     submitter_role VARCHAR(50),
     created_at TIMESTAMP WITH TIME ZONE,
@@ -54,14 +54,14 @@ BEGIN
             SUM(CASE WHEN vote_type = 'like' THEN 1 ELSE 0 END) as like_votes,
             SUM(CASE WHEN vote_type = 'dislike' THEN 1 ELSE 0 END) as dislike_votes,
             COUNT(*) as total_votes
-        FROM idea_votes
+        FROM idea_likes
         GROUP BY idea_id
     ) v ON i.id = v.idea_id
     LEFT JOIN (
         SELECT 
             idea_id,
             COUNT(*) as comment_count
-        FROM idea_comments
+        FROM comments
         GROUP BY idea_id
     ) c ON i.id = c.idea_id
     LEFT JOIN idea_polls p ON i.id = p.idea_id

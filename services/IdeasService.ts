@@ -50,9 +50,12 @@ export interface IdeaPoll {
   id: string;
   idea_id: string;
   question: string;
-  options: string[];
+  options: string[] | string; // Can be array or JSON string
   created_at: string;
   updated_at: string;
+  created_by?: string;
+  is_active?: boolean;
+  total_votes?: number;
 }
 
 export interface PollResponse {
@@ -390,17 +393,41 @@ export class IdeasService {
     options: string[];
   }): Promise<{ data: IdeaPoll | null; error: any }> {
     try {
+      // Get current user for created_by field
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('Error getting user for poll creation:', userError);
+        return { data: null, error: 'User not authenticated' };
+      }
+
+      console.log('Creating poll with data:', {
+        idea_id: pollData.idea_id,
+        question: pollData.question,
+        options: pollData.options,
+        created_by: user.id
+      });
+
       const { data, error } = await supabase
         .from('idea_polls')
         .insert([{
           idea_id: pollData.idea_id,
           question: pollData.question,
-          options: pollData.options
+          options: JSON.stringify(pollData.options), // Convert to JSON string for JSONB
+          created_by: user.id,
+          is_active: true,
+          total_votes: 0
         }])
         .select()
         .single();
 
-      return { data, error };
+      if (error) {
+        console.error('Database error creating poll:', error);
+        return { data: null, error };
+      }
+
+      console.log('Poll created successfully:', data);
+      return { data, error: null };
     } catch (error) {
       console.error('Error creating poll:', error);
       return { data: null, error };
@@ -532,6 +559,73 @@ export class IdeasService {
     } catch (error) {
       console.error('Error fetching poll responses:', error);
       return { data: null, error };
+    }
+  }
+
+  /**
+   * Test poll database connectivity and permissions
+   */
+  static async testPollDatabase(): Promise<{ success: boolean; details: any }> {
+    try {
+      console.log('🔍 Testing poll database connectivity...');
+      
+      // Test 1: Check if idea_polls table exists by trying to query it
+      let tablesExist = true;
+      let tablesError = null;
+      
+      try {
+        await supabase.from('idea_polls').select('id').limit(0);
+        console.log('✅ idea_polls table exists');
+      } catch (error) {
+        tablesExist = false;
+        tablesError = error;
+        console.log('❌ idea_polls table does not exist');
+      }
+
+      try {
+        await supabase.from('poll_responses').select('id').limit(0);
+        console.log('✅ poll_responses table exists');
+      } catch (error) {
+        tablesExist = false;
+        tablesError = error;
+        console.log('❌ poll_responses table does not exist');
+      }
+
+      // Test 2: Check user authentication
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      console.log('👤 User check:', { user: user?.id, userError });
+
+      // Test 3: Try to read from idea_polls table
+      const { data: pollsData, error: pollsError } = await supabase
+        .from('idea_polls')
+        .select('id')
+        .limit(1);
+
+      console.log('📊 Polls table read test:', { pollsData, pollsError });
+      if (pollsError) console.error('❌ Polls error details:', pollsError);
+
+      // Test 4: Check if user is admin
+      if (user) {
+        const { data: userData, error: userDataError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        console.log('🔐 User role check:', { userData, userDataError });
+      }
+
+      return {
+        success: tablesExist && !userError && !pollsError,
+        details: {
+          tables: { exist: tablesExist, error: tablesError },
+          user: { id: user?.id, error: userError },
+          pollsAccess: { data: pollsData, error: pollsError }
+        }
+      };
+    } catch (error) {
+      console.error('❌ Database test failed:', error);
+      return { success: false, details: { error } };
     }
   }
 

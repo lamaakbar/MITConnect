@@ -28,6 +28,7 @@ export interface IdeaWithLikes {
   poll_total_responses?: number;
   hasPoll?: boolean;
   poll?: {
+    id: string;
     question: string;
     options: string[];
   };

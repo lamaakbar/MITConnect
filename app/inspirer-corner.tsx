@@ -22,6 +22,7 @@ export default function InspirerCornerScreen() {
   const [pollVotingModalVisible, setPollVotingModalVisible] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<IdeaWithLikes | null>(null);
   const [selectedPollIdea, setSelectedPollIdea] = useState<IdeaWithLikes | null>(null);
+
   const [ideaTitle, setIdeaTitle] = useState('');
 
   const [ideaDescription, setIdeaDescription] = useState('');
@@ -92,8 +93,11 @@ export default function InspirerCornerScreen() {
             total_reactions,
             hasPoll: !!idea.poll_id,
             poll: idea.poll_id ? {
+              id: idea.poll_id,
               question: idea.poll_question || '',
-              options: idea.poll_options || []
+              options: typeof idea.poll_options === 'string' 
+                ? JSON.parse(idea.poll_options) 
+                : idea.poll_options || []
             } : undefined
           };
         });
@@ -409,6 +413,8 @@ export default function InspirerCornerScreen() {
     setPollVotingModalVisible(true);
   };
 
+  
+
   const handlePollVote = async (optionIndex: number) => {
     if (!selectedPollIdea || !selectedPollIdea.poll) return;
 
@@ -420,9 +426,16 @@ export default function InspirerCornerScreen() {
         return;
       }
 
-      // Submit poll response
+      // Submit poll response - get poll ID from the idea data
+      const pollId = (selectedPollIdea as any).poll_id || selectedPollIdea.poll?.id;
+      
+      if (!pollId) {
+        Alert.alert('Error', 'Poll ID not found.');
+        return;
+      }
+
       const { error } = await IdeasService.submitPollResponse({
-        poll_id: selectedPollIdea.poll_id!,
+        poll_id: pollId,
         user_id: user.id,
         user_name: userProfile?.name || user.email || 'Anonymous User',
         user_role: userRole || 'trainee',
@@ -606,32 +619,24 @@ export default function InspirerCornerScreen() {
                      </TouchableOpacity>
                   </View>
 
-                  {/* Poll Voting Section */}
+                  {/* Poll Section - Simplified */}
                   {item.hasPoll && item.poll && (
                     <View style={styles.pollSection}>
                       <Text style={[styles.pollQuestion, { color: primaryText }]}>
-                        {item.poll.question}
+                        📊 Poll: {item.poll.question}
                       </Text>
-                      <View style={styles.pollOptions}>
-                        {item.poll.options.map((option, index) => (
-                          <TouchableOpacity
-                            key={index}
-                            style={[styles.pollOption, { backgroundColor: isDarkMode ? '#3A3A3C' : '#f6f7f9' }]}
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              openPollVotingModal(item);
-                            }}
-                          >
-                            <Text style={[styles.pollOptionText, { color: primaryText }]}>
-                              {option}
-                            </Text>
-                            <Ionicons name="chevron-forward" size={16} color={secondaryText} />
-                          </TouchableOpacity>
-                        ))}
-                      </View>
                       <Text style={[styles.pollVoteCount, { color: secondaryText }]}>
-                        {item.poll_total_responses || 0} total votes
+                        {item.poll_total_responses || 0} votes • Poll available
                       </Text>
+                      <TouchableOpacity 
+                        style={styles.viewResultsButton}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          openPollVotingModal(item);
+                        }}
+                      >
+                        <Text style={[styles.viewResultsText, { color: '#007AFF' }]}>View Poll</Text>
+                      </TouchableOpacity>
                     </View>
                   )}
                   
@@ -946,39 +951,19 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   pollSection: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
   },
   pollQuestion: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 12,
-  },
-  pollOptions: {
     marginBottom: 8,
   },
-  pollOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  pollOptionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    flex: 1,
-  },
-  pollVoteCount: {
-    fontSize: 12,
-    fontWeight: '500',
-    textAlign: 'center',
-    marginTop: 8,
-  },
+
   pollModalQuestion: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -1124,5 +1109,18 @@ const styles = StyleSheet.create({
     color: '#3730A3',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  pollVoteCount: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  viewResultsButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  viewResultsText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 }); 
