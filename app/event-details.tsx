@@ -361,22 +361,7 @@ export default function EventDetailsScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Feedback Button */}
-          <TouchableOpacity
-            style={[
-              styles.feedbackBtn,
-              { 
-                backgroundColor: isDarkMode ? '#2A2A2A' : '#F5F5F5',
-                borderColor: isDarkMode ? '#444' : '#E0E0E0'
-              }
-            ]}
-            onPress={() => router.push(`/event-feedback?id=${event.id}`)}
-          >
-            <Ionicons name="chatbubble-outline" size={20} color={isDarkMode ? '#43C6AC' : '#43C6AC'} />
-            <Text style={[styles.feedbackBtnText, { color: isDarkMode ? '#43C6AC' : '#43C6AC' }]}>
-              Submit Feedback
-            </Text>
-          </TouchableOpacity>
+
         </View>
       </ScrollView>
       
@@ -599,27 +584,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
-  feedbackBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.2)',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  feedbackBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginLeft: 8,
-  },
+
   returnToAdminBtn: {
     backgroundColor: '#FF6B6B',
     paddingVertical: 16,

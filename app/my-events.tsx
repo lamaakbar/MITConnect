@@ -114,7 +114,7 @@ export default function MyEventsScreen() {
       case 'Registered':
         return { text: 'View Details', action: () => router.push({ pathname: 'event-details' as any, params: { id: event.id } }) };
       case 'Attended':
-        return { text: 'Give Feedback', action: () => router.push({ pathname: 'event-feedback' as any, params: { id: event.id } }) };
+        return { text: 'View Details', action: () => router.push({ pathname: 'event-details' as any, params: { id: event.id } }) };
       case 'Completed':
         return { text: 'View Details', action: () => router.push({ pathname: 'event-details' as any, params: { id: event.id } }) };
       case 'Missed':

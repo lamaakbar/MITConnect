@@ -158,13 +158,7 @@ export default function RootLayout() {
                     animationDuration: 400,
                     animationTypeForReplace: 'push'
                   }} />
-                  <Stack.Screen name="event-feedback" options={{ 
-                    headerShown: false, 
-                    gestureEnabled: false,
-                    animation: 'fade',
-                    animationDuration: 400,
-                    animationTypeForReplace: 'push'
-                  }} />
+
                   <Stack.Screen name="library/[id]/details" options={{ 
                     headerShown: false, 
                     gestureEnabled: false,

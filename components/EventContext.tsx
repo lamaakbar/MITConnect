@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { Event, EventContextType, UserEvent, EventFeedback, EventStats, UserEventTracking } from '../types/events';
+import { Event, EventContextType, UserEvent, UserEventTracking } from '../types/events';
 import eventService from '../services/EventService';
 import { supabase } from '../services/supabase';
 
@@ -14,9 +14,7 @@ interface LegacyEventContextType {
   unbookmarkEvent: (id: string) => Promise<boolean>;
   registerEvent: (id: string) => Promise<boolean>;
   unregisterEvent: (id: string) => Promise<boolean>;
-  submitFeedback: (feedback: Omit<EventFeedback, 'id' | 'submittedAt' | 'userId'>) => Promise<boolean>;
-  getEventStats: (eventId: string) => Promise<EventStats | null>;
-  getEventFeedback: (eventId: string) => Promise<EventFeedback[]>;
+
   getUserEventStatus: (eventId: string) => Promise<UserEventTracking | null>;
   markUserAsAttended: (eventId: string) => Promise<boolean>;
   fetchUserEvents: () => Promise<void>;
@@ -397,35 +395,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const submitFeedback = async (feedback: Omit<EventFeedback, 'id' | 'submittedAt' | 'userId'>): Promise<boolean> => {
-    try {
-      return await eventService.submitEventFeedback(feedback);
-    } catch (err) {
-      setError('Failed to submit feedback');
-      console.error('Error submitting feedback:', err);
-      return false;
-    }
-  };
 
-  const getEventStats = async (eventId: string): Promise<EventStats | null> => {
-    try {
-      return await eventService.getEventStats(eventId);
-    } catch (err) {
-      setError('Failed to fetch event stats');
-      console.error('Error fetching event stats:', err);
-      return null;
-    }
-  };
-
-  const getEventFeedback = async (eventId: string): Promise<EventFeedback[]> => {
-    try {
-      return await eventService.getEventFeedback(eventId);
-    } catch (err) {
-      setError('Failed to fetch event feedback');
-      console.error('Error fetching event feedback:', err);
-      return [];
-    }
-  };
 
   const getUserEventStatus = async (eventId: string): Promise<UserEventTracking | null> => {
     try {
@@ -479,9 +449,7 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
         unbookmarkEvent: unbookmarkEventLegacy,
         registerEvent: registerEventLegacy,
         unregisterEvent: unregisterEventLegacy,
-        submitFeedback,
-        getEventStats,
-        getEventFeedback,
+
         getUserEventStatus,
         markUserAsAttended,
         fetchUserEvents,
