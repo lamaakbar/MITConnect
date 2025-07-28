@@ -11,6 +11,7 @@ import { useThemeColor } from '../hooks/useThemeColor';
 import { useRouter, useNavigation, useFocusEffect } from 'expo-router';
 import { supabase } from '../services/supabase';
 import { useCallback } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DEPARTMENTS = [
   'IT Services',
@@ -389,6 +390,7 @@ const iosStyles = StyleSheet.create({
 export default function TraineeHub() {
   const router = useRouter();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<'Departments' | 'Registration' | 'Dashboard'>('Departments');
   const [overallFrom, setOverallFrom] = useState('');
   const [overallTo, setOverallTo] = useState('');
@@ -689,16 +691,64 @@ export default function TraineeHub() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: isDarkMode ? darkCard : cardBackground }}>
-      <View style={[styles.header, { backgroundColor: isDarkMode ? darkCard : cardBackground, borderBottomColor: isDarkMode ? darkBorder : borderColor }] }>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8, ...Platform.select({ android: { marginTop: 8 } }) }}>
+      <View style={[
+        styles.header, 
+        { 
+          backgroundColor: isDarkMode ? darkCard : cardBackground, 
+          borderBottomColor: isDarkMode ? darkBorder : borderColor,
+          ...Platform.select({
+            android: {
+              paddingTop: Math.max(insets.top, 10),
+              paddingBottom: 12,
+            }
+          })
+        }
+      ]}>
+        <TouchableOpacity 
+          onPress={() => router.back()} 
+          style={{ 
+            padding: 8, 
+            marginRight: 8,
+            ...Platform.select({ 
+              android: { 
+                marginTop: 0,
+                marginBottom: 4,
+              } 
+            }) 
+          }}
+        >
           <Ionicons name="arrow-back" size={24} color={iconColor} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
+        <Text style={{ 
+          fontSize: 22, 
+          fontWeight: '700', 
+          letterSpacing: 0.5, 
+          flex: 1, 
+          textAlign: 'center', 
+          color: isDarkMode ? darkText : textColor,
+          ...Platform.select({
+            android: {
+              marginTop: 4,
+            }
+          })
+        }}>
           MIT<Text style={{ color: darkHighlight }}>Connect</Text>
         </Text>
         <View style={{ width: 32 }} />
       </View>
-      <View style={[styles.tabRow, { backgroundColor: isDarkMode ? darkTab : '#F2F2F7' }] }>
+      <View style={[
+        styles.tabRow, 
+        { 
+          backgroundColor: isDarkMode ? darkTab : '#F2F2F7',
+          ...Platform.select({
+            android: {
+              marginTop: 12,
+              marginBottom: 16,
+              marginHorizontal: 16,
+            }
+          })
+        }
+      ]}>
         {['Departments', 'Registration', 'Dashboard'].map(t => (
           Platform.OS === 'android' ? (
             <TouchableNativeFeedback key={t} onPress={() => setTab(t as 'Departments' | 'Registration' | 'Dashboard')} background={TouchableNativeFeedback.Ripple('#3CB6E3', false)}>
@@ -855,7 +905,11 @@ export default function TraineeHub() {
                   onValueChange={setSelectedProgram}
                   value={selectedProgram}
                   placeholder={{ label: 'Select a program...', value: '', color: isDarkMode ? darkSecondary : secondaryTextColor }}
-                  items={PROGRAM_OPTIONS.map(opt => ({ ...opt, color: isDarkMode ? darkText : textColor }))}
+                  items={PROGRAM_OPTIONS.map(opt => ({ 
+                    ...opt, 
+                    color: isDarkMode ? darkText : textColor,
+                    backgroundColor: isDarkMode ? darkCard : cardBackground,
+                  }))}
                   style={{
                     inputIOS: { 
                       height: 40, 
@@ -871,9 +925,23 @@ export default function TraineeHub() {
                       color: isDarkMode ? darkText : textColor, 
                       paddingHorizontal: 4, 
                       fontWeight: '600', 
-                      backgroundColor: isDarkMode ? darkCard : cardBackground 
+                      backgroundColor: isDarkMode ? darkCard : cardBackground,
+                      ...Platform.select({
+                        android: {
+                          paddingLeft: 8,
+                          paddingRight: 32,
+                        }
+                      })
                     },
-                    placeholder: { color: isDarkMode ? darkSecondary : secondaryTextColor },
+                    placeholder: { 
+                      color: isDarkMode ? darkSecondary : secondaryTextColor,
+                      ...Platform.select({
+                        android: {
+                          fontSize: 16,
+                          fontWeight: '500',
+                        }
+                      })
+                    },
                     iconContainer: {
                       top: 0,
                       right: 8,
@@ -882,7 +950,13 @@ export default function TraineeHub() {
                       alignItems: 'center',
                       position: 'absolute',
                       zIndex: 2,
+                      ...Platform.select({
+                        android: {
+                          backgroundColor: 'transparent',
+                        }
+                      })
                     },
+
                   }}
                   useNativeAndroidPickerStyle={false}
                   Icon={() => (
@@ -895,8 +969,17 @@ export default function TraineeHub() {
                       justifyContent: 'center', 
                       alignItems: 'center',
                       zIndex: 2,
+                      ...Platform.select({
+                        android: {
+                          backgroundColor: 'transparent',
+                        }
+                      })
                     }}>
-                      <Ionicons name="chevron-down" size={20} color={isDarkMode ? darkSecondary : secondaryTextColor} />
+                      <Ionicons 
+                        name="chevron-down" 
+                        size={20} 
+                        color={isDarkMode ? darkSecondary : secondaryTextColor} 
+                      />
                     </View>
                   )}
                 />
@@ -1027,7 +1110,12 @@ export default function TraineeHub() {
                               onValueChange={value => handleWeekPlanChange(idx, 'department', value)}
                               value={w.department}
                               placeholder={{ label: 'Select Department...', value: '', color: '#888' }}
-                              items={DEPARTMENTS.map(dep => ({ label: dep, value: dep }))}
+                              items={DEPARTMENTS.map(dep => ({ 
+                                label: dep, 
+                                value: dep,
+                                color: '#222',
+                                backgroundColor: '#fff',
+                              }))}
                               style={{
                                 inputAndroid: { 
                                   height: 44, 
@@ -1035,6 +1123,13 @@ export default function TraineeHub() {
                                   color: '#222', 
                                   flex: 1,
                                   backgroundColor: 'transparent',
+                                  fontSize: 16,
+                                  fontWeight: '500',
+                                },
+                                placeholder: {
+                                  color: '#888',
+                                  fontSize: 16,
+                                  fontWeight: '500',
                                 },
                                 iconContainer: {
                                   top: 0,
@@ -1044,7 +1139,9 @@ export default function TraineeHub() {
                                   alignItems: 'center',
                                   position: 'absolute',
                                   zIndex: 2,
+                                  backgroundColor: 'transparent',
                                 },
+
                               }}
                               useNativeAndroidPickerStyle={false}
                               Icon={() => (
