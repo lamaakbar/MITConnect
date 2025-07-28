@@ -514,8 +514,8 @@ export default function TraineeHome() {
                       router.push('/inspirer-corner');
                     }
                   } else if (link.key === 'bookclub') {
-                    if (pathname !== '/bookclub') {
-                      router.push('/bookclub');
+                    if (pathname !== '/library') {
+                      router.push('/library');
                     }
                   } else if (link.key === 'checklist') {
                     if (pathname !== '/trainee-checklist') {
