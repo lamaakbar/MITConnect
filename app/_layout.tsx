@@ -3,6 +3,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
+import { Platform } from 'react-native';
 import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { BookProvider } from '../components/BookContext';
@@ -149,7 +150,13 @@ export default function RootLayout() {
                   <Stack.Screen name="shop-management" options={{ headerShown: false }} />
                   <Stack.Screen name="shopdrop" options={{ headerShown: false }} />
                   <Stack.Screen name="highlight-management" options={{ headerShown: false }} />
-                  <Stack.Screen name="ideas-management" options={{ headerShown: false }} />
+                  <Stack.Screen name="ideas-management" options={{ 
+                    headerShown: false, 
+                    gestureEnabled: false,
+                    animation: 'fade',
+                    animationDuration: 400,
+                    animationTypeForReplace: 'push'
+                  }} />
                   <Stack.Screen name="home" options={{ headerShown: false }} />
                   <Stack.Screen name="my-events" options={{ 
                     headerShown: false, 
@@ -173,7 +180,10 @@ export default function RootLayout() {
                     animationTypeForReplace: 'push'
                   }} />
                 </Stack>
-                <StatusBar style="auto" />
+                <StatusBar 
+                  style={Platform.OS === 'android' ? 'light' : 'auto'} 
+                  backgroundColor={Platform.OS === 'android' ? '#000000' : undefined}
+                />
               </ThemeProvider>
             </CustomThemeProvider>
           </EventProvider>

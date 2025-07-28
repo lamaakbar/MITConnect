@@ -19,6 +19,10 @@ export interface Idea {
   dislike_votes?: number;
   total_votes?: number;
   comment_count?: number;
+  poll_id?: string;
+  poll_question?: string;
+  poll_options?: string[];
+  poll_total_responses?: number;
 }
 
 export interface IdeaVote {
@@ -40,6 +44,25 @@ export interface IdeaComment {
   comment_text: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface IdeaPoll {
+  id: string;
+  idea_id: string;
+  question: string;
+  options: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PollResponse {
+  id: string;
+  poll_id: string;
+  user_id: string;
+  user_name: string;
+  user_role: string;
+  selected_option: number;
+  created_at: string;
 }
 
 export class IdeasService {
@@ -112,7 +135,7 @@ export class IdeasService {
   }
 
   /**
-   * Get all ideas for admin view (all statuses)
+   * Get all ideas for admin view (all statuses) with polls
    */
   static async getAdminIdeas(): Promise<{ data: Idea[] | null; error: any }> {
     try {
@@ -358,6 +381,160 @@ export class IdeasService {
 
   // ============ STATISTICS ============
   
+  /**
+   * Create a poll for an idea
+   */
+  static async createPoll(pollData: {
+    idea_id: string;
+    question: string;
+    options: string[];
+  }): Promise<{ data: IdeaPoll | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('idea_polls')
+        .insert([{
+          idea_id: pollData.idea_id,
+          question: pollData.question,
+          options: pollData.options
+        }])
+        .select()
+        .single();
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error creating poll:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Get poll for an idea
+   */
+  static async getPollForIdea(ideaId: string): Promise<{ data: IdeaPoll | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('idea_polls')
+        .select('*')
+        .eq('idea_id', ideaId)
+        .single();
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching poll:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Submit a poll response
+   */
+  static async submitPollResponse(responseData: {
+    poll_id: string;
+    user_id: string;
+    user_name: string;
+    user_role: string;
+    selected_option: number;
+  }): Promise<{ data: PollResponse | null; error: any }> {
+    try {
+      // Check if user already responded to this poll
+      const { data: existingResponse, error: checkError } = await supabase
+        .from('poll_responses')
+        .select('*')
+        .eq('poll_id', responseData.poll_id)
+        .eq('user_id', responseData.user_id)
+        .single();
+
+      if (existingResponse) {
+        // Update existing response
+        const { data, error } = await supabase
+          .from('poll_responses')
+          .update({
+            selected_option: responseData.selected_option,
+            created_at: new Date().toISOString()
+          })
+          .eq('id', existingResponse.id)
+          .select()
+          .single();
+
+        return { data, error };
+      } else {
+        // Create new response
+        const { data, error } = await supabase
+          .from('poll_responses')
+          .insert([responseData])
+          .select()
+          .single();
+
+        return { data, error };
+      }
+    } catch (error) {
+      console.error('Error submitting poll response:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Get poll responses for a specific poll with option counts
+   */
+  static async getPollResults(pollId: string): Promise<{ 
+    data: {
+      total_responses: number;
+      option_counts: { [key: number]: number };
+      responses: PollResponse[];
+    } | null; 
+    error: any 
+  }> {
+    try {
+      // Get all responses for this poll
+      const { data: responses, error: responsesError } = await supabase
+        .from('poll_responses')
+        .select('*')
+        .eq('poll_id', pollId)
+        .order('created_at', { ascending: false });
+
+      if (responsesError) {
+        return { data: null, error: responsesError };
+      }
+
+      // Calculate option counts
+      const option_counts: { [key: number]: number } = {};
+      responses?.forEach(response => {
+        const option = response.selected_option;
+        option_counts[option] = (option_counts[option] || 0) + 1;
+      });
+
+      return {
+        data: {
+          total_responses: responses?.length || 0,
+          option_counts,
+          responses: responses || []
+        },
+        error: null
+      };
+    } catch (error) {
+      console.error('Error fetching poll results:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
+   * Get poll responses for a poll
+   */
+  static async getPollResponses(pollId: string): Promise<{ data: PollResponse[] | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('poll_responses')
+        .select('*')
+        .eq('poll_id', pollId)
+        .order('created_at', { ascending: false });
+
+      return { data, error };
+    } catch (error) {
+      console.error('Error fetching poll responses:', error);
+      return { data: null, error };
+    }
+  }
+
   /**
    * Get overall statistics for ideas
    */

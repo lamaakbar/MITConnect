@@ -19,7 +19,9 @@ import RoleGuard from '../components/RoleGuard';
 export default function InspirerCornerScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [votingModalVisible, setVotingModalVisible] = useState(false);
+  const [pollVotingModalVisible, setPollVotingModalVisible] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<IdeaWithLikes | null>(null);
+  const [selectedPollIdea, setSelectedPollIdea] = useState<IdeaWithLikes | null>(null);
   const [ideaTitle, setIdeaTitle] = useState('');
 
   const [ideaDescription, setIdeaDescription] = useState('');
@@ -63,20 +65,9 @@ export default function InspirerCornerScreen() {
       // Get user session first to avoid multiple auth calls
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Load only approved ideas directly from database for faster loading
+      // Load only approved ideas with polls directly from database for faster loading
       const { data: approvedIdeasData, error: ideasError } = await supabase
-        .from('ideas')
-        .select(`
-          id,
-          title,
-          description,
-          category,
-          status,
-          submitter_id,
-          submitter_name,
-          submitter_role,
-          created_at
-        `)
+        .rpc('get_ideas_with_votes')
         .eq('status', 'Approved')
         .order('created_at', { ascending: false })
         .limit(10); // Limit to first 10 for faster loading
@@ -87,33 +78,31 @@ export default function InspirerCornerScreen() {
       }
 
       if (approvedIdeasData) {
-        // Transform data to match IdeaWithLikes type and calculate vote counts
-        const ideasWithVotes = await Promise.all(
-          approvedIdeasData.map(async (idea) => {
-            // Get vote counts for this idea
-            const { data: votes } = await supabase
-              .from('idea_votes')
-              .select('vote_type')
-              .eq('idea_id', idea.id);
-            
-            const likes_count = votes?.filter(v => v.vote_type === 'like').length || 0;
-            const dislikes_count = votes?.filter(v => v.vote_type === 'dislike').length || 0;
-            const total_reactions = likes_count + dislikes_count;
-            
-            return {
-              ...idea,
-              likes_count,
-              dislikes_count,
-              total_reactions
-            };
-          })
-        );
+        // Transform data to match IdeaWithLikes type with poll information
+        // Transform data to match IdeaWithLikes type with poll information
+        const ideasWithVotes = approvedIdeasData.map((idea: any) => {
+          const likes_count = idea.like_votes || 0;
+          const dislikes_count = idea.dislike_votes || 0;
+          const total_reactions = likes_count + dislikes_count;
+          
+          return {
+            ...idea,
+            likes_count,
+            dislikes_count,
+            total_reactions,
+            hasPoll: !!idea.poll_id,
+            poll: idea.poll_id ? {
+              question: idea.poll_question || '',
+              options: idea.poll_options || []
+            } : undefined
+          };
+        });
         
         setIdeas(ideasWithVotes);
         
         // Calculate stats efficiently
         const totalIdeas = ideasWithVotes.length;
-        const totalReactions = ideasWithVotes.reduce((sum, idea) => sum + idea.total_reactions, 0);
+        const totalReactions = ideasWithVotes.reduce((sum: number, idea: any) => sum + idea.total_reactions, 0);
         
         // Get stats for all ideas in a separate query (non-blocking)
         (async () => {
@@ -146,12 +135,12 @@ export default function InspirerCornerScreen() {
                 .from('idea_votes')
                 .select('idea_id, vote_type')
                 .eq('user_id', user.id)
-                .in('idea_id', approvedIdeasData.map(idea => idea.id));
+                .in('idea_id', approvedIdeasData.map((idea: any) => idea.id));
               
               const userReactionsData: { [key: string]: boolean | null } = {};
               
               // Initialize all reactions as null
-              approvedIdeasData.forEach(idea => {
+              approvedIdeasData.forEach((idea: any) => {
                 userReactionsData[idea.id] = null;
               });
 
@@ -194,7 +183,7 @@ export default function InspirerCornerScreen() {
     // Optimistically update the idea counts
     setIdeas(prevIdeas => 
       prevIdeas.map(idea => {
-        if (idea.id === ideaId) {
+          if (idea.id === ideaId) {
           // Adjust counts based on previous reaction
           if (previousReaction === true && liked) {
             // Was liked, still liked - no change
@@ -227,8 +216,8 @@ export default function InspirerCornerScreen() {
               total_reactions: idea.total_reactions + 1
             };
           }
-        }
-        return idea;
+          }
+          return idea;
       })
     );
 
@@ -415,6 +404,51 @@ export default function InspirerCornerScreen() {
     setVotingModalVisible(true);
   };
 
+  const openPollVotingModal = (idea: IdeaWithLikes) => {
+    setSelectedPollIdea(idea);
+    setPollVotingModalVisible(true);
+  };
+
+  const handlePollVote = async (optionIndex: number) => {
+    if (!selectedPollIdea || !selectedPollIdea.poll) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user || !user.id) {
+        Alert.alert('Login Required', 'You must be logged in to vote on polls.');
+        return;
+      }
+
+      // Submit poll response
+      const { error } = await IdeasService.submitPollResponse({
+        poll_id: selectedPollIdea.poll_id!,
+        user_id: user.id,
+        user_name: userProfile?.name || user.email || 'Anonymous User',
+        user_role: userRole || 'trainee',
+        selected_option: optionIndex
+      });
+
+      if (error) {
+        console.error('Error submitting poll vote:', error);
+        Alert.alert('Error', 'Failed to submit vote. Please try again.');
+        return;
+      }
+
+      // Reload ideas to reflect the new vote
+      await loadIdeasAndReactions();
+      
+      // Close modal
+      setPollVotingModalVisible(false);
+      setSelectedPollIdea(null);
+      
+      Alert.alert('Success!', '✅ Your vote has been recorded.', [{ text: 'OK' }]);
+    } catch (error) {
+      console.error('Error voting on poll:', error);
+      Alert.alert('Error', 'Failed to submit vote. Please try again.');
+    }
+  };
+
   const displayedIdeas = useMemo(() => 
     showAllIdeas ? ideas : ideas.slice(0, 3), 
     [showAllIdeas, ideas]
@@ -427,7 +461,7 @@ export default function InspirerCornerScreen() {
 
   // Show loading only for initial page load, not for background data fetching
   if (!initialLoadComplete && loading) {
-    return (
+  return (
       <View style={[styles.container, { backgroundColor: screenBg }]}>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.loadingContainer}>
@@ -440,14 +474,14 @@ export default function InspirerCornerScreen() {
 
   return (
     <RoleGuard allowedRoles={['trainee', 'employee']}>
-      <View style={[styles.container, { backgroundColor: screenBg }]}>
-        <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.container, { backgroundColor: screenBg }]}>
+      <SafeAreaView style={styles.safeArea}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color={primaryText} />
-            </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                <Ionicons name="arrow-back" size={24} color={primaryText} />
+              </TouchableOpacity>
             <View style={styles.iconContainer}>
               <Ionicons name="bulb" size={24} color="#FF9500" />
             </View>
@@ -468,25 +502,25 @@ export default function InspirerCornerScreen() {
 
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
                   {/* Compact Stats Row */}
-        <View style={styles.statsContainer}>
+          <View style={styles.statsContainer}>
           <View style={[styles.statItem, { backgroundColor: cardBg }]}>
             <Ionicons name="bulb-outline" size={16} color="#FF9500" style={styles.statIcon} />
-            <Text style={[styles.statNumber, { color: primaryText }]}>{stats.totalIdeas}</Text>
-            <Text style={[styles.statLabel, { color: secondaryText }]}>Total Ideas</Text>
-          </View>
-          
+              <Text style={[styles.statNumber, { color: primaryText }]}>{stats.totalIdeas}</Text>
+              <Text style={[styles.statLabel, { color: secondaryText }]}>Total Ideas</Text>
+            </View>
+            
           <View style={[styles.statItem, { backgroundColor: cardBg }]}>
             <Ionicons name="settings-outline" size={16} color="#007AFF" style={styles.statIcon} />
-            <Text style={[styles.statNumber, { color: primaryText }]}>{stats.inProgress}</Text>
-            <Text style={[styles.statLabel, { color: secondaryText }]}>In Progress</Text>
-          </View>
-          
+              <Text style={[styles.statNumber, { color: primaryText }]}>{stats.inProgress}</Text>
+              <Text style={[styles.statLabel, { color: secondaryText }]}>In Progress</Text>
+            </View>
+            
           <View style={[styles.statItem, { backgroundColor: cardBg }]}>
             <Ionicons name="checkmark-circle-outline" size={16} color="#34C759" style={styles.statIcon} />
-            <Text style={[styles.statNumber, { color: primaryText }]}>{stats.approved}</Text>
-            <Text style={[styles.statLabel, { color: secondaryText }]}>Approved</Text>
+              <Text style={[styles.statNumber, { color: primaryText }]}>{stats.approved}</Text>
+              <Text style={[styles.statLabel, { color: secondaryText }]}>Approved</Text>
+            </View>
           </View>
-        </View>
 
           {/* Community Ideas */}
           <View style={styles.sectionContainer}>
@@ -500,23 +534,23 @@ export default function InspirerCornerScreen() {
                 activeOpacity={0.7}
               >
                 {/* Status Tag Only */}
-                <View style={styles.tagsRow}>
+                 <View style={styles.tagsRow}>
                   <View style={[
                     styles.tag, 
-                    item.status === 'In Progress' ? styles.inProgressTag : styles.approvedTag
-                  ]}>
-                    <Ionicons 
-                      name={item.status === 'In Progress' ? 'time-outline' : 'checkmark-circle'} 
-                      size={12} 
-                      color="#fff" 
-                    />
-                    <Text style={styles.statusTagText}>{item.status}</Text>
-                  </View>
-                </View>
+                       item.status === 'In Progress' ? styles.inProgressTag : styles.approvedTag
+                     ]}>
+                       <Ionicons 
+                         name={item.status === 'In Progress' ? 'time-outline' : 'checkmark-circle'} 
+                         size={12} 
+                         color="#fff" 
+                       />
+                       <Text style={styles.statusTagText}>{item.status}</Text>
+                     </View>
+                 </View>
 
-                {/* Idea Content */}
-                <Text style={[styles.ideaTitle, { color: primaryText }]}>{item.title}</Text>
-                <Text style={[styles.ideaDescription, { color: secondaryText }]}>{item.description}</Text>
+                                 {/* Idea Content */}
+                 <Text style={[styles.ideaTitle, { color: primaryText }]}>{item.title}</Text>
+                 <Text style={[styles.ideaDescription, { color: secondaryText }]}>{item.description}</Text>
 
                 {/* Like/Dislike Buttons */}
                 <View style={styles.reactionButtons}>
@@ -525,8 +559,8 @@ export default function InspirerCornerScreen() {
                       <Text style={[styles.reactionLoadingText, { color: secondaryText }]}>Loading reactions...</Text>
                     </View>
                   )}
-                  <TouchableOpacity 
-                    style={[
+                                         <TouchableOpacity 
+                       style={[
                       styles.reactionButton,
                       userReactions[item.id] === true && styles.reactionButtonActive
                     ]}
@@ -546,10 +580,10 @@ export default function InspirerCornerScreen() {
                     ]}>
                       {item.likes_count}
                     </Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={[
+                     </TouchableOpacity>
+                     
+                     <TouchableOpacity 
+                       style={[
                       styles.reactionButton,
                       userReactions[item.id] === false && styles.reactionButtonActive
                     ]}
@@ -569,9 +603,38 @@ export default function InspirerCornerScreen() {
                     ]}>
                       {item.dislikes_count}
                     </Text>
-                  </TouchableOpacity>
-                </View>
+                     </TouchableOpacity>
+                  </View>
 
+                  {/* Poll Voting Section */}
+                  {item.hasPoll && item.poll && (
+                    <View style={styles.pollSection}>
+                      <Text style={[styles.pollQuestion, { color: primaryText }]}>
+                        {item.poll.question}
+                      </Text>
+                      <View style={styles.pollOptions}>
+                        {item.poll.options.map((option, index) => (
+                          <TouchableOpacity
+                            key={index}
+                            style={[styles.pollOption, { backgroundColor: isDarkMode ? '#3A3A3C' : '#f6f7f9' }]}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              openPollVotingModal(item);
+                            }}
+                          >
+                            <Text style={[styles.pollOptionText, { color: primaryText }]}>
+                              {option}
+                            </Text>
+                            <Ionicons name="chevron-forward" size={16} color={secondaryText} />
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <Text style={[styles.pollVoteCount, { color: secondaryText }]}>
+                        {item.poll_total_responses || 0} total votes
+                      </Text>
+                    </View>
+                  )}
+                  
                 {/* Expanded Content */}
                 {expandedCards[item.id] && (
                   <View style={styles.expandedContent}>
@@ -587,17 +650,17 @@ export default function InspirerCornerScreen() {
 
                       {/* Admin Manage Button */}
                       {userRole === 'admin' && (
-                        <TouchableOpacity 
+                                     <TouchableOpacity 
                           style={[styles.actionBtn, { backgroundColor: isDarkMode ? '#3A3A3C' : '#f6f7f9' }]}
                         >
                           <Ionicons name="settings-outline" size={16} color="#8E8E93" />
                           <Text style={[styles.actionBtnText, { color: primaryText }]}>Manage</Text>
-                        </TouchableOpacity>
+                   </TouchableOpacity>
                       )}
-                    </View>
+                </View>
                   </View>
                 )}
-              </TouchableOpacity>
+                   </TouchableOpacity>
             ))}
 
             {/* View All Ideas Button */}
@@ -611,7 +674,7 @@ export default function InspirerCornerScreen() {
                   {loadingAllIdeas ? 'Loading...' : `View All Ideas (${ideas.length})`}
                 </Text>
                 <Ionicons name={loadingAllIdeas ? "hourglass-outline" : "chevron-down"} size={20} color={primaryText} />
-              </TouchableOpacity>
+                   </TouchableOpacity>
             )}
 
             {/* Show Less Button */}
@@ -622,7 +685,7 @@ export default function InspirerCornerScreen() {
               >
                 <Text style={[styles.viewAllButtonText, { color: primaryText }]}>Show Less</Text>
                 <Ionicons name="chevron-up" size={20} color={primaryText} />
-              </TouchableOpacity>
+                   </TouchableOpacity>
             )}
           </View>
         </ScrollView>
@@ -635,38 +698,87 @@ export default function InspirerCornerScreen() {
           onRequestClose={() => setModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={[styles.modalContainer, { backgroundColor: cardBg }]}>
-              <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: primaryText }]}>Share Your Idea</Text>
+                         <View style={[styles.modalContainer, { backgroundColor: cardBg }]}>
+               <View style={styles.modalHeader}>
+                 <Text style={[styles.modalTitle, { color: primaryText }]}>Share Your Idea</Text>
                 <TouchableOpacity onPress={() => setModalVisible(false)}>
                   <Ionicons name="close" size={24} color="#8E8E93" />
                 </TouchableOpacity>
               </View>
               
               <ScrollView style={styles.modalContent}>
-                <TextInput
-                  style={[styles.input, { backgroundColor: isDarkMode ? '#3A3A3C' : '#F2F2F7', color: primaryText }]}
-                  placeholder="Enter a clear, descriptive title for your idea"
-                  value={ideaTitle}
-                  onChangeText={setIdeaTitle}
-                  placeholderTextColor="#8E8E93"
-                />
+                                 <TextInput
+                   style={[styles.input, { backgroundColor: isDarkMode ? '#3A3A3C' : '#F2F2F7', color: primaryText }]}
+                   placeholder="Enter a clear, descriptive title for your idea"
+                   value={ideaTitle}
+                   onChangeText={setIdeaTitle}
+                   placeholderTextColor="#8E8E93"
+                 />
                 
-                <TextInput
-                  style={[styles.input, styles.textArea, { backgroundColor: isDarkMode ? '#3A3A3C' : '#F2F2F7', color: primaryText }]}
-                  placeholder="Describe your idea in detail..."
-                  value={ideaDescription}
-                  onChangeText={setIdeaDescription}
-                  multiline
-                  placeholderTextColor="#8E8E93"
-                />
+                                 <TextInput
+                   style={[styles.input, styles.textArea, { backgroundColor: isDarkMode ? '#3A3A3C' : '#F2F2F7', color: primaryText }]}
+                   placeholder="Describe your idea in detail..."
+                   value={ideaDescription}
+                   onChangeText={setIdeaDescription}
+                   multiline
+                   placeholderTextColor="#8E8E93"
+                 />
               </ScrollView>
               
               <View style={styles.modalFooter}>
-                <TouchableOpacity style={[styles.submitBtn, { backgroundColor: buttonBg }]} onPress={handleSubmitIdea}>
-                  <Text style={styles.submitBtnText}>Submit Idea</Text>
-                </TouchableOpacity>
+                                 <TouchableOpacity style={[styles.submitBtn, { backgroundColor: buttonBg }]} onPress={handleSubmitIdea}>
+                   <Text style={styles.submitBtnText}>Submit Idea</Text>
+                 </TouchableOpacity>
                 <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Poll Voting Modal */}
+        <Modal
+          visible={pollVotingModalVisible}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setPollVotingModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContainer, { backgroundColor: cardBg }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: primaryText }]}>Vote on Poll</Text>
+                <TouchableOpacity onPress={() => setPollVotingModalVisible(false)}>
+                  <Ionicons name="close" size={24} color="#8E8E93" />
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView style={styles.modalContent}>
+                {selectedPollIdea && selectedPollIdea.poll && (
+                  <>
+                    <Text style={[styles.pollModalQuestion, { color: primaryText }]}>
+                      {selectedPollIdea.poll.question}
+                    </Text>
+                    <View style={styles.pollModalOptions}>
+                      {selectedPollIdea.poll.options.map((option, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={[styles.pollModalOption, { backgroundColor: isDarkMode ? '#3A3A3C' : '#F2F2F7' }]}
+                          onPress={() => handlePollVote(index)}
+                        >
+                          <Text style={[styles.pollModalOptionText, { color: primaryText }]}>
+                            {option}
+                          </Text>
+                          <Ionicons name="chevron-forward" size={20} color={secondaryText} />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )}
+              </ScrollView>
+              
+              <View style={styles.modalFooter}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setPollVotingModalVisible(false)}>
                   <Text style={styles.cancelBtnText}>Cancel</Text>
                 </TouchableOpacity>
               </View>
@@ -699,15 +811,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: 'italic',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 24,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    flexWrap: 'wrap',
-  },
+     header: {
+     flexDirection: 'row',
+     justifyContent: 'space-between',
+     alignItems: 'center',
+     marginTop: 24,
+     marginHorizontal: 20,
+     marginBottom: 12,
+     flexWrap: 'wrap',
+   },
   backButton: {
     padding: 8,
     marginRight: 12,
@@ -729,83 +841,83 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     marginHorizontal: 20,
   },
-  newIdeaBtn: { 
-    borderRadius: 12, 
+   newIdeaBtn: { 
+     borderRadius: 12, 
     paddingVertical: 12, 
     paddingHorizontal: 20, 
-    shadowColor: '#818cf8', 
-    shadowOpacity: 0.18, 
-    shadowRadius: 8, 
-    elevation: 3,
+     shadowColor: '#818cf8', 
+     shadowOpacity: 0.18, 
+     shadowRadius: 8, 
+     elevation: 3,
     flexDirection: 'row',
     alignItems: 'center',
     minWidth: 140,
-  },
-  newIdeaBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14, letterSpacing: 0.3 },
+   },
+   newIdeaBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14, letterSpacing: 0.3 },
   scrollView: { flex: 1 },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 8,
-    marginHorizontal: 16,
-    paddingHorizontal: 4,
-  },
+     statsContainer: {
+     flexDirection: 'row',
+     justifyContent: 'space-between',
+     marginVertical: 8,
+     marginHorizontal: 16,
+     paddingHorizontal: 4,
+   },
   statItem: {
-    borderRadius: 12,
+     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    marginHorizontal: 4,
-    shadowColor: '#818cf8',
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
-  },
+     alignItems: 'center',
+     justifyContent: 'center',
+     flex: 1,
+     marginHorizontal: 4,
+     shadowColor: '#818cf8',
+     shadowOpacity: 0.08,
+     shadowRadius: 6,
+     elevation: 2,
+   },
   statIcon: {
     marginBottom: 4,
   },
-  statNumber: { 
+   statNumber: { 
     fontSize: 18, 
-    fontWeight: '600', 
+     fontWeight: '600', 
     lineHeight: 22,
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  statLabel: { 
+     textAlign: 'center',
+     marginBottom: 2,
+   },
+   statLabel: { 
     fontSize: 10, 
-    fontWeight: '400',
-    textAlign: 'center',
+     fontWeight: '400',
+     textAlign: 'center',
     lineHeight: 12,
-    marginTop: 0,
-  },
+     marginTop: 0,
+   },
   sectionContainer: { marginTop: 12, marginBottom: 24, marginHorizontal: 20 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 16, letterSpacing: 0.2 },
-  ideaCard: {
+   ideaCard: {
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
+     shadowColor: '#000',
+     shadowOpacity: 0.06,
     shadowRadius: 8,
-    elevation: 2,
-  },
-  tagsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+     elevation: 2,
+   },
+     tagsRow: {
+     flexDirection: 'row',
+     alignItems: 'center',
     marginBottom: 12,
-    flexWrap: 'wrap',
-  },
-  tag: {
+     flexWrap: 'wrap',
+   },
+     tag: {
     borderRadius: 8,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginRight: 8,
-    marginBottom: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+     paddingVertical: 4,
+     marginRight: 8,
+     marginBottom: 4,
+     flexDirection: 'row',
+     alignItems: 'center',
+   },
 
   approvedTag: { backgroundColor: '#34d399' },
   inProgressTag: { backgroundColor: '#818cf8' },
@@ -818,20 +930,77 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   reactionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+     flexDirection: 'row',
+     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 8,
+     borderRadius: 8,
     backgroundColor: '#f8f9fa',
   },
   reactionButtonActive: {
     backgroundColor: '#e8f5e8',
   },
   reactionButtonText: {
-    fontSize: 13,
+     fontSize: 13,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  pollSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+  },
+  pollQuestion: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  pollOptions: {
+    marginBottom: 8,
+  },
+  pollOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  pollOptionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  pollVoteCount: {
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  pollModalQuestion: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  pollModalOptions: {
+    marginBottom: 20,
+  },
+  pollModalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  pollModalOptionText: {
+    fontSize: 16,
+    fontWeight: '500',
+    flex: 1,
   },
   expandedContent: {
     marginTop: 16,
@@ -843,17 +1012,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
   },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
+     actionBtn: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
     flex: 1,
     marginHorizontal: 4,
     justifyContent: 'center',
-  },
-  actionBtnText: {
+   },
+   actionBtnText: {
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
@@ -872,10 +1041,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   viewAllButtonText: {
-    fontSize: 14,
+     fontSize: 14,
     fontWeight: '600',
     marginRight: 8,
-  },
+   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.22)',

@@ -22,6 +22,15 @@ export interface IdeaWithLikes {
   likes_count: number;
   dislikes_count: number;
   total_reactions: number;
+  poll_id?: string;
+  poll_question?: string;
+  poll_options?: string[];
+  poll_total_responses?: number;
+  hasPoll?: boolean;
+  poll?: {
+    question: string;
+    options: string[];
+  };
 }
 
 export class IdeaLikesService {

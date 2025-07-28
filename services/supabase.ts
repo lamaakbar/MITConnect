@@ -1,3 +1,8 @@
+// Polyfills for Android compatibility
+import 'react-native-get-random-values';
+import { Buffer } from 'buffer';
+global.Buffer = Buffer;
+
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
