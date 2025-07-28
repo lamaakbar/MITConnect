@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, StatusBar, Alert } from 'react-native';
 import { Feather, MaterialIcons, MaterialCommunityIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import ProfileModal from '../components/ProfileModal';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUserContext } from '../components/UserContext';
+import { supabase } from '../services/supabase';
 
 // Mock user data for admin
 const mockAdminUser = {
@@ -23,6 +24,67 @@ export default function AdminHome() {
   const { fromLogin } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const { effectiveRole, viewAs, setViewAs, userRole } = useUserContext();
+
+  // State for dynamic data
+  const [latestHighlightTitle, setLatestHighlightTitle] = useState('Loading...');
+  const [availableEventsCount, setAvailableEventsCount] = useState(0);
+  const [approvedIdeasCount, setApprovedIdeasCount] = useState(0);
+  const [traineeCount, setTraineeCount] = useState(0);
+
+  // Fetch real data from database
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch latest highlight
+        const { data: highlights, error: highlightsError } = await supabase
+          .from('highlights')
+          .select('title')
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        if (!highlightsError && highlights && highlights.length > 0) {
+          setLatestHighlightTitle(highlights[0].title);
+        } else {
+          setLatestHighlightTitle('No highlights available');
+        }
+
+        // Fetch available events count
+        const { count: events, error: eventsError } = await supabase
+          .from('events')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'upcoming');
+        
+        if (!eventsError && events !== null) {
+          setAvailableEventsCount(events);
+        }
+
+        // Fetch approved ideas count
+        const { count: approvedIdeas, error: ideasError } = await supabase
+          .from('ideas')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'Approved');
+        
+        if (!ideasError && approvedIdeas !== null) {
+          setApprovedIdeasCount(approvedIdeas);
+        }
+
+        // Fetch trainee count (registered trainees with ongoing progress)
+        const { count: trainees, error: traineesError } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .eq('role', 'trainee');
+        
+        if (!traineesError && trainees !== null) {
+          setTraineeCount(trainees);
+        }
+
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   React.useEffect(() => {
     if (fromLogin) {
@@ -226,7 +288,7 @@ export default function AdminHome() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.cardTitle, { color: colors.text }]}>Highlight Management</Text>
-                <Text style={[styles.cardSubtitle, { color: '#3CB371', fontWeight: '500' }]}>The Winner of Table Tennis Competition</Text>
+                <Text style={[styles.cardSubtitle, { color: '#3CB371', fontWeight: '500' }]}>{latestHighlightTitle}</Text>
               </View>
               <Feather name="bookmark" size={22} color="#3CB371" />
             </View>
@@ -242,7 +304,7 @@ export default function AdminHome() {
               </View>
                              <View style={{ flex: 1 }}>
                  <Text style={[styles.cardTitle, { color: colors.text }]}>Events Management</Text>
-                 <Text style={[styles.cardLink, { color: '#3CB371' }]}>87 registrations</Text>
+                 <Text style={[styles.cardLink, { color: '#3CB371' }]}>{availableEventsCount} available events</Text>
                </View>
               <Feather name="calendar" size={22} color="#7D3C98" />
             </View>
@@ -258,7 +320,7 @@ export default function AdminHome() {
               </View>
                              <View style={{ flex: 1 }}>
                  <Text style={[styles.cardTitle, { color: colors.text }]}>Ideas Management</Text>
-                 <Text style={[styles.cardLink, { color: '#7D3C98' }]}>15% implemented</Text>
+                 <Text style={[styles.cardLink, { color: '#7D3C98' }]}>{approvedIdeasCount} approved</Text>
                </View>
               <Feather name="zap" size={22} color="#7D3C98" />
             </View>
@@ -274,6 +336,7 @@ export default function AdminHome() {
               </View>
                              <View style={{ flex: 1 }}>
                  <Text style={[styles.cardTitle, { color: colors.text }]}>Trainee Management</Text>
+                 <Text style={[styles.cardLink, { color: '#F39C12' }]}>{traineeCount} trainees in progress</Text>
                </View>
               <Feather name="user" size={22} color="#F39C12" />
             </View>
