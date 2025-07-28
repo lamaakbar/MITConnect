@@ -377,7 +377,7 @@ export class FeedbackService {
   }
 
   /**
-   * Delete feedback (if user wants to remove their submission)
+   * Delete feedback (relies on database RLS policies for admin access)
    */
   static async deleteFeedback(feedbackId: string): Promise<FeedbackServiceResponse<boolean>> {
     try {
@@ -390,14 +390,23 @@ export class FeedbackService {
         };
       }
 
+      // Try to delete the feedback - RLS policies will handle admin vs user permissions
       const { error } = await supabase
         .from('trainee_feedback')
         .delete()
-        .eq('id', feedbackId)
-        .eq('trainee_id', user.id); // Ensure user can only delete their own feedback
+        .eq('id', feedbackId);
 
       if (error) {
         console.error('Database error when deleting feedback:', error);
+        
+        // Provide more user-friendly error messages
+        if (error.code === '42501') {
+          return {
+            data: null,
+            error: 'You do not have permission to delete this feedback.'
+          };
+        }
+        
         return {
           data: null,
           error: 'Failed to delete feedback. Please try again later.'
