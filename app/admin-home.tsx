@@ -84,9 +84,6 @@ export default function AdminHome() {
           <Text style={[styles.appName, { color: colors.text }]}>
             <Text style={{ color: colors.text }}>MIT</Text>
             <Text style={{ color: '#43C6AC' }}>Connect</Text>
-            {viewAs && (
-              <Text style={{ color: '#FF6B6B', fontSize: 12, fontWeight: 'normal' }}> (Preview Mode)</Text>
-            )}
           </Text>
           <View style={styles.headerButtons}>
             <TouchableOpacity 
@@ -172,17 +169,6 @@ export default function AdminHome() {
             </Text>
             
             <View style={styles.viewAsButtons}>
-              <TouchableOpacity
-                style={[
-                  styles.viewAsButton,
-                  { backgroundColor: viewAs === 'admin' || (!viewAs && effectiveRole === 'admin') ? '#3CB371' : colors.border }
-                ]}
-                onPress={() => handleViewAs('admin')}
-              >
-                <Text style={[styles.viewAsButtonText, { color: viewAs === 'admin' || (!viewAs && effectiveRole === 'admin') ? '#fff' : colors.text }]}>
-                  Admin
-                </Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 style={[
                   styles.viewAsButton,
