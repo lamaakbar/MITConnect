@@ -45,7 +45,7 @@ export default function EmployeeHome() {
   const pathname = usePathname();
   const { fromLogin } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState('home');
-  const { events, registered } = useEventContext();
+  const { events, registered, registerEvent } = useEventContext();
   const { effectiveRole, isInitialized, viewAs, setViewAs } = useUserContext();
   const { user, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
@@ -467,7 +467,7 @@ export default function EmployeeHome() {
               contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                  onPress={() => router.push({ pathname: '/event-details', params: { id: item.id, from: 'employee-home' } })}
                   activeOpacity={0.85}
                 >
                   <View style={[styles.eventCard, { backgroundColor: cardBackground }]}>
@@ -483,11 +483,25 @@ export default function EmployeeHome() {
                       </View>
                     )}
                     <TouchableOpacity
-                      style={styles.eventBtn}
+                      style={[
+                        styles.eventBtn,
+                        registered.includes(item.id) && styles.eventBtnRegistered
+                      ]}
                       activeOpacity={0.85}
-                      onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                      onPress={(e) => {
+                        e.stopPropagation(); // Prevent navigation to event details
+                        if (!registered.includes(item.id)) {
+                          registerEvent(item.id);
+                        }
+                      }}
+                      disabled={registered.includes(item.id)}
                     >
-                      <Text style={styles.eventBtnText}>Register Now!</Text>
+                      <Text style={[
+                        styles.eventBtnText,
+                        registered.includes(item.id) && styles.eventBtnTextRegistered
+                      ]}>
+                        {registered.includes(item.id) ? '✅ Registered' : 'Register Now!'}
+                      </Text>
                     </TouchableOpacity>
                     <View style={styles.eventCardFooter}>
                       <View style={styles.eventFooterItem}>
@@ -1009,5 +1023,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginTop: 5,
+  },
+  eventBtnRegistered: {
+    backgroundColor: '#43C6AC',
+    opacity: 0.7,
+  },
+  eventBtnTextRegistered: {
+    color: '#fff',
   },
 });

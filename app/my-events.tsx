@@ -112,17 +112,17 @@ export default function MyEventsScreen() {
   const getActionButton = (event: any) => {
     switch (event.status) {
       case 'Registered':
-        return { text: 'View Details', action: () => router.push({ pathname: 'event-details' as any, params: { id: event.id } }) };
+        return { text: 'View Details', action: () => router.push({ pathname: 'event-details' as any, params: { id: event.id, from: 'my-events' } }) };
       case 'Attended':
-        return { text: 'View Details', action: () => router.push({ pathname: 'event-details' as any, params: { id: event.id } }) };
+        return { text: 'View Details', action: () => router.push({ pathname: 'event-details' as any, params: { id: event.id, from: 'my-events' } }) };
       case 'Completed':
-        return { text: 'View Details', action: () => router.push({ pathname: 'event-details' as any, params: { id: event.id } }) };
+        return { text: 'View Details', action: () => router.push({ pathname: 'event-details' as any, params: { id: event.id, from: 'my-events' } }) };
       case 'Missed':
         // Check if user has already completed this event (attended + feedback)
         if (event.userStatus && event.userStatus.status === 'completed') {
           return { text: 'Completed', action: () => {} };
         }
-        return { text: 'Re-register', action: () => router.push({ pathname: 'event-details' as any, params: { id: event.id } }) };
+        return { text: 'Re-register', action: () => router.push({ pathname: 'event-details' as any, params: { id: event.id, from: 'my-events' } }) };
       default:
         return { text: 'View Details', action: () => {} };
     }

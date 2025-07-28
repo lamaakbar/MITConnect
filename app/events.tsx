@@ -457,7 +457,7 @@ export default function EventsScreen() {
                         registerEvent(item.id);
                       }
                     }}
-                    onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                    onPress={() => router.push({ pathname: '/event-details', params: { id: item.id, from: 'events' } })}
                     buttonText={getEventButtonState(item.id, item.date, item.time).text}
                     buttonDisabled={getEventButtonState(item.id, item.date, item.time).disabled}
                     registrationCount={getRegistrationCount(item.id)}
@@ -492,7 +492,7 @@ export default function EventsScreen() {
                         registerEvent(item.id);
                       }
                     }}
-                    onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                    onPress={() => router.push({ pathname: '/event-details', params: { id: item.id, from: 'events' } })}
                     buttonText={getEventButtonState(item.id, item.date, item.time).text}
                     buttonDisabled={getEventButtonState(item.id, item.date, item.time).disabled}
                     registrationCount={getRegistrationCount(item.id)}
@@ -548,7 +548,7 @@ export default function EventsScreen() {
                     registerEvent(item.id);
                   }
                 }}
-                onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                onPress={() => router.push({ pathname: '/event-details', params: { id: item.id, from: 'events' } })}
                 buttonText={getEventButtonState(item.id, item.date, item.time).text}
                 buttonDisabled={getEventButtonState(item.id, item.date, item.time).disabled}
                 registrationCount={getRegistrationCount(item.id)}
@@ -627,7 +627,7 @@ export default function EventsScreen() {
                         registerEvent(item.id);
                       }
                     }}
-                    onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                    onPress={() => router.push({ pathname: '/event-details', params: { id: item.id, from: 'events' } })}
                     buttonText={getEventButtonState(item.id, item.date, item.time).text}
                     buttonDisabled={getEventButtonState(item.id, item.date, item.time).disabled}
                     registrationCount={getRegistrationCount(item.id)}
@@ -659,7 +659,7 @@ export default function EventsScreen() {
                         registerEvent(item.id);
                       }
                     }}
-                    onPress={() => router.push({ pathname: '/event-details', params: { id: item.id } })}
+                    onPress={() => router.push({ pathname: '/event-details', params: { id: item.id, from: 'events' } })}
                     buttonText={getEventButtonState(item.id, item.date, item.time).text}
                     buttonDisabled={getEventButtonState(item.id, item.date, item.time).disabled}
                     registrationCount={getRegistrationCount(item.id)}
