@@ -245,6 +245,71 @@ export default function EmployeeHome() {
     }
   }, [bookOfMonth]);
 
+  // Set up real-time subscription for Book of the Month ratings
+  useEffect(() => {
+    if (!bookOfMonth) return;
+
+    console.log('🔄 EmployeeHome: Setting up real-time subscription for book ID:', bookOfMonth.id);
+    
+    // Set up real-time subscription for ratings
+    const ratingsSubscription = supabase
+      .channel('employee-home-ratings')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'ratings',
+          filter: `book_id=eq.${bookOfMonth.id}`
+        },
+        (payload) => {
+          console.log('🔄 EmployeeHome: Real-time rating change detected:', payload);
+          
+          // Handle different types of changes
+          if (payload.eventType === 'INSERT') {
+            console.log('➕ EmployeeHome: New rating added:', payload.new);
+            // Add the new rating to the list
+            setRatings(prevRatings => [payload.new, ...prevRatings]);
+          } else if (payload.eventType === 'UPDATE') {
+            console.log('✏️ EmployeeHome: Rating updated:', payload.new);
+            // Update the existing rating in the list
+            setRatings(prevRatings => 
+              prevRatings.map(rating => 
+                rating.id === payload.new.id 
+                  ? { ...rating, ...payload.new }
+                  : rating
+              )
+            );
+          } else if (payload.eventType === 'DELETE') {
+            console.log('🗑️ EmployeeHome: Rating deleted:', payload.old);
+            // Remove the deleted rating from the list
+            setRatings(prevRatings => 
+              prevRatings.filter(rating => rating.id !== payload.old.id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on component unmount or when book changes
+    return () => {
+      console.log('🔌 EmployeeHome: Cleaning up real-time subscription');
+      ratingsSubscription.unsubscribe();
+    };
+  }, [bookOfMonth]); // Re-subscribe when book of the month changes
+
+  // Recalculate average rating when ratings change
+  useEffect(() => {
+    if (ratings.length > 0) {
+      const avg = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
+      setAverageRating(avg);
+      console.log('📊 EmployeeHome: Average rating updated to:', avg.toFixed(1), 'from', ratings.length, 'ratings');
+    } else {
+      setAverageRating(0);
+      console.log('📊 EmployeeHome: No ratings, average set to 0');
+    }
+  }, [ratings]);
+
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');

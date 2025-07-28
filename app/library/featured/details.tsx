@@ -123,7 +123,72 @@ export default function FeaturedBookDetailsScreen() {
       fetchComments(),
       getCurrentUser()
     ]);
-  }, []);
+
+    // Set up real-time subscription for ratings
+    const ratingsSubscription = supabase
+      .channel('ratings-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'ratings',
+          filter: `book_id=eq.${FEATURED_BOOK.id}`
+        },
+        (payload) => {
+          console.log('🔄 Real-time rating change detected:', payload);
+          
+          // Handle different types of changes
+          if (payload.eventType === 'INSERT') {
+            console.log('➕ New rating added:', payload.new);
+            // Add the new rating to the list
+            setRatings(prevRatings => {
+              const newRating: Rating = {
+                id: payload.new.id,
+                user_id: payload.new.user_id,
+                book_id: payload.new.book_id,
+                rating: payload.new.rating,
+                created_at: payload.new.created_at,
+                user_name: 'Anonymous' // Will be updated when we refetch
+              };
+              return [newRating, ...prevRatings];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            console.log('✏️ Rating updated:', payload.new);
+            // Update the existing rating in the list
+            setRatings(prevRatings => 
+              prevRatings.map(rating => 
+                rating.id === payload.new.id 
+                  ? { ...rating, ...payload.new }
+                  : rating
+              )
+            );
+          } else if (payload.eventType === 'DELETE') {
+            console.log('🗑️ Rating deleted:', payload.old);
+            // Remove the deleted rating from the list
+            setRatings(prevRatings => 
+              prevRatings.filter(rating => rating.id !== payload.old.id)
+            );
+          }
+          
+          // Update user rating if it's the current user's rating
+          if (currentUser && payload.new && 'user_id' in payload.new && payload.new.user_id === currentUser.id) {
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              setUserRating(payload.new.rating);
+            } else if (payload.eventType === 'DELETE') {
+              setUserRating(0);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on component unmount
+    return () => {
+      console.log('🔌 Cleaning up real-time subscription');
+      ratingsSubscription.unsubscribe();
+    };
+  }, [currentUser]); // Add currentUser as dependency to re-subscribe when user changes
 
   // Fetch ratings for featured book
   const fetchRatings = async () => {
@@ -220,7 +285,7 @@ export default function FeaturedBookDetailsScreen() {
       if (error) throw error;
       
       setUserRating(rating);
-      await fetchRatings();
+      // No need to fetch ratings manually - real-time subscription will handle updates
       Alert.alert('Success', 'Rating submitted successfully!');
     } catch (error) {
       console.error('Error submitting rating:', error);
@@ -270,6 +335,11 @@ export default function FeaturedBookDetailsScreen() {
   const averageRating = ratings.length > 0 
     ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length 
     : FEATURED_BOOK.averageRating;
+
+  // Log rating changes for debugging
+  useEffect(() => {
+    console.log('📊 Ratings updated - Count:', ratings.length, 'Average:', averageRating.toFixed(1));
+  }, [ratings, averageRating]);
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
