@@ -5,11 +5,10 @@ export interface TraineeFeedback {
   id: string;
   trainee_id: string;
   trainee_name: string;
-  text: string; // Main text column
+  feedback_text: string; // Changed from 'text' to match database column
   rating: number;
-  date: string; // Date column as shown in your table
+  submission_date: string; // Changed from 'date' to match database column
   created_at?: string; // Optional fallback
-  submission_date?: string; // Optional fallback
   // File fields (nullable)
   file_name?: string | null;
   file_path?: string | null;
@@ -166,9 +165,9 @@ export class FeedbackService {
       const insertData = {
         trainee_id: user.id,
         trainee_name: traineeName,
-        text: input.feedback_text.trim(),
+        feedback_text: input.feedback_text.trim(),
         rating: input.rating,
-        date: new Date().toISOString().split('T')[0],
+        submission_date: new Date().toISOString().split('T')[0],
         // Include file data if available
         ...(fileData && {
           file_name: fileData.file_name,
@@ -231,7 +230,7 @@ export class FeedbackService {
       const { data, error } = await supabase
         .from('trainee_feedback')
         .select('*')
-        .order('date', { ascending: false });
+        .order('submission_date', { ascending: false });
 
       if (error) {
         console.error('Database error when fetching all feedback:', error);
@@ -273,7 +272,7 @@ export class FeedbackService {
         .from('trainee_feedback')
         .select('*')
         .eq('trainee_id', user.id)
-        .order('date', { ascending: false });
+        .order('submission_date', { ascending: false });
 
       if (error) {
         console.error('Database error when fetching user feedback:', error);
@@ -433,7 +432,7 @@ export class FeedbackService {
       const { data: allFeedback, error } = await supabase
         .from('trainee_feedback')
         .select('*')
-        .order('date', { ascending: false });
+        .order('submission_date', { ascending: false });
 
       if (error) {
         console.error('Database error when fetching feedback stats:', error);
