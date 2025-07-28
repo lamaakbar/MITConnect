@@ -8,6 +8,7 @@ import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { uploadImageFromLibrary, uploadImageFromLibraryFallback } from '../services/imageUploadService';
+import { uploadPDFFromLibrary, uploadPDFFromLibraryFallback, uploadPDFToImagesBucket, getPDFPublicUrl } from '../services/pdfUploadService';
 import { BOOK_GENRES } from '../constants/Genres';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -44,12 +45,22 @@ export default function AddBookScreen() {
   const [genreColor, setGenreColor] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState<string | null>(null);
+  const [pdfPath, setPdfPath] = useState<string | null>(null);
+  const [pdfFileName, setPdfFileName] = useState<string | null>(null);
   const [showGenreList, setShowGenreList] = useState(false);
   const [error, setError] = useState('');
   const [category, setCategory] = useState('library');
+  const [isUploadingPDF, setIsUploadingPDF] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const pickImage = async () => {
+    if (isUploadingImage || isUploadingPDF) {
+      setError('Please wait for the current upload to complete.');
+      return;
+    }
+
     try {
+      setIsUploadingImage(true);
       console.log('🚀 Starting image upload...');
       
       // Try primary upload method first
@@ -71,6 +82,51 @@ export default function AddBookScreen() {
     } catch (error) {
       console.error('❌ Image upload error:', error);
       setError('Failed to upload image. Please check your internet connection and try again.');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const pickPDF = async () => {
+    if (isUploadingPDF || isUploadingImage) {
+      setError('Please wait for the current upload to complete.');
+      return;
+    }
+
+    try {
+      setIsUploadingPDF(true);
+      console.log('🚀 Starting PDF upload...');
+      
+      // Try using images bucket directly (which should already work)
+      let uploadedPdfPath = await uploadPDFToImagesBucket('pdfs');
+      
+      // If that fails, try the original method
+      if (!uploadedPdfPath) {
+        console.log('⚠️ Images bucket upload failed, trying book-pdfs...');
+        uploadedPdfPath = await uploadPDFFromLibrary('book-pdfs', 'pdfs');
+      }
+      
+      // If that also fails, try fallback
+      if (!uploadedPdfPath) {
+        console.log('⚠️ Primary PDF upload failed, trying fallback...');
+        uploadedPdfPath = await uploadPDFFromLibraryFallback('book-pdfs', 'pdfs');
+      }
+      
+      if (uploadedPdfPath) {
+        console.log('✅ PDF uploaded:', uploadedPdfPath);
+        setPdfPath(uploadedPdfPath);
+        // Extract filename from path for display
+        const fileName = uploadedPdfPath.split('/').pop() || 'PDF file';
+        setPdfFileName(fileName);
+        setError('');
+      } else {
+        setError('Failed to upload PDF. Please check your internet connection and try again.');
+      }
+    } catch (error) {
+      console.error('❌ PDF upload error:', error);
+      setError('Failed to upload PDF. Please check your internet connection and try again.');
+    } finally {
+      setIsUploadingPDF(false);
     }
   };
 
@@ -88,15 +144,18 @@ export default function AddBookScreen() {
       cover: image,
       description,
       category,
+      pdf_path: pdfPath,
     };
     try {
-      await addBook(newBook);
+      await addBook({ ...newBook, pdf_path: pdfPath ?? undefined });
       setTitle('');
       setAuthor('');
       setGenre('');
       setGenreColor('');
       setDescription('');
       setImage(null);
+      setPdfPath(null);
+      setPdfFileName(null);
       setError('');
       setCategory('library');
       router.push('/book-added');
@@ -283,10 +342,13 @@ export default function AddBookScreen() {
               <View style={styles.imagePreviewContainer}>
                 <Image source={{ uri: image }} style={styles.coverPreview} />
                 <TouchableOpacity 
-                  style={styles.changeImageButton}
+                  style={[styles.changeImageButton, isUploadingImage && styles.disabledButton]}
                   onPress={pickImage}
+                  disabled={isUploadingImage}
                 >
-                  <Text style={styles.changeImageText}>Change Image</Text>
+                  <Text style={styles.changeImageText}>
+                    {isUploadingImage ? 'Uploading...' : 'Change Image'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -297,10 +359,61 @@ export default function AddBookScreen() {
                   PNG, JPG up to 10MB
                 </Text>
                 <TouchableOpacity 
-                  style={[styles.chooseFileBtn, { backgroundColor: searchBackground }]} 
+                  style={[styles.chooseFileBtn, { backgroundColor: searchBackground }, isUploadingImage && styles.disabledButton]} 
                   onPress={pickImage}
+                  disabled={isUploadingImage}
                 >
-                  <Text style={[styles.chooseFileText, { color: textColor }]}>Choose File</Text>
+                  <Text style={[styles.chooseFileText, { color: textColor }]}>
+                    {isUploadingImage ? 'Uploading...' : 'Choose File'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* PDF Upload Card */}
+        <View style={[styles.card, CARD_SHADOW, { marginTop: 16, backgroundColor: cardBackground, borderColor }]}>  
+          <Text style={[styles.sectionTitle, { color: textColor }]}>
+            Book PDF (Optional)
+          </Text>
+          <TouchableOpacity 
+            style={[styles.uploadArea, { borderColor }]} 
+            onPress={pickPDF} 
+            activeOpacity={0.8}
+          >
+            {pdfPath ? (
+              <View style={styles.pdfPreviewContainer}>
+                <Ionicons name="document-text" size={48} color="#3CB371" />
+                <Text style={[styles.pdfFileName, { color: textColor }]}>{pdfFileName}</Text>
+                <Text style={[styles.pdfPath, { color: secondaryTextColor }]}>
+                  {pdfPath}
+                </Text>
+                <TouchableOpacity 
+                  style={[styles.changePDFButton, isUploadingPDF && styles.disabledButton]}
+                  onPress={pickPDF}
+                  disabled={isUploadingPDF}
+                >
+                  <Text style={styles.changePDFText}>
+                    {isUploadingPDF ? 'Uploading...' : 'Replace PDF'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.uploadPlaceholder}>
+                <Ionicons name="document-text-outline" size={48} color={secondaryTextColor} />
+                <Text style={[styles.uploadText, { color: textColor }]}>Upload book PDF</Text>
+                <Text style={[styles.uploadSubText, { color: secondaryTextColor }]}>
+                  PDF files up to 50MB
+                </Text>
+                <TouchableOpacity 
+                  style={[styles.chooseFileBtn, { backgroundColor: searchBackground }, isUploadingPDF && styles.disabledButton]} 
+                  onPress={pickPDF}
+                  disabled={isUploadingPDF}
+                >
+                  <Text style={[styles.chooseFileText, { color: textColor }]}>
+                    {isUploadingPDF ? 'Uploading...' : 'Choose PDF'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -471,6 +584,34 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 14,
+  },
+  pdfPreviewContainer: {
+    alignItems: 'center',
+  },
+  pdfFileName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  pdfPath: {
+    fontSize: 12,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  changePDFButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 8,
+  },
+  changePDFText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   uploadText: {
     fontSize: 18,

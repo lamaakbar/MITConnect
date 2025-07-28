@@ -12,6 +12,7 @@ export type Book = {
   cover: string;
   description?: string;
   category?: string;
+  pdf_path?: string;
 };
 
 interface BookContextType {
@@ -141,10 +142,11 @@ export function BookProvider({ children }: { children: ReactNode }) {
             cover: processedCover,
             description: book.description,
             category: book.category || 'library',
+            pdf_path: book.pdf_path,
           };
         }));
         
-        console.log('📚 BookContext final processed books:', processedBooks.map(b => ({ title: b.title, cover: b.cover })));
+        console.log('📚 BookContext final processed books:', processedBooks.map(b => ({ title: b.title, cover: b.cover, pdf_path: b.pdf_path })));
         setBooks(processedBooks);
       }
     } catch (error) {
@@ -236,6 +238,7 @@ export function BookProvider({ children }: { children: ReactNode }) {
             genre_color: getGenreColor(book.genre),
             cover_image_url: imageUrl,
             category: book.category || 'library',
+            pdf_path: book.pdf_path || null,
           },
         ])
         .select()

@@ -9,7 +9,8 @@ import {
   TextInput, 
   Alert, 
   ActivityIndicator,
-  StatusBar
+  StatusBar,
+  Linking
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -20,7 +21,18 @@ import { supabase } from '../../../services/supabase';
 import { getGenreColor } from '../../../constants/Genres';
 
 // Featured book data
-const FEATURED_BOOK = {
+const FEATURED_BOOK: {
+  id: number;
+  title: string;
+  author: string;
+  genre: string;
+  genreColor: string;
+  cover: string;
+  description: string;
+  pdf_path: string | null;
+  ratingCount: number;
+  averageRating: number;
+} = {
   id: 1,
   title: "Think and Grow Rich",
   author: "Napoleon Hill",
@@ -28,6 +40,7 @@ const FEATURED_BOOK = {
   genreColor: getGenreColor("Self-Help"),
   cover: "https://covers.openlibrary.org/b/id/7222246-L.jpg",
   description: "Think and Grow Rich is a personal development and self-help book written by Napoleon Hill and inspired by a suggestion from Scottish-American businessman Andrew Carnegie. The book was first published in 1937 and has sold over 100 million copies worldwide.",
+  pdf_path: null, // No PDF for featured book by default
 
   ratingCount: 44,
   averageRating: 4.9
@@ -71,6 +84,37 @@ export default function FeaturedBookDetailsScreen() {
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Function to open PDF
+  const openPDF = async (pdfPath: string) => {
+    try {
+      // Determine the bucket based on the path
+      const bucket = pdfPath.startsWith('pdfs/') ? 'images' : 'book-pdfs';
+      const { data } = supabase.storage.from(bucket).getPublicUrl(pdfPath);
+      const pdfUrl = data.publicUrl;
+      
+      console.log('📄 Opening PDF:', pdfUrl);
+      
+      // Check if the URL can be opened
+      const canOpen = await Linking.canOpenURL(pdfUrl);
+      if (canOpen) {
+        await Linking.openURL(pdfUrl);
+      } else {
+        Alert.alert(
+          'Cannot Open PDF',
+          'Unable to open the PDF file. Please try downloading it manually.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error opening PDF:', error);
+      Alert.alert(
+        'Error',
+        'Failed to open the PDF file. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
   // Fetch ratings, comments, and user data
   useEffect(() => {
@@ -300,6 +344,48 @@ export default function FeaturedBookDetailsScreen() {
           <View style={[styles.aboutBox, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9', marginBottom: 24 }]}>
             <Text style={[styles.aboutLabel, { color: textColor }]}>About This Book</Text>
             <Text style={[styles.aboutText, { color: isDarkMode ? '#ccc' : '#444' }]}>{FEATURED_BOOK.description}</Text>
+          </View>
+
+          {/* PDF Section */}
+          <View style={[styles.aboutBox, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9', marginBottom: 24 }]}>
+            <Text style={[styles.aboutLabel, { color: textColor, marginBottom: 12 }]}>
+              <Ionicons name="document-text" size={20} color="#3CB371" style={{ marginRight: 8 }} />
+              Book PDF
+            </Text>
+            {FEATURED_BOOK.pdf_path && typeof FEATURED_BOOK.pdf_path === 'string' ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: isDarkMode ? '#ccc' : '#444', fontSize: 14, marginBottom: 4 }}>
+                    {FEATURED_BOOK.pdf_path.split('/').pop() || 'PDF Document'}
+                  </Text>
+                  <Text style={{ color: secondaryTextColor, fontSize: 12 }}>
+                    Available for download
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#3CB371',
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center'
+                  }}
+                  onPress={() => openPDF(FEATURED_BOOK.pdf_path as string)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="download" size={16} color="#fff" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>Download</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="document-text-outline" size={20} color={secondaryTextColor} style={{ marginRight: 8 }} />
+                <Text style={{ color: secondaryTextColor, fontSize: 14 }}>
+                  No PDF available for this book
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 

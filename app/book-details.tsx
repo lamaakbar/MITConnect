@@ -10,7 +10,8 @@ import {
   TextInput, 
   Alert,
   ActivityIndicator,
-  FlatList
+  FlatList,
+  Linking
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -29,6 +30,7 @@ type Book = {
   cover_image_url?: string;
   genre?: string;
   genreColor?: string;
+  pdf_path?: string;
 };
 
 type Rating = {
@@ -74,6 +76,37 @@ export default function BookDetails() {
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState<any>(null);
+
+  // Function to open PDF
+  const openPDF = async (pdfPath: string) => {
+    try {
+      // Determine the bucket based on the path
+      const bucket = pdfPath.startsWith('pdfs/') ? 'images' : 'book-pdfs';
+      const { data } = supabase.storage.from(bucket).getPublicUrl(pdfPath);
+      const pdfUrl = data.publicUrl;
+      
+      console.log('📄 Opening PDF:', pdfUrl);
+      
+      // Check if the URL can be opened
+      const canOpen = await Linking.canOpenURL(pdfUrl);
+      if (canOpen) {
+        await Linking.openURL(pdfUrl);
+      } else {
+        Alert.alert(
+          'Cannot Open PDF',
+          'Unable to open the PDF file. Please try downloading it manually.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error opening PDF:', error);
+      Alert.alert(
+        'Error',
+        'Failed to open the PDF file. Please try again.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
   // Fetch book details
   const fetchBookDetails = async () => {
@@ -236,6 +269,47 @@ export default function BookDetails() {
       Alert.alert('Error', 'Failed to submit comment');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const deleteComment = async (commentId: number) => {
+    try {
+      // Show confirmation dialog
+      Alert.alert(
+        'Delete Comment',
+        'Are you sure you want to delete this comment? This action cannot be undone.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const { error } = await supabase
+                  .from('comments')
+                  .delete()
+                  .eq('id', commentId);
+                
+                if (error) throw error;
+                
+                // Refresh comments after deletion
+                await fetchComments();
+                
+                Alert.alert('Success', 'Comment deleted successfully');
+              } catch (error) {
+                console.error('Error deleting comment:', error);
+                Alert.alert('Error', 'Failed to delete comment');
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error in delete comment:', error);
+      Alert.alert('Error', 'Failed to delete comment');
     }
   };
 
@@ -413,16 +487,32 @@ export default function BookDetails() {
                         borderRadius: 12
                       }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                          <Text style={{ color: textColor, fontWeight: '600', fontSize: 14 }}>
-                            {comment.user_name || 'Anonymous'}
-                          </Text>
-                          <Text style={{ color: isDarkMode ? '#aaa' : '#888', fontSize: 12 }}>
-                            {new Date(comment.created_at).toLocaleDateString('en-US', { 
-                              year: 'numeric', 
-                              month: '2-digit', 
-                              day: '2-digit' 
-                            })}
-                          </Text>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: textColor, fontWeight: '600', fontSize: 14 }}>
+                              {comment.user_name || 'Anonymous'}
+                            </Text>
+                            <Text style={{ color: isDarkMode ? '#aaa' : '#888', fontSize: 12 }}>
+                              {new Date(comment.created_at).toLocaleDateString('en-US', { 
+                                year: 'numeric', 
+                                month: '2-digit', 
+                                day: '2-digit' 
+                              })}
+                            </Text>
+                          </View>
+                          {userRole === 'admin' && (
+                            <TouchableOpacity
+                              onPress={() => deleteComment(comment.id)}
+                              style={{
+                                padding: 8,
+                                backgroundColor: '#E74C3C',
+                                borderRadius: 6,
+                                marginLeft: 8
+                              }}
+                              activeOpacity={0.8}
+                            >
+                              <Ionicons name="trash-outline" size={16} color="#fff" />
+                            </TouchableOpacity>
+                          )}
                         </View>
                         <Text style={{ color: isDarkMode ? '#ccc' : '#444', lineHeight: 18 }}>
                           {comment.content}
