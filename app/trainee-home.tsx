@@ -460,7 +460,7 @@ export default function TraineeHome() {
                       <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
                       <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
                     </View>
-                    <Text style={styles.eventTitle}>{item.title}</Text>
+                    <Text style={[styles.eventTitle, { color: textColor }]}>{item.title}</Text>
                     <Text style={styles.eventDesc}>{item.description}</Text>
                     {registered.includes(item.id) && (
                       <View style={styles.registeredBadge}><Text style={styles.registeredBadgeText}>Registered</Text></View>
