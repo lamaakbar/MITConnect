@@ -7,14 +7,12 @@ import { useBooks } from '../components/BookContext';
 import { useTheme } from '../components/ThemeContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { uploadImageFromLibrary, uploadImageFromLibraryFallback } from '../services/imageUploadService';
+import { BOOK_GENRES } from '../constants/Genres';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-const GENRES = [
-  { name: 'Philosophical Fiction', color: '#A3C9A8' },
-  { name: 'Finance', color: '#B5D6F6' },
-  { name: 'Personal Development', color: '#F6E7B5' },
-];
+const GENRES = BOOK_GENRES;
 
 const CARD_SHADOW = Platform.OS === 'ios'
   ? {
@@ -51,26 +49,28 @@ export default function AddBookScreen() {
   const [category, setCategory] = useState('library');
 
   const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      if (!asset.uri) return;
-      // Validate file type
-      if (!asset.uri.match(/\.(jpg|jpeg|png)$/i)) {
-        setError('Only PNG or JPG images are allowed.');
-        return;
+    try {
+      console.log('🚀 Starting image upload...');
+      
+      // Try primary upload method first
+      let imageUrl = await uploadImageFromLibrary('images', 'book-covers');
+      
+      // If primary method fails, try fallback
+      if (!imageUrl) {
+        console.log('⚠️ Primary upload failed, trying fallback...');
+        imageUrl = await uploadImageFromLibraryFallback('images', 'book-covers');
       }
-      // Validate file size (max 10MB)
-      if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
-        setError('Image size must be less than 10MB.');
-        return;
+      
+      if (imageUrl) {
+        console.log('✅ Book image uploaded:', imageUrl);
+        setImage(imageUrl);
+        setError('');
+      } else {
+        setError('Failed to upload image. Please check your internet connection and try again.');
       }
-      setImage(asset.uri);
-      setError('');
+    } catch (error) {
+      console.error('❌ Image upload error:', error);
+      setError('Failed to upload image. Please check your internet connection and try again.');
     }
   };
 

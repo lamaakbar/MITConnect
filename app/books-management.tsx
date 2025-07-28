@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList, Alert, SafeA
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useBooks } from '../components/BookContext';
+import { getGenreColor } from '../constants/Genres';
 
 import Toast from 'react-native-root-toast';
 import AdminHeader from '../components/AdminHeader';
@@ -143,7 +144,7 @@ export default function AdminBooksScreen() {
           </Text>
           <View style={styles.bookTags}>
             {item.genre && (
-              <View style={[styles.genreChip, { backgroundColor: item.genreColor || '#A3C9A8' }]}>
+              <View style={[styles.genreChip, { backgroundColor: getGenreColor(item.genre) }]}>
                 <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>
                   {item.genre}
                 </Text>

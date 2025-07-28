@@ -17,6 +17,7 @@ import AutoCarousel from '../components/AutoCarousel';
 import { useLocalSearchParams } from 'expo-router';
 import { fetchHighlights } from '../services/supabase';
 import { supabase } from '../services/supabase';
+import { getGenreColor } from '../constants/Genres';
 
 // BookOfMonth type definition
 type BookOfMonth = {
@@ -86,6 +87,8 @@ export default function TraineeHome() {
   // Book of the Month state
   const [bookOfMonth, setBookOfMonth] = useState<BookOfMonth | null>(null);
   const [loadingBookOfMonth, setLoadingBookOfMonth] = useState(true);
+  const [ratings, setRatings] = useState<any[]>([]);
+  const [averageRating, setAverageRating] = useState(0);
 
   // Debug logging
   console.log('TraineeHome: Current userRole:', userRole, 'isInitialized:', isInitialized);
@@ -290,6 +293,41 @@ export default function TraineeHome() {
     fetchBookOfMonth();
   }, []);
 
+  // Fetch ratings for book of the month
+  const fetchRatings = async () => {
+    try {
+      if (bookOfMonth) {
+        const { data, error } = await supabase
+          .from('ratings')
+          .select('*')
+          .eq('book_id', bookOfMonth.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        setRatings(data || []);
+        
+        // Calculate average rating
+        if (data && data.length > 0) {
+          const avg = data.reduce((sum, r) => sum + r.rating, 0) / data.length;
+          setAverageRating(avg);
+        } else {
+          setAverageRating(0);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching ratings:', error);
+      setAverageRating(0);
+    }
+  };
+
+  // Fetch ratings when book of the month changes
+  useEffect(() => {
+    if (bookOfMonth) {
+      fetchRatings();
+    }
+  }, [bookOfMonth]);
+
   // Get upcoming events (events with future dates)
   const upcomingEvents = useMemo(() => {
     const today = new Date();
@@ -342,6 +380,9 @@ export default function TraineeHome() {
             )}
           </Text> 
           <View style={styles.headerIcons}> 
+            <TouchableOpacity onPress={() => router.push('/library')} style={styles.headerIcon}> 
+              <Ionicons name="library-outline" size={22} color={iconColor} /> 
+            </TouchableOpacity> 
             <TouchableOpacity onPress={toggleTheme} style={styles.headerIcon}> 
               <Feather name={isDarkMode ? 'sun' : 'moon'} size={22} color={iconColor} /> 
             </TouchableOpacity> 
@@ -470,7 +511,7 @@ export default function TraineeHome() {
                       <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
                       <Ionicons name="ellipsis-horizontal" size={18} color="#bbb" />
                     </View>
-                    <Text style={styles.eventTitle}>{item.title}</Text>
+                    <Text style={[styles.eventTitle, { color: textColor }]}>{item.title}</Text>
                     <Text style={styles.eventDesc}>{item.description}</Text>
                     {registered.includes(item.id) && (
                       <View style={styles.registeredBadge}><Text style={styles.registeredBadgeText}>Registered</Text></View>
@@ -524,8 +565,8 @@ export default function TraineeHome() {
                       router.push('/inspirer-corner');
                     }
                   } else if (link.key === 'bookclub') {
-                    if (pathname !== '/bookclub') {
-                      router.push('/bookclub');
+                    if (pathname !== '/library') {
+                      router.push('/library');
                     }
                   } else if (link.key === 'checklist') {
                     if (pathname !== '/trainee-checklist') {
@@ -577,24 +618,22 @@ export default function TraineeHome() {
                 )}
               </View>
               <View style={{ flex: 1, marginLeft: 16 }}>
-                <View style={[styles.genreChip, { backgroundColor: bookOfMonth.genre_color || '#A3C9A8' }]}><Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{bookOfMonth.genre || 'Philosophical Fiction'}</Text></View>
+                <View style={[styles.genreChip, { backgroundColor: getGenreColor(bookOfMonth.genre || '') }]}><Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{bookOfMonth.genre || 'Philosophical Fiction'}</Text></View>
                 <Text style={[styles.featuredBookTitle, { color: isDarkMode ? '#fff' : '#222' }]}>{bookOfMonth.title}</Text>
                 <Text style={[styles.featuredBookAuthor, { color: isDarkMode ? '#fff' : '#888' }]}>By {bookOfMonth.author}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                   {[1,2,3,4,5].map(i => (
                     <MaterialIcons
                       key={i}
-                      name={i <= 5 ? 'star' : 'star-border'}
+                      name={i <= averageRating ? 'star' : 'star-border'}
                       size={20}
                       color="#F4B400"
                       style={{ marginRight: 2 }}
                     />
                   ))}
-                  <Text style={[styles.ratingText, { color: isDarkMode ? '#fff' : '#222' }]}>4.9</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                  <Ionicons name="person" size={16} color={isDarkMode ? '#9BA1A6' : '#888'} style={{ marginRight: 4 }} />
-                  <Text style={[styles.recommender, { color: isDarkMode ? '#9BA1A6' : '#888' }]}>Nizar Naghi</Text>
+                  <Text style={[styles.ratingText, { color: isDarkMode ? '#fff' : '#222', fontSize: 12 }]}>
+                    {averageRating > 0 ? averageRating.toFixed(1) : 'No ratings'} {ratings.length > 0 && `(${ratings.length} ratings)`}
+                  </Text>
                 </View>
                 {bookOfMonth.description && (
                   <Text style={[styles.bookDescription, { color: isDarkMode ? '#ccc' : '#666' }]} numberOfLines={2}>

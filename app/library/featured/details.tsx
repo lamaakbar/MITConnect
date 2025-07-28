@@ -1,280 +1,479 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, TextInput, SafeAreaView, FlatList } from 'react-native';
-import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  Image, 
+  TouchableOpacity, 
+  ScrollView, 
+  TextInput, 
+  Alert, 
+  ActivityIndicator,
+  StatusBar
+} from 'react-native';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useBooks } from '../../../components/BookContext';
+import { useTheme } from '../../../components/ThemeContext';
+import { useThemeColor } from '../../../hooks/useThemeColor';
+import { useUserContext } from '../../../components/UserContext';
+import { supabase } from '../../../services/supabase';
+import { getGenreColor } from '../../../constants/Genres';
 
+// Featured book data
 const FEATURED_BOOK = {
-  id: 'featured',
-  title: 'The Alchemist',
-  author: 'Paulo Coelho',
-  genre: 'Philosophical Fiction',
-  genreColor: '#A3C9A8',
-  cover: 'https://covers.openlibrary.org/b/id/7222246-L.jpg',
-  description: 'The Alchemist is a novel by Paulo Coelho that follows the journey of Santiago, a young Andalusian shepherd who dreams of finding a hidden treasure near the Egyptian pyramids. Along the way, he meets several people — including a king, a merchant, an Englishman, and an alchemist — each helping him discover deeper truths about life. The story is a spiritual and philosophical journey that teaches readers about following one\'s dreams, listening to the heart, and trusting the universe.',
-  rating: 4.9,
+  id: 1,
+  title: "Think and Grow Rich",
+  author: "Napoleon Hill",
+  genre: "Self-Help",
+  genreColor: getGenreColor("Self-Help"),
+  cover: "https://covers.openlibrary.org/b/id/7222246-L.jpg",
+  description: "Think and Grow Rich is a personal development and self-help book written by Napoleon Hill and inspired by a suggestion from Scottish-American businessman Andrew Carnegie. The book was first published in 1937 and has sold over 100 million copies worldwide.",
+
   ratingCount: 44,
-  recommender: 'Nizar Naghi',
+  averageRating: 4.9
+};
+
+type Rating = {
+  id: number;
+  user_id: string;
+  book_id: number;
+  rating: number;
+  created_at: string;
+  user_name?: string;
+};
+
+type Comment = {
+  id: number;
+  user_id: string;
+  book_id: number;
+  content: string;
+  created_at: string;
+  user_name?: string;
 };
 
 export default function FeaturedBookDetailsScreen() {
   const router = useRouter();
-  const { books } = useBooks();
-  const [comments, setComments] = useState<string[]>([]);
-  const [commentInput, setCommentInput] = useState('');
+  const { isDarkMode } = useTheme();
+  const { userRole } = useUserContext();
+  
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
+  const borderColor = isDarkMode ? '#2A2A2A' : '#eee';
+  const darkHighlight = '#43C6AC';
+  const iconColor = isDarkMode ? '#fff' : '#222';
 
-  // Exclude featured book from recent selections
-  const recentBooks = books.filter(b => b.title !== FEATURED_BOOK.title);
+  // State for ratings and comments
+  const [ratings, setRatings] = useState<Rating[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [userRating, setUserRating] = useState(0);
+  const [newComment, setNewComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
-  const handleAddComment = () => {
-    if (!commentInput.trim()) return;
-    setComments([commentInput.trim(), ...comments]);
-    setCommentInput('');
+  // Fetch ratings, comments, and user data
+  useEffect(() => {
+    Promise.all([
+      fetchRatings(),
+      fetchComments(),
+      getCurrentUser()
+    ]);
+  }, []);
+
+  // Fetch ratings for featured book
+  const fetchRatings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('ratings')
+        .select(`
+          *,
+          users:user_id(name)
+        `)
+        .eq('book_id', FEATURED_BOOK.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      const processedRatings = data.map((rating: any) => ({
+        ...rating,
+        user_name: rating.users?.name || 'Anonymous'
+      }));
+      
+      setRatings(processedRatings);
+    } catch (error) {
+      console.error('Error fetching ratings:', error);
+    }
   };
 
+  // Fetch comments for featured book
+  const fetchComments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .select(`
+          *,
+          users:user_id(name)
+        `)
+        .eq('book_id', FEATURED_BOOK.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      const processedComments = data.map((comment: any) => ({
+        ...comment,
+        user_name: comment.users?.name || 'Anonymous'
+      }));
+      
+      setComments(processedComments);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  };
+
+  // Get current user and their rating
+  const getCurrentUser = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+      
+      if (user) {
+        // Get user's existing rating
+        const { data: userRatingData } = await supabase
+          .from('ratings')
+          .select('rating')
+          .eq('book_id', FEATURED_BOOK.id)
+          .eq('user_id', user.id)
+          .single();
+        
+        if (userRatingData) {
+          setUserRating(userRatingData.rating);
+        }
+      }
+    } catch (error) {
+      console.error('Error getting user:', error);
+    }
+  };
+
+  // Submit rating
+  const submitRating = async (rating: number) => {
+    if (!currentUser) {
+      Alert.alert('Error', 'Please log in to rate this book');
+      return;
+    }
+    
+    try {
+      setSubmitting(true);
+      
+      const { error } = await supabase
+        .from('ratings')
+        .upsert({
+          user_id: currentUser.id,
+          book_id: FEATURED_BOOK.id,
+          rating: rating
+        });
+      
+      if (error) throw error;
+      
+      setUserRating(rating);
+      await fetchRatings();
+      Alert.alert('Success', 'Rating submitted successfully!');
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      Alert.alert('Error', 'Failed to submit rating');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Submit comment
+  const submitComment = async () => {
+    if (!currentUser) {
+      Alert.alert('Error', 'Please log in to comment');
+      return;
+    }
+    
+    if (!newComment.trim()) {
+      Alert.alert('Error', 'Please enter a comment');
+      return;
+    }
+    
+    try {
+      setSubmitting(true);
+      
+      const { error } = await supabase
+        .from('comments')
+        .insert({
+          user_id: currentUser.id,
+          book_id: FEATURED_BOOK.id,
+          content: newComment.trim()
+        });
+      
+      if (error) throw error;
+      
+      setNewComment('');
+      await fetchComments();
+      Alert.alert('Success', 'Comment submitted successfully!');
+    } catch (error) {
+      console.error('Error submitting comment:', error);
+      Alert.alert('Error', 'Failed to submit comment');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Calculate average rating
+  const averageRating = ratings.length > 0 
+    ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length 
+    : FEATURED_BOOK.averageRating;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 32 }}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#222" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Book Details</Text>
-          <View style={{ width: 24 }} />
-        </View>
+    <View style={[styles.container, { backgroundColor }]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      
+      {/* Header */}
+      <View style={[styles.header, { 
+        backgroundColor: isDarkMode ? '#23272b' : '#fff',
+        borderBottomColor: borderColor
+      }]}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+          <Ionicons name="arrow-back" size={24} color={iconColor} />
+        </TouchableOpacity>
+        <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? '#fff' : textColor }}>
+          MIT<Text style={{ color: darkHighlight }}>Connect</Text>
+        </Text>
+        <TouchableOpacity 
+          onPress={() => router.push('/library')} 
+          style={{ 
+            padding: 8, 
+            backgroundColor: darkHighlight, 
+            borderRadius: 8,
+            marginLeft: 8
+          }}
+        >
+          <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Library</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* Book Details Card */}
-        <View style={styles.bookCard}>
-          <View style={{ flexDirection: 'row' }}>
-            <Image source={{ uri: FEATURED_BOOK.cover }} style={styles.bookCover} />
-            <View style={{ flex: 1, marginLeft: 16 }}>
-              <View style={[styles.genreChip, { backgroundColor: FEATURED_BOOK.genreColor }]}> 
-                <Text style={styles.genreText}>{FEATURED_BOOK.genre}</Text>
-              </View>
-              <Text style={styles.bookTitle}>{FEATURED_BOOK.title}</Text>
-              <Text style={styles.bookAuthor}>By {FEATURED_BOOK.author}</Text>
-            </View>
-          </View>
-
-          {/* About This Book */}
-          {FEATURED_BOOK.description && (
-            <View style={styles.aboutBox}>
-              <Text style={styles.aboutLabel}>About This Book</Text>
-              <Text style={styles.aboutText}>{FEATURED_BOOK.description}</Text>
-            </View>
-          )}
-
-          {/* Stats Row */}
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Ionicons name="person-outline" size={30} color="#1abc9c" style={{ marginBottom: 4 }} />
-              <Text style={styles.statNameBold}>Nizar Naghi</Text>
-              <Text style={styles.statLabel}>Recommended by</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Ionicons name="book-outline" size={30} color="#2979ff" style={{ marginBottom: 4 }} />
-              <Text style={styles.statNumber}>44</Text>
-              <Text style={styles.statLabel}>Book</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Ionicons name="star-outline" size={30} color="#FFA726" style={{ marginBottom: 4 }} />
-              <Text style={styles.statNumber}>4.9</Text>
-              <Text style={styles.statLabel}>Rating</Text>
-            </View>
-          </View>
-
-          {/* Comments Section */}
-          <View style={styles.commentSection}>
-            <Text style={styles.commentTitle}>Comments</Text>
-            <View style={styles.commentInputRow}>
-              <TextInput
-                style={styles.commentInputArea}
-                placeholder="Write a comment..."
-                value={commentInput}
-                onChangeText={setCommentInput}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Book Information Section */}
+        <View style={{ padding: 18 }}>
+          <View style={{ flexDirection: 'row', marginBottom: 20 }}>
+            <View style={{ width: 120, height: 180, borderRadius: 12, overflow: 'hidden', marginRight: 16 }}>
+              <Image 
+                source={{ uri: FEATURED_BOOK.cover }} 
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+                onError={(error) => console.log('❌ Book image error:', error.nativeEvent.error)}
+                onLoad={() => console.log('✅ Book image loaded successfully')}
               />
             </View>
-            <TouchableOpacity
-              style={styles.commentPostBtn}
-              onPress={handleAddComment}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.commentPostBtnText}>Post Comment</Text>
-            </TouchableOpacity>
-            <Text style={styles.commentSubtitle}>Recent Comments</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.featuredTitle, { color: textColor, fontSize: 24, fontWeight: '700', marginBottom: 8 }]}>{FEATURED_BOOK.title}</Text>
+              <Text style={[styles.featuredAuthor, { color: secondaryTextColor, fontSize: 16, marginBottom: 12 }]}>By {FEATURED_BOOK.author}</Text>
+              
+              <View style={[styles.genreChip, { backgroundColor: FEATURED_BOOK.genreColor, marginBottom: 12 }]}>
+                <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{FEATURED_BOOK.genre}</Text>
+              </View>
+              
+              {/* Average Rating Display */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                {[1,2,3,4,5].map(i => (
+                  <MaterialIcons
+                    key={i}
+                    name={i <= averageRating ? 'star' : 'star-border'}
+                    size={20}
+                    color="#F4B400"
+                    style={{ marginRight: 2 }}
+                  />
+                ))}
+                <Text style={[styles.ratingText, { color: textColor, marginLeft: 8, fontSize: 16 }]}>
+                  {averageRating.toFixed(1)} ({ratings.length} ratings)
+                </Text>
+              </View>
+              
+
+            </View>
+          </View>
+          
+          {/* About This Book */}
+          <View style={[styles.aboutBox, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9', marginBottom: 24 }]}>
+            <Text style={[styles.aboutLabel, { color: textColor }]}>About This Book</Text>
+            <Text style={[styles.aboutText, { color: isDarkMode ? '#ccc' : '#444' }]}>{FEATURED_BOOK.description}</Text>
+          </View>
+        </View>
+
+        {/* User Rating Section */}
+        <View style={{ paddingHorizontal: 18, marginBottom: 24 }}>
+          <View style={[styles.rateBox, { backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9' }]}>
+            <Text style={[styles.rateLabel, { color: textColor, fontSize: 18, fontWeight: '600', marginBottom: 12 }]}>
+              <MaterialIcons name="star-border" size={20} color="#F4B400" /> Rate This Book
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 8 }}>
+              {[1,2,3,4,5].map(i => (
+                <TouchableOpacity key={i} onPress={() => submitRating(i)} disabled={submitting}>
+                  <MaterialIcons
+                    name={i <= userRating ? 'star' : 'star-border'}
+                    size={32}
+                    color="#F4B400"
+                    style={{ marginHorizontal: 4 }}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+            {userRating > 0 && (
+              <Text style={[styles.ratingText, { color: isDarkMode ? '#aaa' : '#555', textAlign: 'center', fontSize: 14 }]}>
+                You rated this book {userRating} star{userRating > 1 ? 's' : ''}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Comments Section */}
+        <View style={{ paddingHorizontal: 18 }}>
+          <View style={styles.commentSection}>
+            <Text style={[styles.commentTitle, { color: textColor, fontSize: 18, fontWeight: '600', marginBottom: 16 }]}>
+              Comments ({comments.length})
+            </Text>
+            
+            {currentUser && (
+              <>
+                <View style={styles.commentInputRow}>
+                  <TextInput
+                    style={[styles.commentInputArea, { 
+                      backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9', 
+                      color: textColor, 
+                      borderColor: borderColor,
+                      minHeight: 80,
+                      padding: 12
+                    }]}
+                    placeholder="Write a comment..."
+                    placeholderTextColor={isDarkMode ? '#888' : '#aaa'}
+                    value={newComment}
+                    onChangeText={setNewComment}
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                  />
+                </View>
+                <TouchableOpacity
+                  style={[styles.commentPostBtn, { 
+                    backgroundColor: isDarkMode ? '#23272b' : '#e6f0fe',
+                    paddingVertical: 12,
+                    paddingHorizontal: 20,
+                    borderRadius: 8,
+                    marginTop: 8,
+                    marginBottom: 16
+                  }]}
+                  onPress={submitComment}
+                  disabled={submitting || !newComment.trim()}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.commentPostBtnText, { 
+                    color: isDarkMode ? '#43C6AC' : '#2196f3',
+                    textAlign: 'center',
+                    fontWeight: '600'
+                  }]}>
+                    {submitting ? 'Posting...' : 'Post Comment'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+            
+            <Text style={[styles.commentSubtitle, { color: textColor, marginBottom: 12 }]}>Recent Comments</Text>
             <View style={styles.commentList}>
               {comments.length === 0 ? (
-                <Text style={styles.noComments}>No comments yet. Be the first to comment!</Text>
+                <Text style={[styles.noComments, { color: isDarkMode ? '#aaa' : '#888' }]}>
+                  No comments yet. Be the first to comment!
+                </Text>
               ) : (
-                comments.map((c, idx) => (
-                  <View key={idx} style={styles.commentBubble}>
-                    <Text style={styles.commentText}>{c}</Text>
+                comments.map((comment, idx) => (
+                  <View key={idx} style={[styles.commentBubble, { 
+                    backgroundColor: isDarkMode ? '#23272b' : '#f6f7f9',
+                    marginBottom: 12,
+                    padding: 16
+                  }]}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <Text style={[styles.commentAuthor, { color: textColor, fontWeight: '600' }]}>
+                        {comment.user_name}
+                      </Text>
+                      <Text style={[styles.commentDate, { color: isDarkMode ? '#aaa' : '#888', fontSize: 12 }]}>
+                        {new Date(comment.created_at).toLocaleDateString()}
+                      </Text>
+                    </View>
+                    <Text style={[styles.commentText, { color: textColor, lineHeight: 20 }]}>
+                      {comment.content}
+                    </Text>
                   </View>
                 ))
               )}
             </View>
           </View>
         </View>
-
-        {/* Recent Selections */}
-        <View style={styles.recentHeaderRow}>
-          <Text style={styles.sectionTitle}><Feather name="clock" size={16} color="#3AC569" /> Recent Selections</Text>
-        </View>
-        <FlatList
-          data={recentBooks}
-          keyExtractor={item => item.id}
-          scrollEnabled={false}
-          renderItem={({ item }) => (
-            <View style={styles.recentCard}>
-              <Image source={{ uri: item.cover }} style={styles.recentCover} />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.recentTitle}>{item.title}</Text>
-                <Text style={styles.recentAuthor}>By {item.author}</Text>
-                <View style={[styles.genreChip, { alignSelf: 'flex-start', marginTop: 4, backgroundColor: item.genreColor }]}> 
-                  <Text style={styles.genreText}>{item.genre}</Text>
-                </View>
-              </View>
-              <TouchableOpacity style={{ alignSelf: 'center' }} onPress={() => router.push('/bookclub')}>
-                <Text style={styles.moreDetails}>More Details</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          ListEmptyComponent={<Text style={{ color: '#888', textAlign: 'center', marginTop: 16 }}>No recent selections.</Text>}
-        />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f6f7f9',
-  },
   container: {
     flex: 1,
-    backgroundColor: '#f6f7f9',
-    paddingHorizontal: 12,
-    paddingTop: 8,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+  },
+  featuredTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  featuredAuthor: {
+    fontSize: 14,
     marginBottom: 8,
   },
-  backBtn: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#222',
-  },
-  bookCard: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 18,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  bookCover: {
-    width: 110,
-    height: 160,
-    borderRadius: 12,
-    backgroundColor: '#eee',
-  },
-  genreChip: {
-    alignSelf: 'flex-start',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginBottom: 6,
-  },
-  genreText: {
-    fontSize: 11,
-    color: '#222',
-    fontWeight: '500',
-  },
-  bookTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#222',
-    marginBottom: 2,
-    marginTop: 2,
-  },
-  bookAuthor: {
+  ratingText: {
     fontSize: 14,
-    color: '#555',
-    marginBottom: 2,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  recommender: {
+    fontSize: 13,
   },
   aboutBox: {
-    backgroundColor: '#f6f7f9',
-    borderRadius: 10,
-    padding: 10,
     marginTop: 16,
-    marginBottom: 10,
+    padding: 16,
+    borderRadius: 12,
   },
   aboutLabel: {
-    fontWeight: 'bold',
-    fontSize: 13,
-    marginBottom: 4,
-    color: '#222',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
   },
   aboutText: {
-    fontSize: 13,
-    color: '#444',
-    lineHeight: 18,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#f6f7f9',
-    borderRadius: 20,
-    marginHorizontal: 4,
-    alignItems: 'center',
-    paddingVertical: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  statNameBold: {
-    fontSize: 15,
-    color: '#222',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  statNumber: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#222',
-    marginBottom: 2,
-    textAlign: 'center',
-  },
-  statLabel: {
     fontSize: 14,
-    color: '#555',
-    fontWeight: '500',
-    textAlign: 'center',
-    marginTop: 0,
+    lineHeight: 20,
+  },
+  rateBox: {
+    backgroundColor: '#f6f7f9',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  rateLabel: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#222',
+    marginBottom: 4,
   },
   commentSection: {
-    marginTop: 18,
+    marginTop: 12,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#eee',
@@ -314,100 +513,50 @@ const styles = StyleSheet.create({
   },
   commentPostBtnText: {
     color: '#2196f3',
-    fontWeight: 'bold',
-    fontSize: 20,
+    fontSize: 16,
+    fontWeight: '600',
   },
   commentSubtitle: {
     fontWeight: 'bold',
     fontSize: 14,
     color: '#222',
-    marginBottom: 6,
-    marginTop: 8,
+    marginBottom: 8,
   },
   commentList: {
-    marginBottom: 10,
-    maxHeight: 120,
-  },
-  noComments: {
-    color: '#888',
-    fontSize: 13,
-    textAlign: 'center',
-    marginBottom: 8,
+    marginTop: 4,
   },
   commentBubble: {
     backgroundColor: '#f6f7f9',
-    borderRadius: 10,
-    padding: 8,
-    marginBottom: 6,
-    alignSelf: 'flex-start',
-    maxWidth: '90%',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  commentAuthor: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  commentDate: {
+    fontSize: 12,
   },
   commentText: {
     fontSize: 14,
-    color: '#222',
+    lineHeight: 20,
   },
-  recentHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 18,
-    marginBottom: 12,
-    paddingHorizontal: 4,
+  noComments: {
+    fontSize: 14,
+    color: '#888',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 8,
   },
-  sectionTitle: {
-    fontWeight: 'bold',
-    fontSize: 18,
-    color: '#222',
-    marginTop: 0,
-    marginBottom: 0,
-    flexShrink: 0,
-    flexGrow: 1,
-  },
-  goLibraryBtnSmall: {
-    backgroundColor: '#1abc9c',
-    borderRadius: 6,
-    paddingVertical: 3,
+  genreChip: {
     paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
   },
-  goLibraryBtnTextSmall: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  recentCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 10,
-    marginBottom: 14,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  recentCover: {
-    width: 54,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: '#eee',
-  },
-  recentTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#222',
-    marginBottom: 2,
-  },
-  recentAuthor: {
-    fontSize: 13,
-    color: '#555',
-  },
-  moreDetails: {
-    color: '#3AC569',
-    fontWeight: 'bold',
-    fontSize: 13,
-    marginLeft: 8,
+  genreText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
 }); 

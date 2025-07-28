@@ -1,15 +1,21 @@
 import { supabase } from './supabase';
 
-// Database-matching type for trainee feedback
+// Database-matching type for trainee feedback with file support
 export interface TraineeFeedback {
   id: string;
   trainee_id: string;
   trainee_name: string;
-  text: string; // Main text column
+  feedback_text: string; // Changed from 'text' to match database column
   rating: number;
-  date: string; // Date column as shown in your table
+  submission_date: string; // Changed from 'date' to match database column
   created_at?: string; // Optional fallback
-  submission_date?: string; // Optional fallback
+  // File fields (nullable)
+  file_name?: string | null;
+  file_path?: string | null;
+  file_size?: number | null;
+  file_type?: string | null;
+  storage_path?: string | null;
+  uploaded_at?: string | null;
 }
 
 // Input type for creating new feedback
@@ -17,6 +23,7 @@ export interface CreateFeedbackInput {
   feedback_text: string;
   rating: number;
   trainee_name?: string; // Optional, can be derived from user profile
+  file?: File; // Optional single file to upload
 }
 
 // Response type for service operations
@@ -27,7 +34,70 @@ export interface FeedbackServiceResponse<T> {
 
 export class FeedbackService {
   /**
-   * Submit new feedback to the database
+   * Upload file to Supabase storage and return file data
+   */
+  static async uploadFile(file: File, userId: string): Promise<{ fileData: any; error: string | null }> {
+    try {
+      // Validate file
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (file.size > maxSize) {
+        return { fileData: null, error: 'File size must be less than 50MB.' };
+      }
+
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain',
+        'image/jpeg',
+        'image/png',
+        'image/gif'
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        return { fileData: null, error: 'File type not allowed. Please upload PDF, Word document, text file, or image.' };
+      }
+
+      // Generate unique file path
+      const timestamp = new Date().getTime();
+      const fileName = `${userId}/${timestamp}_${file.name}`;
+      
+      // Upload to Supabase storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('trainee-feedback-files')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        console.error('File upload error:', uploadError);
+        return { fileData: null, error: 'Failed to upload file. Please try again.' };
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('trainee-feedback-files')
+        .getPublicUrl(fileName);
+
+      // Return file data to be saved with feedback
+      return {
+        fileData: {
+          file_name: file.name,
+          file_path: urlData.publicUrl,
+          file_size: file.size,
+          file_type: file.type,
+          storage_path: fileName,
+          uploaded_at: new Date().toISOString()
+        },
+        error: null
+      };
+
+    } catch (error) {
+      console.error('Unexpected error in uploadFile:', error);
+      return { fileData: null, error: 'An unexpected error occurred while uploading file.' };
+    }
+  }
+
+  /**
+   * Submit new feedback to the database with optional file upload
    */
   static async submitFeedback(input: CreateFeedbackInput): Promise<FeedbackServiceResponse<TraineeFeedback>> {
     try {
@@ -78,13 +148,35 @@ export class FeedbackService {
         };
       }
 
+      // Handle file upload if provided
+      let fileData = null;
+      if (input.file) {
+        const uploadResult = await this.uploadFile(input.file, user.id);
+        if (uploadResult.error) {
+          return {
+            data: null,
+            error: uploadResult.error
+          };
+        }
+        fileData = uploadResult.fileData;
+      }
+
       // Prepare data for insertion (matches your table structure)
       const insertData = {
         trainee_id: user.id,
         trainee_name: traineeName,
-        text: input.feedback_text.trim(),
+        feedback_text: input.feedback_text.trim(),
         rating: input.rating,
-        date: new Date().toISOString().split('T')[0] // Add current date in YYYY-MM-DD format
+        submission_date: new Date().toISOString().split('T')[0],
+        // Include file data if available
+        ...(fileData && {
+          file_name: fileData.file_name,
+          file_path: fileData.file_path,
+          file_size: fileData.file_size,
+          file_type: fileData.file_type,
+          storage_path: fileData.storage_path,
+          uploaded_at: fileData.uploaded_at
+        })
       };
       
       console.log('Inserting feedback data:', insertData);
@@ -101,18 +193,12 @@ export class FeedbackService {
 
       if (error) {
         console.error('Database error when submitting feedback:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-        console.error('Error message:', error.message);
-        console.error('Error code:', error.code);
-        console.error('Error hint:', error.hint);
-        console.error('Error details object keys:', Object.keys(error));
         
-        // Check if it's a table not found error
-        if (!error.message && Object.keys(error).length === 0) {
-          return {
-            data: null,
-            error: 'Table "trainee_feedback" does not exist. Please create the table in Supabase first.'
-          };
+        // If file was uploaded but feedback failed, clean up the file
+        if (fileData && fileData.storage_path) {
+          await supabase.storage
+            .from('trainee-feedback-files')
+            .remove([fileData.storage_path]);
         }
         
         return {
@@ -144,7 +230,7 @@ export class FeedbackService {
       const { data, error } = await supabase
         .from('trainee_feedback')
         .select('*')
-        .order('date', { ascending: false });
+        .order('submission_date', { ascending: false });
 
       if (error) {
         console.error('Database error when fetching all feedback:', error);
@@ -186,7 +272,7 @@ export class FeedbackService {
         .from('trainee_feedback')
         .select('*')
         .eq('trainee_id', user.id)
-        .order('date', { ascending: false });
+        .order('submission_date', { ascending: false });
 
       if (error) {
         console.error('Database error when fetching user feedback:', error);
@@ -291,7 +377,7 @@ export class FeedbackService {
   }
 
   /**
-   * Delete feedback (if user wants to remove their submission)
+   * Delete feedback (relies on database RLS policies for admin access)
    */
   static async deleteFeedback(feedbackId: string): Promise<FeedbackServiceResponse<boolean>> {
     try {
@@ -304,14 +390,23 @@ export class FeedbackService {
         };
       }
 
+      // Try to delete the feedback - RLS policies will handle admin vs user permissions
       const { error } = await supabase
         .from('trainee_feedback')
         .delete()
-        .eq('id', feedbackId)
-        .eq('trainee_id', user.id); // Ensure user can only delete their own feedback
+        .eq('id', feedbackId);
 
       if (error) {
         console.error('Database error when deleting feedback:', error);
+        
+        // Provide more user-friendly error messages
+        if (error.code === '42501') {
+          return {
+            data: null,
+            error: 'You do not have permission to delete this feedback.'
+          };
+        }
+        
         return {
           data: null,
           error: 'Failed to delete feedback. Please try again later.'
@@ -346,7 +441,7 @@ export class FeedbackService {
       const { data: allFeedback, error } = await supabase
         .from('trainee_feedback')
         .select('*')
-        .order('date', { ascending: false });
+        .order('submission_date', { ascending: false });
 
       if (error) {
         console.error('Database error when fetching feedback stats:', error);

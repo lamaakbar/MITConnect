@@ -16,6 +16,7 @@ import { useUserContext } from '../components/UserContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../components/AuthContext';
 import { supabase } from '../services/supabase';
+import { getGenreColor } from '../constants/Genres';
 
 type Book = {
   id: number;
@@ -242,7 +243,11 @@ export default function LibraryScreen() {
         keyExtractor={item => item.id?.toString()}
         contentContainerStyle={styles.bookList}
         renderItem={({ item }) => (
-          <View style={[styles.bookCard, { backgroundColor: cardBackground }]}> 
+          <TouchableOpacity 
+            style={[styles.bookCard, { backgroundColor: cardBackground }]}
+            onPress={() => router.push(`/library/${item.id}/details`)}
+            activeOpacity={0.7}
+          > 
             <View style={styles.bookCoverContainer}>
               {item.cover_image_url ? (
                 <Image 
@@ -269,17 +274,14 @@ export default function LibraryScreen() {
             <View style={styles.bookInfo}>
               <Text style={[styles.bookTitle, { color: textColor }]}>{item.title}</Text>
               <Text style={[styles.bookAuthor, { color: secondaryTextColor }]}>{`By ${item.author}`}</Text>
-              <Text style={[styles.bookDebug, { color: secondaryTextColor, fontSize: 10 }]}>
-                Cover: {item.cover_image_url ? 'Real' : 'None'} | ID: {item.id}
-              </Text>
               {/* Optionally display genre if available */}
               {item.genre && (
-                <View style={[styles.genreChip, { backgroundColor: item.genreColor || '#A3C9A8' }]}> 
+                <View style={[styles.genreChip, { backgroundColor: getGenreColor(item.genre) }]}> 
                   <Text style={[styles.genreText, { color: isDarkMode ? '#23272b' : '#222' }]}>{item.genre}</Text>
                 </View>
               )}
             </View>
-          </View>
+          </TouchableOpacity>
         )}
         ListEmptyComponent={() => (
           <View style={[styles.emptyState, { backgroundColor: cardBackground }]}>
@@ -347,21 +349,17 @@ const styles = StyleSheet.create({
   },
   bookAuthor: {
     fontSize: 14,
-    marginBottom: 8,
-  },
-  bookDebug: {
-    fontSize: 10,
-    color: '#999',
-    marginTop: 2,
+    marginBottom: 6,
   },
   genreChip: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginTop: 2,
   },
   genreText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '600',
   },
   emptyState: {
