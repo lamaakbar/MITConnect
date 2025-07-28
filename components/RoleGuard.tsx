@@ -10,7 +10,7 @@ interface RoleGuardProps {
 export default function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { userRole, userProfile, isInitialized, getHomeRoute } = useUserContext();
+  const { userRole, effectiveRole, userProfile, isInitialized, getHomeRoute } = useUserContext();
 
   useEffect(() => {
     if (!isInitialized) {
@@ -20,10 +20,10 @@ export default function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
     }
 
     const userName = userProfile?.name || 'Unknown User';
-    console.log('RoleGuard: Checking access, user:', userName, 'userRole:', userRole, 'allowedRoles:', allowedRoles, 'pathname:', pathname);
+    console.log('RoleGuard: Checking access, user:', userName, 'effectiveRole:', effectiveRole, 'allowedRoles:', allowedRoles, 'pathname:', pathname);
 
-    // Check if user has access to this screen
-    if (!allowedRoles.includes(userRole)) {
+    // Check if user has access to this screen (use effectiveRole for "View as" functionality)
+    if (!allowedRoles.includes(effectiveRole)) {
       const userName = userProfile?.name || 'Unknown User';
       console.log('RoleGuard: Access denied for user:', userName, 'redirecting to correct home');
       const correctHome = getHomeRoute();
@@ -31,15 +31,15 @@ export default function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
         router.replace(correctHome as any);
       }
     }
-  }, [userRole, isInitialized, allowedRoles, pathname, router, getHomeRoute]);
+  }, [effectiveRole, isInitialized, allowedRoles, pathname, router, getHomeRoute]);
 
   // Don't render children until initialized
   if (!isInitialized) {
     return null;
   }
 
-  // Check if user has access
-  if (!allowedRoles.includes(userRole)) {
+  // Check if user has access (use effectiveRole for "View as" functionality)
+  if (!allowedRoles.includes(effectiveRole)) {
     return null; // Will redirect in useEffect
   }
 

@@ -44,11 +44,14 @@ export default function EmployeeHome() {
   const { fromLogin } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState('home');
   const { events, registered } = useEventContext();
-  const { userRole, isInitialized } = useUserContext();
+  const { effectiveRole, isInitialized, viewAs, setViewAs } = useUserContext();
   const { user, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const [profileVisible, setProfileVisible] = useState(false);
   const insets = useSafeAreaInsets();
+
+  // Debug viewAs state
+  console.log('EmployeeHome: viewAs state:', viewAs);
 
   // Highlights state
   const [highlightCards, setHighlightCards] = useState<any[]>([]);
@@ -214,7 +217,7 @@ export default function EmployeeHome() {
   const portalLabelColor = isDarkMode ? '#fff' : textColor;
 
   // Debug logging
-  console.log('EmployeeHome: Current userRole:', userRole, 'isInitialized:', isInitialized);
+  console.log('EmployeeHome: Current effectiveRole:', effectiveRole, 'isInitialized:', isInitialized);
 
   // Get upcoming events (events with future dates)
   const upcomingEvents = useMemo(() => {
@@ -246,7 +249,13 @@ export default function EmployeeHome() {
       <StatusBar style={isDarkMode ? 'light' : 'dark'} translucent backgroundColor="transparent" />
       <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: insets.top }]}> 
         <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} /> 
-        <Text style={[styles.appName, { color: textColor }]}><Text style={{ color: textColor }}>MIT</Text><Text style={{ color: '#43C6AC' }}>Connect</Text></Text> 
+        <Text style={[styles.appName, { color: textColor }]}>
+          <Text style={{ color: textColor }}>MIT</Text>
+          <Text style={{ color: '#43C6AC' }}>Connect</Text>
+          {viewAs && (
+            <Text style={{ color: '#FF6B6B', fontSize: 12, fontWeight: 'normal' }}> (Preview Mode)</Text>
+          )}
+        </Text> 
         <View style={styles.headerIcons}> 
           <TouchableOpacity onPress={toggleTheme} style={styles.headerIcon}> 
             <Feather name={isDarkMode ? 'sun' : 'moon'} size={22} color={iconColor} /> 
@@ -254,8 +263,50 @@ export default function EmployeeHome() {
           <TouchableOpacity onPress={() => setProfileVisible(true)} style={styles.headerIcon}> 
             <Ionicons name="person-circle-outline" size={26} color={iconColor} /> 
           </TouchableOpacity> 
-        </View> 
+        </View>
       </View>
+
+      {/* Return to Admin View Banner - Show when in viewAs mode */}
+      {viewAs && (
+        <View style={{
+          backgroundColor: '#FF6B6B',
+          paddingVertical: 12,
+          paddingHorizontal: 16,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <Ionicons name="warning" size={20} color="#fff" />
+          <Text style={{
+            color: '#fff',
+            fontSize: 16,
+            fontWeight: '600',
+            marginLeft: 8,
+            flex: 1,
+            textAlign: 'center',
+          }}>
+            Preview Mode - Viewing as {viewAs}
+          </Text>
+          <TouchableOpacity
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.2)',
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 8,
+            }}
+            onPress={() => {
+              console.log('EmployeeHome Banner: Reset to Admin View pressed');
+              setViewAs(null);
+              router.replace('/admin-home');
+            }}
+          >
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
+              Exit Preview
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
         <ScrollView contentContainerStyle={[styles.scrollContent, {flexGrow: 1}]} showsVerticalScrollIndicator={false}>
           <View style={styles.sectionHeaderContainer}>
             <View style={[styles.sectionIconContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E8F5E8' }]}>

@@ -32,8 +32,12 @@ export default function EventsScreen() {
   const secondaryTextColor = isDarkMode ? '#B0B0B0' : '#666666';
   const borderColor = isDarkMode ? '#333333' : '#E5E5E5';
   const iconColor = isDarkMode ? '#FFFFFF' : '#1A1A1A';
-  const { userRole, getHomeRoute } = useUserContext();
+  const { userRole, getHomeRoute, viewAs, setViewAs } = useUserContext();
   const insets = useSafeAreaInsets();
+  
+  // Debug viewAs state
+  console.log('Events: viewAs state:', viewAs);
+  console.log('Events: userRole:', userRole);
   
   // Dark mode specific colors
   const darkBg = '#121212';
@@ -274,6 +278,9 @@ export default function EventsScreen() {
             color: isDarkMode ? darkText : textColor
           }}>
             MIT<Text style={{ color: darkHighlight }}>Connect</Text>
+            {viewAs && (
+              <Text style={{ color: '#FF6B6B', fontSize: 12, fontWeight: 'normal' }}> (Preview Mode)</Text>
+            )}
           </Text>
           <View style={{ width: 32 }} />
         </View>
@@ -353,6 +360,48 @@ export default function EventsScreen() {
           </View>
         </ScrollView>
       </Animated.View>
+      
+      {/* Return to Admin Button - Only show in View As mode */}
+      {viewAs && (
+        <View style={{
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          backgroundColor: isDarkMode ? darkCard : cardBackground,
+          borderBottomWidth: 1,
+          borderBottomColor: isDarkMode ? darkBorder : borderColor,
+        }}>
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#FF6B6B',
+              paddingVertical: 12,
+              paddingHorizontal: 20,
+              borderRadius: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#FF6B6B',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
+            onPress={() => {
+              setViewAs(null);
+              router.replace('/admin-home');
+            }}
+          >
+            <Ionicons name="arrow-back-circle" size={20} color="#fff" />
+            <Text style={{
+              color: '#fff',
+              fontSize: 16,
+              fontWeight: '600',
+              marginLeft: 8,
+            }}>
+              Return to Admin View
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
       
       <View style={{ flex: 1 }}>
         {activeTab === 'All' ? (

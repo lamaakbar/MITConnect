@@ -16,8 +16,11 @@ interface UserProfile {
 interface UserContextType {
   userRole: UserRole;
   userProfile: UserProfile | null;
+  viewAs: UserRole | null;
+  effectiveRole: UserRole;
   setUserRole: (role: UserRole) => Promise<void>;
   setUserProfile: (profile: UserProfile) => void;
+  setViewAs: (role: UserRole | null) => void;
   loadUserProfile: () => Promise<void>;
   getHomeRoute: () => string;
   isInitialized: boolean;
@@ -28,7 +31,20 @@ const UserContext = createContext<UserContextType | null>(null);
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [userRole, setUserRole] = useState<UserRole>('employee');
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [viewAs, setViewAs] = useState<UserRole | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Use this instead of role in components - viewAs takes precedence if set
+  const effectiveRole = viewAs || userRole;
+
+  // Add debugging for viewAs state changes
+  const setViewAsWithLogging = (role: UserRole | null) => {
+    console.log('UserContext: setViewAs called with:', role);
+    console.log('UserContext: Previous viewAs state:', viewAs);
+    console.log('UserContext: Current userRole:', userRole);
+    setViewAs(role);
+    console.log('UserContext: New effectiveRole will be:', role || userRole);
+  };
 
   // Load user role from storage on app start
   useEffect(() => {
@@ -112,8 +128,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       value={{
         userRole,
         userProfile,
+        viewAs,
+        effectiveRole,
         setUserRole: setUserRoleWithStorage,
         setUserProfile,
+        setViewAs: setViewAsWithLogging,
         loadUserProfile,
         getHomeRoute,
         isInitialized,

@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from './ThemeContext';
+import { useUserContext } from './UserContext';
 
 interface EventCardProps {
   event: {
@@ -34,6 +35,10 @@ const EventCard: React.FC<EventCardProps> = ({
   registrationCount
 }) => {
   const { isDarkMode } = useTheme();
+  const { viewAs } = useUserContext();
+
+  // Debug viewAs state
+  console.log('EventCard: viewAs state:', viewAs);
 
   // Helper function to format date and time
   const formatDateAndTime = (dateStr: string, timeStr: string) => {
@@ -145,7 +150,14 @@ const EventCard: React.FC<EventCardProps> = ({
             styles.registerBtn,
             buttonDisabled && [styles.registerBtnDisabled, { backgroundColor: disabledButtonBg }]
           ]}
-          onPress={onRegister}
+          onPress={() => {
+            // Prevent registration in "View As" mode
+            if (viewAs) {
+              Alert.alert('Preview Mode', 'You are in preview mode. Please return to Admin view to register for events.');
+              return;
+            }
+            onRegister();
+          }}
           disabled={buttonDisabled}
           activeOpacity={0.8}
         >
