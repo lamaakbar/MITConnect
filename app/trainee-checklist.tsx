@@ -1194,7 +1194,7 @@ export default function TraineeChecklist() {
                         fontSize: 12,
                         color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93',
                       }}>
-                        {formatDateForDisplay(feedback.date)}
+                        {formatDateForDisplay(feedback.submission_date)}
                       </Text>
                     </View>
                     
@@ -1226,7 +1226,7 @@ export default function TraineeChecklist() {
                       lineHeight: 20,
                       color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E',
                     }}>
-                      {feedback.text}
+                      {feedback.feedback_text}
                     </Text>
 
                     {/* Display uploaded file */}
@@ -1367,9 +1367,9 @@ export default function TraineeChecklist() {
                         id: '',
                         trainee_id: '',
                         trainee_name: '',
-                        text: '',
+                        feedback_text: '',
                         rating: 0,
-                        date: '',
+                        submission_date: '',
                         file_name: viewingFile.file_name,
                         file_path: viewingFile.file_path,
                         file_type: viewingFile.file_type,
