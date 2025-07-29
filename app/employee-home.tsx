@@ -464,56 +464,60 @@ export default function EmployeeHome() {
               keyExtractor={item => item.id}
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingLeft: 8, paddingBottom: 8 }}
+              contentContainerStyle={{ 
+                paddingLeft: 16, 
+                paddingRight: 24,
+                paddingBottom: 8
+              }}
+              ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   onPress={() => router.push({ pathname: '/event-details', params: { id: item.id, from: 'employee-home' } })}
                   activeOpacity={0.85}
                 >
                   <View style={[styles.eventCard, { backgroundColor: cardBackground }]}>
-                    <View style={styles.eventCardHeader}>
-                      <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
-                      <Ionicons name="ellipsis-horizontal" size={18} color={secondaryTextColor} />
+                    <View style={styles.eventCardContent}>
+                      <View style={styles.eventCardHeader}>
+                        <Text style={styles.eventDaysLeft}>{item.daysLeft} days Left</Text>
+                        <Ionicons name="ellipsis-horizontal" size={18} color={secondaryTextColor} />
+                      </View>
+                      <Text style={[styles.eventTitle, { color: textColor }]} numberOfLines={2}>{item.title}</Text>
+                      <Text style={styles.eventDesc} numberOfLines={2}>{item.description}</Text>
                     </View>
-                    <Text style={[styles.eventTitle, { color: textColor }]}>{item.title}</Text>
-                    <Text style={styles.eventDesc}>{item.description}</Text>
-                    {registered && registered.includes(item.id) && (
-                      <View style={styles.registeredBadge}>
-                        <Text style={styles.registeredBadgeText}>Registered</Text>
-                      </View>
-                    )}
-                    <TouchableOpacity
-                      style={[
-                        styles.eventBtn,
-                        registered.includes(item.id) && styles.eventBtnRegistered
-                      ]}
-                      activeOpacity={0.85}
-                      onPress={(e) => {
-                        e.stopPropagation(); // Prevent navigation to event details
-                        if (!registered.includes(item.id)) {
-                          registerEvent(item.id);
-                        }
-                      }}
-                      disabled={registered.includes(item.id)}
-                    >
-                      <Text style={[
-                        styles.eventBtnText,
-                        registered.includes(item.id) && styles.eventBtnTextRegistered
-                      ]}>
-                        {registered.includes(item.id) ? '✅ Registered' : 'Register Now!'}
-                      </Text>
-                    </TouchableOpacity>
-                    <View style={styles.eventCardFooter}>
-                      <View style={styles.eventFooterItem}>
-                        <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
-                        <Text style={styles.eventFooterText}>{item.date}</Text>
-                      </View>
-                      {item.time ? (
+                    <View style={styles.eventCardActions}>
+                      <TouchableOpacity
+                        style={[
+                          styles.eventBtn,
+                          registered.includes(item.id) && styles.eventBtnRegistered
+                        ]}
+                        activeOpacity={0.85}
+                        onPress={(e) => {
+                          e.stopPropagation(); // Prevent navigation to event details
+                          if (!registered.includes(item.id)) {
+                            registerEvent(item.id);
+                          }
+                        }}
+                        disabled={registered.includes(item.id)}
+                      >
+                        <Text style={[
+                          styles.eventBtnText,
+                          registered.includes(item.id) && styles.eventBtnTextRegistered
+                        ]}>
+                          {registered.includes(item.id) ? '✅ Registered' : 'Register Now!'}
+                        </Text>
+                      </TouchableOpacity>
+                      <View style={styles.eventCardFooter}>
                         <View style={styles.eventFooterItem}>
-                          <Ionicons name="time-outline" size={16} color="#7B61FF" />
-                          <Text style={styles.eventFooterText}>{item.time}</Text>
+                          <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
+                          <Text style={styles.eventFooterText}>{item.date}</Text>
                         </View>
-                      ) : null}
+                        {item.time ? (
+                          <View style={styles.eventFooterItem}>
+                            <Ionicons name="time-outline" size={16} color="#7B61FF" />
+                            <Text style={styles.eventFooterText}>{item.time}</Text>
+                          </View>
+                        ) : null}
+                      </View>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -712,21 +716,29 @@ const styles = StyleSheet.create({
   },
   eventCard: {
     backgroundColor: '#fff',
-    borderRadius: 18,
-    marginRight: 16,
-    padding: 16,
-    width: 220,
+    borderRadius: 20,
+    padding: 18,
+    width: 260,
+    height: 180,
     shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+    justifyContent: 'space-between',
+  },
+  eventCardContent: {
+    flex: 1,
+    marginBottom: 12,
+  },
+  eventCardActions: {
+    marginTop: 'auto',
   },
   eventCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   eventDaysLeft: {
     backgroundColor: '#F2F2F7',
@@ -738,21 +750,23 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   eventTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
-    marginBottom: 2,
+    marginBottom: 6,
+    lineHeight: 22,
   },
   eventDesc: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#888',
-    marginBottom: 8,
+    marginBottom: 10,
+    lineHeight: 18,
   },
   eventBtn: {
     backgroundColor: '#E6F0FF',
-    borderRadius: 8,
-    paddingVertical: 6,
+    borderRadius: 10,
+    paddingVertical: 8,
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   eventBtnText: {
     color: '#2196F3',
@@ -762,17 +776,18 @@ const styles = StyleSheet.create({
   eventCardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    marginTop: 0,
   },
   eventFooterItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   eventFooterText: {
     color: '#7B61FF',
     fontSize: 13,
-    marginLeft: 3,
+    marginLeft: 4,
+    fontWeight: '500',
   },
   portalRow: {
     flexDirection: 'row',
