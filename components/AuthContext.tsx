@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, initializeSession, ensureAuthenticatedSession } from '../services/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type UserRole = 'admin' | 'employee' | 'trainee';
 
@@ -24,6 +25,23 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Clear invalid session data
+  const clearInvalidSession = async () => {
+    try {
+      console.log('🧹 AuthContext: Clearing invalid session data...');
+      const keys = await AsyncStorage.getAllKeys();
+      const authKeys = keys.filter(key => key.includes('supabase') || key.includes('auth'));
+      
+      for (const key of authKeys) {
+        await AsyncStorage.removeItem(key);
+        console.log('🗑️ AuthContext: Removed:', key);
+      }
+      console.log('✅ AuthContext: Invalid session data cleared');
+    } catch (error) {
+      console.error('❌ AuthContext: Error clearing session data:', error);
+    }
+  };
 
   // Initialize session on app start
   useEffect(() => {
@@ -73,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('🔄 Initializing authentication...');
       
       // Wait for AsyncStorage to be ready
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       // Check for existing session first
       const { data: { session } } = await supabase.auth.getSession();
@@ -107,6 +125,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.log('⚠️ Error initializing auth (non-critical):', error);
+      
+      // If it's a refresh token error, clear invalid session data
+      if (error instanceof Error && (error.message?.includes('Refresh Token') || error.message?.includes('refresh token'))) {
+        console.log('🔄 Refresh token error during initialization, clearing invalid session...');
+        await clearInvalidSession();
+      }
+      
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -124,6 +149,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('❌ Error during login:', error);
+      
+      // Handle refresh token errors during login
+      if (error instanceof Error && (error.message?.includes('Refresh Token') || error.message?.includes('refresh token'))) {
+        console.log('🔄 Refresh token error during login, clearing invalid session...');
+        await clearInvalidSession();
+      }
     }
   };
 
@@ -154,6 +185,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         // Log the error but don't throw - we still want to clear local state
         console.log('⚠️ Sign out error (non-critical):', error.message);
+        
+        // Handle refresh token errors during logout
+        if (error.message?.includes('Refresh Token') || error.message?.includes('refresh token')) {
+          console.log('🔄 Refresh token error during logout, clearing invalid session...');
+          await clearInvalidSession();
+        }
       } else {
         console.log('✅ Logout successful');
       }

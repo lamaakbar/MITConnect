@@ -1,19 +1,20 @@
-import React, { Component, ReactNode } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Props {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 interface State {
   hasError: boolean;
-  error?: Error;
+  error: Error | null;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+export class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error: Error): State {
@@ -22,22 +23,66 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    
+    // Check if it's an authentication error
+    if (error.message?.includes('Refresh Token') || error.message?.includes('refresh token')) {
+      console.log('🔄 Authentication error detected, clearing invalid session...');
+      this.clearInvalidSession();
+    }
   }
 
+  clearInvalidSession = async () => {
+    try {
+      console.log('🧹 ErrorBoundary: Clearing invalid session data...');
+      const keys = await AsyncStorage.getAllKeys();
+      const authKeys = keys.filter(key => 
+        key.includes('supabase') || 
+        key.includes('auth') || 
+        key.includes('sb-')
+      );
+      
+      for (const key of authKeys) {
+        await AsyncStorage.removeItem(key);
+        console.log('🗑️ ErrorBoundary: Removed:', key);
+      }
+      console.log('✅ ErrorBoundary: Invalid session data cleared');
+    } catch (error) {
+      console.error('❌ ErrorBoundary: Error clearing session data:', error);
+    }
+  };
+
   handleRetry = () => {
-    this.setState({ hasError: false, error: undefined });
+    this.setState({ hasError: false, error: null });
+  };
+
+  handleClearSession = async () => {
+    await this.clearInvalidSession();
+    this.setState({ hasError: false, error: null });
   };
 
   render() {
     if (this.state.hasError) {
+      const isAuthError = this.state.error?.message?.includes('Refresh Token') || 
+                         this.state.error?.message?.includes('refresh token');
+
       return (
         <View style={styles.container}>
-          <Text style={styles.title}>Oops! Something went wrong</Text>
+          <Text style={styles.title}>Something went wrong</Text>
           <Text style={styles.message}>
-            We're sorry, but something unexpected happened. Please try again.
+            {isAuthError 
+              ? 'Authentication error detected. This usually happens when session data becomes invalid.'
+              : 'An unexpected error occurred.'
+            }
           </Text>
+          
+          {isAuthError && (
+            <TouchableOpacity style={styles.clearButton} onPress={this.handleClearSession}>
+              <Text style={styles.clearButtonText}>Clear Session & Retry</Text>
+            </TouchableOpacity>
+          )}
+          
           <TouchableOpacity style={styles.retryButton} onPress={this.handleRetry}>
-            <Text style={styles.retryText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
       );
@@ -53,30 +98,41 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f5f5f5',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 10,
-    textAlign: 'center',
+    color: '#333',
   },
   message: {
     fontSize: 16,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 30,
+    color: '#666',
     lineHeight: 24,
   },
+  clearButton: {
+    backgroundColor: '#ff6b6b',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 15,
+  },
+  clearButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   retryButton: {
-    backgroundColor: '#3CB371',
-    paddingHorizontal: 30,
+    backgroundColor: '#4ecdc4',
+    paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
   },
-  retryText: {
-    color: '#fff',
+  retryButtonText: {
+    color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },
