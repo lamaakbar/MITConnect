@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView, Platform } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, usePathname } from 'expo-router';
@@ -352,7 +352,12 @@ export default function EmployeeHome() {
     <RoleGuard allowedRoles={['employee']}>
       <View style={[styles.safeArea, { backgroundColor }]}> 
       <StatusBar style={isDarkMode ? 'light' : 'dark'} translucent backgroundColor="transparent" />
-      <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: insets.top }]}> 
+      <View style={[styles.header, { 
+        backgroundColor: cardBackground, 
+        borderBottomColor: borderColor, 
+        paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 10 : 16),
+        paddingBottom: Platform.OS === 'ios' ? 6 : 12,
+      }]}> 
         <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} /> 
         <Text style={[styles.appName, { color: textColor }]}>
           <Text style={{ color: textColor }}>MIT</Text>

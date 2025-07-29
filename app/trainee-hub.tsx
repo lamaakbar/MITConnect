@@ -696,12 +696,8 @@ export default function TraineeHub() {
         { 
           backgroundColor: isDarkMode ? darkCard : cardBackground, 
           borderBottomColor: isDarkMode ? darkBorder : borderColor,
-          ...Platform.select({
-            android: {
-              paddingTop: Math.max(insets.top, 10),
-              paddingBottom: 12,
-            }
-          })
+          paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 10 : 16),
+          paddingBottom: Platform.OS === 'ios' ? 12 : 16,
         }
       ]}>
         <TouchableOpacity 
@@ -709,12 +705,7 @@ export default function TraineeHub() {
           style={{ 
             padding: 8, 
             marginRight: 8,
-            ...Platform.select({ 
-              android: { 
-                marginTop: 0,
-                marginBottom: 4,
-              } 
-            }) 
+            marginTop: Platform.OS === 'android' ? 4 : 0,
           }}
         >
           <Ionicons name="arrow-back" size={24} color={iconColor} />
@@ -726,11 +717,7 @@ export default function TraineeHub() {
           flex: 1, 
           textAlign: 'center', 
           color: isDarkMode ? darkText : textColor,
-          ...Platform.select({
-            android: {
-              marginTop: 4,
-            }
-          })
+          marginTop: Platform.OS === 'android' ? 4 : 0,
         }}>
           MIT<Text style={{ color: darkHighlight }}>Connect</Text>
         </Text>
@@ -917,7 +904,7 @@ export default function TraineeHub() {
                       color: isDarkMode ? darkText : textColor, 
                       paddingHorizontal: 4, 
                       fontWeight: '600', 
-                      backgroundColor: isDarkMode ? darkCard : cardBackground 
+                      backgroundColor: 'transparent'
                     },
                     inputAndroid: { 
                       height: 40, 
@@ -925,7 +912,7 @@ export default function TraineeHub() {
                       color: isDarkMode ? darkText : textColor, 
                       paddingHorizontal: 4, 
                       fontWeight: '600', 
-                      backgroundColor: isDarkMode ? darkCard : cardBackground,
+                      backgroundColor: 'transparent',
                       ...Platform.select({
                         android: {
                           paddingLeft: 8,
@@ -935,12 +922,8 @@ export default function TraineeHub() {
                     },
                     placeholder: { 
                       color: isDarkMode ? darkSecondary : secondaryTextColor,
-                      ...Platform.select({
-                        android: {
-                          fontSize: 16,
-                          fontWeight: '500',
-                        }
-                      })
+                      fontSize: 16,
+                      fontWeight: '500',
                     },
                     iconContainer: {
                       top: 0,
@@ -950,13 +933,14 @@ export default function TraineeHub() {
                       alignItems: 'center',
                       position: 'absolute',
                       zIndex: 2,
-                      ...Platform.select({
-                        android: {
-                          backgroundColor: 'transparent',
-                        }
-                      })
+                      backgroundColor: 'transparent',
                     },
-
+                    viewContainer: {
+                      flex: 1,
+                    },
+                    headlessAndroidContainer: {
+                      flex: 1,
+                    },
                   }}
                   useNativeAndroidPickerStyle={false}
                   Icon={() => (
@@ -1030,12 +1014,25 @@ export default function TraineeHub() {
                           <>
                             <Pressable
                               onPress={() => setDeptModalIdx(idx)}
-                              style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 8, marginBottom: 4, height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10 }}
+                              style={{ 
+                                borderWidth: 1, 
+                                borderColor: isDarkMode ? '#2D333B' : '#B2E6F7', 
+                                borderRadius: 8, 
+                                marginBottom: 4, 
+                                height: 44, 
+                                flexDirection: 'row', 
+                                alignItems: 'center', 
+                                paddingHorizontal: 10,
+                                backgroundColor: isDarkMode ? '#23272b' : '#fff'
+                              }}
                             >
-                              <Text style={{ color: w.department ? '#222' : '#888', flex: 1 }} numberOfLines={1} ellipsizeMode="tail">
+                              <Text style={{ 
+                                color: w.department ? (isDarkMode ? '#fff' : '#222') : (isDarkMode ? '#AEB6C1' : '#888'), 
+                                flex: 1 
+                              }} numberOfLines={1} ellipsizeMode="tail">
                                 {w.department || 'Select Department...'}
                               </Text>
-                              <Ionicons name="chevron-down" size={20} color="#888" />
+                              <Ionicons name="chevron-down" size={20} color={isDarkMode ? '#AEB6C1' : '#888'} />
                             </Pressable>
                             <Modal 
                               visible={deptModalIdx === idx} 
@@ -1052,7 +1049,7 @@ export default function TraineeHub() {
                                 onPress={() => setDeptModalIdx(null)} 
                               />
                               <View style={{ 
-                                backgroundColor: '#fff', 
+                                backgroundColor: isDarkMode ? '#23272b' : '#fff', 
                                 borderTopLeftRadius: 16, 
                                 borderTopRightRadius: 16, 
                                 position: 'absolute', 
@@ -1071,7 +1068,7 @@ export default function TraineeHub() {
                                 <View style={{
                                   height: 4,
                                   width: 40,
-                                  backgroundColor: '#ddd',
+                                  backgroundColor: isDarkMode ? '#AEB6C1' : '#ddd',
                                   borderRadius: 2,
                                   alignSelf: 'center',
                                   marginTop: 8,
@@ -1081,14 +1078,18 @@ export default function TraineeHub() {
                                   selectedValue={w.department}
                                   onValueChange={value => { handleWeekPlanChange(idx, 'department', value); setDeptModalIdx(null); }}
                                   style={{ flex: 1 }}
+                                  itemStyle={{ 
+                                    color: isDarkMode ? '#fff' : '#222',
+                                    backgroundColor: isDarkMode ? '#23272b' : '#fff'
+                                  }}
                                 >
-                                  <Picker.Item label="Select Department..." value="" color="#888" />
-                                  <Picker.Item label="IT Services" value="IT Services" color="#222" />
-                                  <Picker.Item label="IT Development" value="IT Development" color="#222" />
-                                  <Picker.Item label="Production" value="Production" color="#222" />
-                                  <Picker.Item label="Enterprise Project Delivery" value="Enterprise Project Delivery" color="#222" />
-                                  <Picker.Item label="IT Governance" value="IT Governance" color="#222" />
-                                  <Picker.Item label="IT Transformation" value="IT Transformation" color="#222" />
+                                  <Picker.Item label="Select Department..." value="" color={isDarkMode ? '#AEB6C1' : '#888'} />
+                                  <Picker.Item label="IT Services" value="IT Services" color={isDarkMode ? '#fff' : '#222'} />
+                                  <Picker.Item label="IT Development" value="IT Development" color={isDarkMode ? '#fff' : '#222'} />
+                                  <Picker.Item label="Production" value="Production" color={isDarkMode ? '#fff' : '#222'} />
+                                  <Picker.Item label="Enterprise Project Delivery" value="Enterprise Project Delivery" color={isDarkMode ? '#fff' : '#222'} />
+                                  <Picker.Item label="IT Governance" value="IT Governance" color={isDarkMode ? '#fff' : '#222'} />
+                                  <Picker.Item label="IT Transformation" value="IT Transformation" color={isDarkMode ? '#fff' : '#222'} />
                                 </Picker>
                               </View>
                             </Modal>
@@ -1096,38 +1097,48 @@ export default function TraineeHub() {
                         ) : (
                           <View style={{ 
                             borderWidth: 1, 
-                            borderColor: '#B2E6F7', 
+                            borderColor: isDarkMode ? '#2D333B' : '#B2E6F7', 
                             borderRadius: 8, 
                             marginBottom: 4, 
                             flexDirection: 'row', 
                             alignItems: 'center', 
                             height: 54,
-                            backgroundColor: '#fff',
+                            backgroundColor: isDarkMode ? '#23272b' : '#fff',
                             zIndex: 1,
                             elevation: 1,
                           }}>
                             <RNPickerSelect
                               onValueChange={value => handleWeekPlanChange(idx, 'department', value)}
                               value={w.department}
-                              placeholder={{ label: 'Select Department...', value: '', color: '#888' }}
+                              placeholder={{ label: 'Select Department...', value: '', color: isDarkMode ? '#AEB6C1' : '#888' }}
                               items={DEPARTMENTS.map(dep => ({ 
                                 label: dep, 
                                 value: dep,
-                                color: '#222',
-                                backgroundColor: '#fff',
+                                color: isDarkMode ? '#fff' : '#222',
+                                backgroundColor: isDarkMode ? '#23272b' : '#fff',
                               }))}
                               style={{
                                 inputAndroid: { 
                                   height: 44, 
                                   padding: 10, 
-                                  color: '#222', 
+                                  color: isDarkMode ? '#fff' : '#222', 
+                                  flex: 1,
+                                  backgroundColor: 'transparent',
+                                  fontSize: 16,
+                                  fontWeight: '500',
+                                  textAlign: 'left',
+                                },
+                                inputIOS: {
+                                  height: 44,
+                                  padding: 10,
+                                  color: isDarkMode ? '#fff' : '#222',
                                   flex: 1,
                                   backgroundColor: 'transparent',
                                   fontSize: 16,
                                   fontWeight: '500',
                                 },
                                 placeholder: {
-                                  color: '#888',
+                                  color: isDarkMode ? '#AEB6C1' : '#888',
                                   fontSize: 16,
                                   fontWeight: '500',
                                 },
@@ -1141,14 +1152,22 @@ export default function TraineeHub() {
                                   zIndex: 2,
                                   backgroundColor: 'transparent',
                                 },
-
+                                viewContainer: {
+                                  flex: 1,
+                                },
+                                headlessAndroidContainer: {
+                                  flex: 1,
+                                },
                               }}
                               useNativeAndroidPickerStyle={false}
+                              touchableWrapperProps={{
+                                activeOpacity: 0.7,
+                              }}
                               Icon={() => (
                                 <Ionicons 
                                   name="chevron-down" 
                                   size={20} 
-                                  color="#888" 
+                                  color={isDarkMode ? '#AEB6C1' : '#888'} 
                                   style={{ marginRight: 10 }} 
                                 />
                               )}
@@ -1156,9 +1175,27 @@ export default function TraineeHub() {
                           </View>
                         )}
                         <TextInput
-                          style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 10, padding: 12, marginBottom: 8, color: '#222', backgroundColor: '#fff', fontSize: 16 }}
+                          style={{ 
+                            borderWidth: 1, 
+                            borderColor: isDarkMode ? '#2D333B' : '#B2E6F7', 
+                            borderRadius: 10, 
+                            padding: 12, 
+                            marginBottom: 8, 
+                            color: isDarkMode ? '#fff' : '#222', 
+                            backgroundColor: isDarkMode ? '#23272b' : '#fff', 
+                            fontSize: 16,
+                            minHeight: 44,
+                            textAlignVertical: 'center',
+                            ...Platform.select({
+                              android: {
+                                textAlignVertical: 'center',
+                                includeFontPadding: false,
+                                textAlign: 'left',
+                              }
+                            })
+                          }}
                           placeholder="Hours"
-                          placeholderTextColor="#888"
+                          placeholderTextColor={isDarkMode ? '#AEB6C1' : '#888'}
                           value={w.hours}
                           onChangeText={v => {
                             let val = v.replace(/[^0-9]/g, '');
@@ -1166,30 +1203,49 @@ export default function TraineeHub() {
                             handleWeekPlanChange(idx, 'hours', val);
                           }}
                           keyboardType="numeric"
+                          editable={true}
+                          selectTextOnFocus={false}
+                          autoCorrect={false}
+                          returnKeyType="done"
                         />
                         {errors[`week${idx}_hours`] && <Text style={{ color: 'red', marginBottom: 2 }}>{errors[`week${idx}_hours`]}</Text>}
                         <TextInput
                           style={{ 
                             borderWidth: 1, 
-                            borderColor: '#B2E6F7', 
+                            borderColor: isDarkMode ? '#2D333B' : '#B2E6F7', 
                             borderRadius: 10, 
                             padding: 12, 
                             marginBottom: 8, 
-                            color: '#222', 
-                            backgroundColor: '#fff', 
+                            color: isDarkMode ? '#fff' : '#222', 
+                            backgroundColor: isDarkMode ? '#23272b' : '#fff', 
                             fontSize: 16,
                             minHeight: 80,
                             textAlignVertical: 'top',
                             paddingTop: 12,
-                            paddingBottom: 12
+                            paddingBottom: 12,
+                            ...Platform.select({
+                              android: {
+                                textAlignVertical: 'top',
+                                paddingTop: 12,
+                                paddingBottom: 12,
+                                includeFontPadding: false,
+                                textAlign: 'left',
+                              }
+                            })
                           }}
                           placeholder="Task description"
-                          placeholderTextColor="#888"
+                          placeholderTextColor={isDarkMode ? '#AEB6C1' : '#888'}
                           value={w.task}
                           onChangeText={v => handleWeekPlanChange(idx, 'task', v)}
                           multiline
                           numberOfLines={4}
                           textAlignVertical="top"
+                          editable={true}
+                          selectTextOnFocus={false}
+                          autoCorrect={false}
+                          autoCapitalize="sentences"
+                          returnKeyType="default"
+                          blurOnSubmit={false}
                         />
                         {errors[`week${idx}_task`] && <Text style={{ color: 'red', marginBottom: 2 }}>{errors[`week${idx}_task`]}</Text>}
                       </View>
@@ -1202,12 +1258,12 @@ export default function TraineeHub() {
                 marginTop: 20,
                 padding: 16,
                 borderRadius: 12,
-                backgroundColor: cardBackground,
+                backgroundColor: isDarkMode ? '#23272b' : cardBackground,
                 shadowColor: '#000',
                 shadowOpacity: 0.05,
                 shadowRadius: 10,
                 borderWidth: 1,
-                borderColor: borderColor,
+                borderColor: isDarkMode ? '#2D333B' : borderColor,
               }}>
                 <Text style={{ fontSize: 18, fontWeight: '600', color: isDarkMode ? '#43C6AC' : '#0EA5E9', marginBottom: 12, textAlign: 'center' }}>Plan Summary</Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 8, borderBottomWidth: 1, borderColor: borderColor }}>
@@ -1255,23 +1311,42 @@ export default function TraineeHub() {
               {/* Only show Plan confirmed after submit */}
             </View>
           ) : (
-            <View style={{ margin: 18, backgroundColor: '#F8FAFC', borderRadius: 18, padding: 22, borderWidth: 1, borderColor: '#B2E6F7', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 }}>
-              <Text style={{ textAlign: 'center', fontSize: 26, fontWeight: 'bold', color: '#3CB6E3', marginBottom: 24, letterSpacing: 0.5 }}>Plan Summary</Text>
+            <View style={{ 
+              margin: 18, 
+              backgroundColor: isDarkMode ? '#23272b' : '#F8FAFC', 
+              borderRadius: 18, 
+              padding: 22, 
+              borderWidth: 1, 
+              borderColor: isDarkMode ? '#2D333B' : '#B2E6F7', 
+              shadowColor: '#000', 
+              shadowOpacity: 0.06, 
+              shadowRadius: 12, 
+              shadowOffset: { width: 0, height: 4 }, 
+              elevation: 3 
+            }}>
+              <Text style={{ 
+                textAlign: 'center', 
+                fontSize: 26, 
+                fontWeight: 'bold', 
+                color: isDarkMode ? '#43C6AC' : '#3CB6E3', 
+                marginBottom: 24, 
+                letterSpacing: 0.5 
+              }}>Plan Summary</Text>
               {/* Edit icon/button at the top of the summary */}
               <TouchableOpacity style={{ alignSelf: 'flex-end', marginBottom: 8 }} onPress={() => setIsEditing(true)}>
-                <Ionicons name="pencil" size={22} color="#3CB6E3" />
+                <Ionicons name="pencil" size={22} color={isDarkMode ? '#43C6AC' : '#3CB6E3'} />
               </TouchableOpacity>
               {/* Plan Summary Table - summary only, not editable */}
               <View style={{
                 marginTop: 20,
                 padding: 16,
                 borderRadius: 12,
-                backgroundColor: cardBackground,
+                backgroundColor: isDarkMode ? '#23272b' : cardBackground,
                 shadowColor: '#000',
                 shadowOpacity: 0.05,
                 shadowRadius: 10,
                 borderWidth: 1,
-                borderColor: borderColor,
+                borderColor: isDarkMode ? '#2D333B' : borderColor,
               }}>
                 <Text style={{ fontSize: 18, fontWeight: '600', color: isDarkMode ? '#43C6AC' : '#0EA5E9', marginBottom: 12, textAlign: 'center' }}>Plan Summary</Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 8, borderBottomWidth: 1, borderColor: borderColor }}>
@@ -1327,21 +1402,52 @@ export default function TraineeHub() {
                 }]
               : [])
             .map((trainee, idx) => (
-              <View key={idx} style={{ backgroundColor: cardBackground, borderRadius: 18, padding: 18, marginBottom: 18, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}>
+              <View key={idx} style={{ 
+                backgroundColor: isDarkMode ? '#23272b' : cardBackground, 
+                borderRadius: 18, 
+                padding: 18, 
+                marginBottom: 18, 
+                shadowColor: '#000', 
+                shadowOpacity: 0.08, 
+                shadowRadius: 8, 
+                shadowOffset: { width: 0, height: 2 }, 
+                elevation: 2 
+              }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
                   <View>
-                    <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#222' }}>{trainee.name + "'s Plan"}</Text>
-                    <Text style={{ color: '#888', fontSize: 13, marginTop: 2 }}>{trainee.department}</Text>
+                    <Text style={{ 
+                      fontWeight: 'bold', 
+                      fontSize: 18, 
+                      color: isDarkMode ? '#fff' : '#222' 
+                    }}>{trainee.name + "'s Plan"}</Text>
+                    <Text style={{ 
+                      color: isDarkMode ? '#AEB6C1' : '#888', 
+                      fontSize: 13, 
+                      marginTop: 2 
+                    }}>{trainee.department}</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ fontWeight: 'bold', fontSize: 20, color: '#222' }}>{trainee.progress}%</Text>
-                    <Text style={{ color: '#888', fontSize: 12, marginTop: 2 }}>Overall progress</Text>
+                    <Text style={{ 
+                      fontWeight: 'bold', 
+                      fontSize: 20, 
+                      color: isDarkMode ? '#fff' : '#222' 
+                    }}>{trainee.progress}%</Text>
+                    <Text style={{ 
+                      color: isDarkMode ? '#AEB6C1' : '#888', 
+                      fontSize: 12, 
+                      marginTop: 2 
+                    }}>Overall progress</Text>
                   </View>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, marginBottom: 2 }}>
                   {trainee.weeks.map((week: any, widx: number) => (
                     <View key={widx} style={{ alignItems: 'center', flex: 1 }}>
-                      <Text style={{ fontWeight: 'bold', fontSize: 13, color: '#222', marginBottom: 2 }}>Week {widx + 1}</Text>
+                      <Text style={{ 
+                        fontWeight: 'bold', 
+                        fontSize: 13, 
+                        color: isDarkMode ? '#fff' : '#222', 
+                        marginBottom: 2 
+                      }}>Week {widx + 1}</Text>
                       <View style={{ marginBottom: 4 }}>
                         {week.status === 'done' && (
                           <Ionicons name="checkmark-circle" size={32} color="#4ECB71" />
@@ -1350,11 +1456,21 @@ export default function TraineeHub() {
                           <Ionicons name="hourglass" size={32} color="#3CB6E3" />
                         )}
                         {week.status === 'not-started' && (
-                          <Ionicons name="ellipse-outline" size={32} color="#D3D3D3" />
+                          <Ionicons name="ellipse-outline" size={32} color={isDarkMode ? '#AEB6C1' : '#D3D3D3'} />
                         )}
                       </View>
-                      <Text style={{ color: '#888', fontSize: 12, textAlign: 'center', lineHeight: 16 }}>{week.hours}h logged</Text>
-                      <Text style={{ color: '#888', fontSize: 12, textAlign: 'center', lineHeight: 16 }}>{week.tasks} tasks</Text>
+                      <Text style={{ 
+                        color: isDarkMode ? '#AEB6C1' : '#888', 
+                        fontSize: 12, 
+                        textAlign: 'center', 
+                        lineHeight: 16 
+                      }}>{week.hours}h logged</Text>
+                      <Text style={{ 
+                        color: isDarkMode ? '#AEB6C1' : '#888', 
+                        fontSize: 12, 
+                        textAlign: 'center', 
+                        lineHeight: 16 
+                      }}>{week.tasks} tasks</Text>
                     </View>
                   ))}
                 </View>

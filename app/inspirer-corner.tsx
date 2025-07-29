@@ -953,7 +953,10 @@ export default function InspirerCornerScreen() {
     <View style={[styles.container, { backgroundColor: screenBg }]}>
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { 
+          marginTop: Platform.OS === 'android' ? 16 : 24,
+          marginBottom: Platform.OS === 'android' ? 16 : 12,
+        }]}>
           <View style={styles.headerLeft}>
               <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                 <Ionicons name="arrow-back" size={24} color={primaryText} />

@@ -101,7 +101,8 @@ export default function AdminTabBar({ activeTab }: AdminTabBarProps) {
       styles.tabBar, 
       { 
         backgroundColor: colors.cardBackground,
-        paddingBottom: insets.bottom + (Platform.OS === 'ios' ? 8 : 12)
+        paddingBottom: insets.bottom + (Platform.OS === 'ios' ? 8 : 16),
+        paddingTop: Platform.OS === 'android' ? 8 : 0,
       }
     ]}>
       {TABS.map((tab) => (

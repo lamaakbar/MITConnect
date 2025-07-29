@@ -435,7 +435,12 @@ export default function TraineeHome() {
     <RoleGuard allowedRoles={['trainee']}>
       <View style={[styles.safeArea, { backgroundColor }]}>
         <StatusBar style={isDarkMode ? 'light' : 'dark'} translucent backgroundColor="transparent" />
-        <View style={[styles.header, { backgroundColor: cardBackground, borderBottomColor: borderColor, paddingTop: insets.top }]}> 
+        <View style={[styles.header, { 
+          backgroundColor: cardBackground, 
+          borderBottomColor: borderColor, 
+          paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 10 : 16),
+          paddingBottom: Platform.OS === 'ios' ? 6 : 12,
+        }]}>
           <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} /> 
           <Text style={[styles.appName, { color: textColor }]}>
             <Text style={{ color: textColor }}>MIT</Text>

@@ -1,16 +1,17 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
 import { useUserContext } from './UserContext';
 import { useTheme } from './ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TABS = [
   {
     key: 'home',
     label: 'Home',
-    icon: (color: string) => <Ionicons name="home" size={22} color={color} />,
-    route: 'home', // Will be resolved dynamically
+    icon: (color: string) => <Ionicons name="home-outline" size={22} color={color} />,
+    route: '/employee-home',
   },
   {
     key: 'events',
@@ -34,6 +35,7 @@ export default function EventsTabBar() {
   const pathname = usePathname();
   const { getHomeRoute, userRole, effectiveRole } = useUserContext();
   const { isDarkMode } = useTheme();
+  const insets = useSafeAreaInsets();
 
   // Friendly dark mode palette for employee/trainee
   const isEmpOrTrainee = effectiveRole === 'employee' || effectiveRole === 'trainee';
@@ -62,7 +64,14 @@ export default function EventsTabBar() {
       };
 
   return (
-    <View style={[styles.tabBar, { backgroundColor: colors.background }]}>
+    <View style={[
+      styles.tabBar, 
+      { 
+        backgroundColor: colors.background,
+        paddingBottom: insets.bottom + (Platform.OS === 'ios' ? 8 : 16),
+        paddingTop: Platform.OS === 'android' ? 8 : 0,
+      }
+    ]}>
       {TABS.map(tab => {
         const route = tab.route === 'home' ? getHomeRoute() : tab.route;
         const isActive = pathname === route;
