@@ -192,6 +192,9 @@ export default function LoginScreen() {
                 <Text style={styles.signupLink}>Sign up</Text>
               </TouchableOpacity>
             </View>
+            
+            {/* Team Credit */}
+            <Text style={styles.creditText}>Made by IT Pulse Team – Summer 2025</Text>
           </View>
         </View>
     </LinearGradient>
@@ -357,5 +360,17 @@ const styles = StyleSheet.create({
     color: '#007BFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  creditText: {
+    color: '#888',
+    fontSize: 11,
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    opacity: 0.8,
+    paddingHorizontal: 16,
   },
 }); 
