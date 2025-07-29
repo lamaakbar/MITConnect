@@ -50,19 +50,46 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 });
 
+// Clear invalid session data
+const clearInvalidSession = async () => {
+  try {
+    console.log('🧹 Clearing invalid session data...');
+    const keys = await AsyncStorage.getAllKeys();
+    const authKeys = keys.filter(key => key.includes('supabase') || key.includes('auth'));
+    
+    for (const key of authKeys) {
+      await AsyncStorage.removeItem(key);
+      console.log('🗑️ Removed:', key);
+    }
+    console.log('✅ Invalid session data cleared');
+  } catch (error) {
+    console.error('❌ Error clearing session data:', error);
+  }
+};
+
+// Export the function so it can be used elsewhere
+export const clearInvalidSessionData = clearInvalidSession;
+
 // Initialize session on app start with proper timing
 export const initializeSession = async () => {
   try {
     console.log('🔄 Initializing session...');
     
     // Wait a bit for AsyncStorage to be ready
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
     
     // First try getSession (which reads from storage)
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) {
       console.error('❌ Error getting initial session:', error);
+      
+      // If it's a refresh token error, clear invalid session data
+      if (error.message?.includes('Refresh Token') || error.message?.includes('refresh token')) {
+        console.log('🔄 Refresh token error detected, clearing invalid session...');
+        await clearInvalidSession();
+        return null;
+      }
       return null;
     }
     
@@ -96,7 +123,7 @@ export const initializeSession = async () => {
   }
 };
 
-// Enhanced session management
+// Enhanced session management with better error handling
 export const ensureAuthenticatedSession = async () => {
   try {
     // First try to get current session
@@ -104,19 +131,38 @@ export const ensureAuthenticatedSession = async () => {
     
     if (error) {
       console.error('Session error:', error);
+      
+      // Handle refresh token errors gracefully
+      if (error.message?.includes('Refresh Token') || error.message?.includes('refresh token')) {
+        console.log('🔄 Refresh token error, clearing invalid session...');
+        await clearInvalidSession();
+        return null;
+      }
       return null;
     }
     
     if (session && !session.expires_at) {
       console.log('Session found but no expiry, refreshing...');
-      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError) {
-        console.error('Refresh error:', refreshError);
+      try {
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError) {
+          console.error('Refresh error:', refreshError);
+          
+          // Handle refresh token errors gracefully
+          if (refreshError.message?.includes('Refresh Token') || refreshError.message?.includes('refresh token')) {
+            console.log('🔄 Refresh token error during refresh, clearing invalid session...');
+            await clearInvalidSession();
+            return null;
+          }
+          return null;
+        }
+        
+        session = refreshedSession;
+      } catch (refreshError) {
+        console.error('Refresh exception:', refreshError);
         return null;
       }
-      
-      session = refreshedSession;
     }
     
     // Check if session is expired
@@ -126,14 +172,26 @@ export const ensureAuthenticatedSession = async () => {
       
       if (expiryTime <= now) {
         console.log('Session expired, attempting refresh...');
-        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
-        
-        if (refreshError) {
-          console.error('Failed to refresh expired session:', refreshError);
+        try {
+          const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+          
+          if (refreshError) {
+            console.error('Failed to refresh expired session:', refreshError);
+            
+            // Handle refresh token errors gracefully
+            if (refreshError.message?.includes('Refresh Token') || refreshError.message?.includes('refresh token')) {
+              console.log('🔄 Refresh token error during expired session refresh, clearing invalid session...');
+              await clearInvalidSession();
+              return null;
+            }
+            return null;
+          }
+          
+          session = refreshedSession;
+        } catch (refreshError) {
+          console.error('Refresh exception for expired session:', refreshError);
           return null;
         }
-        
-        session = refreshedSession;
       }
     }
     
