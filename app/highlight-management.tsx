@@ -119,11 +119,12 @@ export default function HighlightManagement() {
 
   const pickImage = async (setImageFn: (uri: string) => void) => {
     const result = await ImagePicker.launchImageLibraryAsync({
+      // Note: MediaTypeOptions.Images is deprecated but still works in expo-image-picker v16.1.4
+      // TODO: Update to MediaType.Images when upgrading to newer version
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 1,
-      base64: false, // let FileSystem handle base64
+      quality: 0.8,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setImageFn(result.assets[0].uri);

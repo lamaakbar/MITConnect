@@ -19,6 +19,7 @@ import DatePickerModal from '../../../components/DatePickerModal';
 import TimePickerModal from '../../../components/TimePickerModal';
 import eventService from '../../../services/EventService';
 import { Event } from '../../../types/events';
+import { uploadImageFromLibrary } from '../../../services/imageUploadService';
 
 const EVENT_TYPES = ['Seminar', 'Workshop', 'Conference', 'Meetup'];
 
@@ -28,6 +29,7 @@ const EditEventScreen: React.FC = () => {
 
   // Form state - completely admin-driven
   const [image, setImage] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [type, setType] = useState('MITC');
   const [category, setCategory] = useState('');
@@ -45,6 +47,7 @@ const EditEventScreen: React.FC = () => {
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Date and Time Picker states
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -91,53 +94,23 @@ const EditEventScreen: React.FC = () => {
       setTags(eventData.tags?.join(', ') || '');
       setRequirements(eventData.requirements?.join(', ') || '');
       setMaterials(eventData.materials?.join(', ') || '');
-      setImage(eventData.coverImage || null);
       
-      // Set picker initial values
-      if (eventData.date) {
-        try {
-          const eventDate = new Date(eventData.date);
-          if (!isNaN(eventDate.getTime())) {
-            setSelectedDate(eventDate);
-          }
-        } catch (error) {
-          console.log('Error parsing event date:', error);
-        }
+      // Set image data
+      if (eventData.coverImage) {
+        setImage(eventData.coverImage);
+        setImageUrl(eventData.coverImage);
       }
       
+      // Set date and time picker values
+      if (eventData.date) {
+        setSelectedDate(new Date(eventData.date));
+      }
       if (eventData.time) {
-        try {
-          // Parse time string to Date object
-          const timeStr = eventData.time;
-          let hour = 0;
-          let minute = 0;
-          
-          // Handle different time formats
-          if (timeStr.includes(':')) {
-            const [timePart, period] = timeStr.split(' ');
-            const [hours, minutes] = timePart.split(':');
-            hour = parseInt(hours);
-            minute = parseInt(minutes);
-            
-            // Convert to 24-hour format
-            if (period === 'PM' && hour !== 12) {
-              hour += 12;
-            } else if (period === 'AM' && hour === 12) {
-              hour = 0;
-            }
-          } else {
-            // Handle 24-hour format
-            const [hours, minutes] = timeStr.split(':');
-            hour = parseInt(hours);
-            minute = parseInt(minutes);
-          }
-          
-          const timeDate = new Date();
-          timeDate.setHours(hour, minute, 0, 0);
-          setSelectedTime(timeDate);
-        } catch (error) {
-          console.log('Error parsing event time:', error);
-        }
+        // Parse time string to Date object
+        const [hours, minutes] = eventData.time.split(':');
+        const timeDate = new Date();
+        timeDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        setSelectedTime(timeDate);
       }
       
     } catch (error) {
@@ -150,14 +123,24 @@ const EditEventScreen: React.FC = () => {
   };
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      setImage(result.assets[0].uri);
+    try {
+      setUploadingImage(true);
+      
+      // Upload image to Supabase first
+      const uploadedImageUrl = await uploadImageFromLibrary('images', 'event-covers');
+      
+      if (uploadedImageUrl) {
+        setImageUrl(uploadedImageUrl);
+        setImage(uploadedImageUrl); // For display
+        console.log('✅ Image uploaded successfully:', uploadedImageUrl);
+      } else {
+        Alert.alert('Error', 'Failed to upload image. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      Alert.alert('Error', 'Failed to upload image. Please try again.');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -244,7 +227,7 @@ const EditEventScreen: React.FC = () => {
         tags: tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
         requirements: requirements ? requirements.split(',').map(req => req.trim()).filter(req => req) : [],
         materials: materials ? materials.split(',').map(mat => mat.trim()).filter(mat => mat) : [],
-        coverImage: image || undefined,
+        coverImage: imageUrl || undefined, // Use imageUrl for the final save
       };
 
       // Update event in database using EventService
@@ -283,9 +266,19 @@ const EditEventScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         {/* Image Upload */}
         <Text style={styles.label}>Event Cover Image</Text>
-        <TouchableOpacity style={styles.imageUploadBox} onPress={pickImage} activeOpacity={0.8}>
-          {image ? (
-            <Image source={{ uri: image }} style={styles.uploadedImage} />
+        <TouchableOpacity 
+          style={styles.imageUploadBox} 
+          onPress={pickImage} 
+          activeOpacity={0.8}
+          disabled={uploadingImage}
+        >
+          {uploadingImage ? (
+            <View style={{ alignItems: 'center' }}>
+              <ActivityIndicator size="large" color="#43C6AC" />
+              <Text style={styles.uploadText}>Uploading image...</Text>
+            </View>
+          ) : imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.uploadedImage} />
           ) : (
             <View style={{ alignItems: 'center' }}>
               <Text style={styles.uploadText}>Tap to upload an event image</Text>

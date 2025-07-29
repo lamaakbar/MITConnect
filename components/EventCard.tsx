@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from './ThemeContext';
 import { useUserContext } from './UserContext';
@@ -37,6 +37,8 @@ const EventCard: React.FC<EventCardProps> = ({
 }) => {
   const { isDarkMode } = useTheme();
   const { viewAs } = useUserContext();
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   // Debug viewAs state
   console.log('EventCard: viewAs state:', viewAs);
@@ -66,6 +68,18 @@ const EventCard: React.FC<EventCardProps> = ({
   const disabledButtonBg = isDarkMode ? '#404040' : '#E0E0E0';
   const disabledButtonText = isDarkMode ? '#888888' : '#999999';
 
+  // Handle image loading
+  const handleImageLoad = () => {
+    setImageLoading(false);
+    setImageError(false);
+  };
+
+  const handleImageError = (error: any) => {
+    console.log('Image loading error:', error.nativeEvent.error);
+    setImageLoading(false);
+    setImageError(true);
+  };
+
   return (
     <TouchableOpacity 
       style={[
@@ -81,9 +95,21 @@ const EventCard: React.FC<EventCardProps> = ({
     >
       {/* Cover Image */}
       <View style={styles.imageContainer}>
+        {imageLoading && (
+          <View style={[styles.imageLoadingContainer, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F5F5F5' }]}>
+            <ActivityIndicator size="large" color={accentColor} />
+          </View>
+        )}
+        
         <Image 
           source={event.coverImage ? { uri: event.coverImage } : event.image} 
-          style={styles.eventCoverImage} 
+          style={[
+            styles.eventCoverImage,
+            imageError && styles.imageError
+          ]}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+          defaultSource={require('../assets/images/splash-icon.png')}
         />
         
         {/* Bookmark Icon at top-right */}
@@ -218,10 +244,23 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
   },
+  imageLoadingContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
   eventCoverImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  imageError: {
+    opacity: 0.5,
   },
   bookmarkIcon: {
     position: 'absolute',

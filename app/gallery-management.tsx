@@ -185,12 +185,16 @@ export default function GalleryManagement() {
 
   // Pick cover image separately
   const pickCoverImage = async (): Promise<Photo | null> => {
+    // Note: MediaTypeOptions.Images is deprecated but still works in expo-image-picker v16.1.4
+    // TODO: Update to MediaType.Images when upgrading to newer version
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission required', 'Please grant photo library access to add cover image.');
       return null;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
+      // Note: MediaTypeOptions.Images is deprecated but still works in expo-image-picker v16.1.4
+      // TODO: Update to MediaType.Images when upgrading to newer version
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: false,
       quality: 0.8,

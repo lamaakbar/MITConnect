@@ -11,6 +11,8 @@ export const uploadImageFromLibrary = async (
   try {
     console.log('🚀 Starting image upload process...');
     
+    // Note: MediaTypeOptions.Images is deprecated but still works in expo-image-picker v16.1.4
+    // TODO: Update to MediaType.Images when upgrading to newer version
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -109,6 +111,8 @@ export const uploadImageFromLibraryFallback = async (
   try {
     console.log('🔄 Using fallback upload method...');
     
+    // Note: MediaTypeOptions.Images is deprecated but still works in expo-image-picker v16.1.4
+    // TODO: Update to MediaType.Images when upgrading to newer version
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
