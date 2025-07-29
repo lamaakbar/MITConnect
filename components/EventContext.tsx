@@ -131,7 +131,21 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
   const fetchEvents = async (): Promise<void> => {
     setLoading(true);
     try {
+      console.log('🔄 EventContext: Fetching events...');
       const fetchedEvents = await eventService.getAllEvents();
+      console.log('✅ EventContext: Fetched', fetchedEvents.length, 'events');
+      
+      // Debug each event's image data
+      fetchedEvents.forEach((event, index) => {
+        console.log(`📸 Event ${index + 1} image data:`, {
+          title: event.title,
+          coverImage: event.coverImage,
+          image: event.image,
+          hasCoverImage: !!event.coverImage,
+          hasImage: !!event.image
+        });
+      });
+      
       setEvents(fetchedEvents);
       setError(null);
     } catch (err) {

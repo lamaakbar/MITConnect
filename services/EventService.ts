@@ -348,6 +348,17 @@ class EventService {
         return [];
       }
 
+      console.log('📊 Raw events data from Supabase:', data?.length || 0, 'events');
+      if (data && data.length > 0) {
+        data.forEach((event, index) => {
+          console.log(`📊 Event ${index + 1}:`, {
+            title: event.title,
+            cover_image: event.cover_image,
+            hasCoverImage: !!event.cover_image && event.cover_image.trim() !== ''
+          });
+        });
+      }
+
       const events = data?.map(this.mapSupabaseEventToEvent) || [];
       this.updateCache(events);
       return events;
