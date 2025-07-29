@@ -563,6 +563,29 @@ export class IdeasService {
   }
 
   /**
+   * Get a user's poll response for a specific poll
+   */
+  static async getUserPollResponse(pollId: string, userId: string): Promise<{ data: PollResponse | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('poll_responses')
+        .select('*')
+        .eq('poll_id', pollId)
+        .eq('user_id', userId)
+        .single();
+
+      return { data, error };
+    } catch (error: any) {
+      // If no response found, return null (not an error)
+      if (error?.code === 'PGRST116') {
+        return { data: null, error: null };
+      }
+      console.error('Error fetching user poll response:', error);
+      return { data: null, error };
+    }
+  }
+
+  /**
    * Test poll database connectivity and permissions
    */
   static async testPollDatabase(): Promise<{ success: boolean; details: any }> {

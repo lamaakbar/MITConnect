@@ -32,6 +32,9 @@ export default function InspirerCornerScreen() {
   const [allIdeasLoaded, setAllIdeasLoaded] = useState(false);
   const [loadingAllIdeas, setLoadingAllIdeas] = useState(false);
   const [userReactions, setUserReactions] = useState<{ [key: string]: boolean | null }>({});
+  const [userPollResponses, setUserPollResponses] = useState<{ [key: string]: number | null }>({});
+  const [pollVotingLoading, setPollVotingLoading] = useState<{ [key: string]: boolean }>({});
+  const [expandedPolls, setExpandedPolls] = useState<{ [key: string]: boolean }>({});
   const [stats, setStats] = useState({
     totalIdeas: 0,
     inProgress: 0,
@@ -46,6 +49,9 @@ export default function InspirerCornerScreen() {
   const { isDarkMode } = useTheme();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
+  
+  // Debug log for user role
+  console.log('🔍 Current userRole:', userRole);
   
   // Dark mode colors
   const screenBg = isDarkMode ? '#121212' : '#F5F5F7';
@@ -66,10 +72,10 @@ export default function InspirerCornerScreen() {
       // Get user session first to avoid multiple auth calls
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Load only approved ideas with polls directly from database for faster loading
+      // Load approved and in-progress ideas with polls directly from database
       const { data: approvedIdeasData, error: ideasError } = await supabase
         .rpc('get_ideas_with_votes')
-        .eq('status', 'Approved')
+        .in('status', ['Approved', 'In Progress'])
         .order('created_at', { ascending: false })
         .limit(10); // Limit to first 10 for faster loading
       
@@ -78,28 +84,154 @@ export default function InspirerCornerScreen() {
         return;
       }
 
+      console.log('🔍 Raw ideas data from database:', approvedIdeasData);
+
+      // DEBUG: Check if polls exist in database
+      try {
+        const { data: existingPolls, error: pollsError } = await supabase
+          .from('idea_polls')
+          .select('*');
+        
+        console.log('🔍 Existing polls in database:', existingPolls);
+        console.log('🔍 Polls error:', pollsError);
+        
+        // Also test the function directly
+        const { data: functionTest, error: functionError } = await supabase
+          .rpc('get_ideas_with_votes');
+        
+        console.log('🔍 Function test result:', functionTest?.slice(0, 2)); // Show first 2 results
+        console.log('🔍 Function error:', functionError);
+      } catch (error) {
+        console.log('❌ Error checking polls:', error);
+      }
+
       if (approvedIdeasData) {
+        // TEMPORARY: Create a test poll for the first idea to verify functionality
+        if (approvedIdeasData.length > 0) {
+          const firstIdea = approvedIdeasData[0];
+          console.log('🔍 Creating test poll for idea:', firstIdea.id, firstIdea.title);
+          
+          // Try to create a test poll
+          try {
+            const { data: testPoll, error: pollError } = await supabase
+              .from('idea_polls')
+              .insert([{
+                idea_id: firstIdea.id,
+                question: 'Do you support this idea?',
+                options: JSON.stringify(['Yes, I support it!', 'No, I have concerns', 'Maybe, need more info']),
+                created_by: user?.id || 'test',
+                is_active: true
+              }])
+              .select()
+              .single();
+            
+            if (pollError) {
+              console.log('❌ Error creating test poll:', pollError);
+            } else {
+              console.log('✅ Test poll created successfully:', testPoll);
+            }
+          } catch (error) {
+            console.log('❌ Exception creating test poll:', error);
+          }
+        }
+
+        // TEMPORARY FIX: Load ideas with polls manually since the function is broken
+        console.log('🔧 Using manual poll loading since function is broken...');
+        
+        // Load ideas and polls separately, then match them
+        const { data: allIdeas, error: ideasError } = await supabase
+          .from('ideas')
+          .select('*')
+          .in('status', ['Approved', 'In Progress'])
+          .order('created_at', { ascending: false })
+          .limit(10);
+        
+        const { data: allPolls, error: pollsError } = await supabase
+          .from('idea_polls')
+          .select('*')
+          .eq('is_active', true);
+        
+        console.log('🔧 All ideas loaded:', allIdeas?.length);
+        console.log('🔧 All polls loaded:', allPolls?.length);
+        console.log('🔧 Ideas error:', ideasError);
+        console.log('🔧 Polls error:', pollsError);
+        
+        // Match polls to ideas manually
+        const ideasWithPolls = allIdeas?.map(idea => {
+          const matchingPoll = allPolls?.find(poll => poll.idea_id === idea.id);
+          return {
+            ...idea,
+            poll_id: matchingPoll?.id,
+            poll_question: matchingPoll?.question,
+            poll_options: matchingPoll?.options,
+            poll_total_responses: matchingPoll?.total_votes || 0
+          };
+        }) || [];
+        
+        console.log('🔧 Ideas with polls matched:', ideasWithPolls.map(idea => ({
+          id: idea.id,
+          title: idea.title,
+          hasPoll: !!idea.poll_id,
+          poll_question: idea.poll_question
+        })));
+        
+        // Use the manually matched data
+        const finalIdeasData = ideasWithPolls;
+
         // Transform data to match IdeaWithLikes type with poll information
-        // Transform data to match IdeaWithLikes type with poll information
-        const ideasWithVotes = approvedIdeasData.map((idea: any) => {
+        const ideasWithVotes = finalIdeasData.map((idea: any) => {
           const likes_count = idea.like_votes || 0;
           const dislikes_count = idea.dislike_votes || 0;
           const total_reactions = likes_count + dislikes_count;
           
-          return {
+          // Handle both function data and manual poll loading data
+          let pollData = null;
+          if (idea.idea_polls && idea.idea_polls.length > 0) {
+            // Manual loading structure
+            pollData = idea.idea_polls[0];
+          } else if (idea.poll_id) {
+            // Function data structure
+            pollData = {
+              id: idea.poll_id,
+              question: idea.poll_question,
+              options: idea.poll_options,
+              total_votes: idea.poll_total_responses
+            };
+          }
+          
+          const transformedIdea = {
             ...idea,
             likes_count,
             dislikes_count,
             total_reactions,
-            hasPoll: !!idea.poll_id,
-            poll: idea.poll_id ? {
-              id: idea.poll_id,
-              question: idea.poll_question || '',
-              options: typeof idea.poll_options === 'string' 
-                ? JSON.parse(idea.poll_options) 
-                : idea.poll_options || []
-            } : undefined
+            hasPoll: !!pollData,
+            poll: pollData ? {
+              id: pollData.id,
+              question: pollData.question || '',
+              options: typeof pollData.options === 'string' 
+                ? JSON.parse(pollData.options) 
+                : pollData.options || []
+            } : undefined,
+            poll_id: pollData?.id,
+            poll_question: pollData?.question,
+            poll_options: typeof pollData?.options === 'string' 
+              ? JSON.parse(pollData.options) 
+              : pollData?.options || [],
+            poll_total_responses: pollData?.total_votes || 0
           };
+          
+          console.log('🔍 Transformed idea:', {
+            id: transformedIdea.id,
+            title: transformedIdea.title,
+            status: transformedIdea.status,
+            hasPoll: transformedIdea.hasPoll,
+            poll: transformedIdea.poll,
+            poll_id: transformedIdea.poll_id,
+            poll_question: transformedIdea.poll_question,
+            poll_options: transformedIdea.poll_options
+          });
+          
+          return transformedIdea;
         });
         
         setIdeas(ideasWithVotes);
@@ -132,19 +264,19 @@ export default function InspirerCornerScreen() {
         })();
 
         // Load user reactions in background (non-blocking)
-        if (user?.id && approvedIdeasData.length > 0) {
+        if (user?.id && finalIdeasData.length > 0) {
           (async () => {
             try {
               const { data: userReactions } = await supabase
                 .from('idea_votes')
                 .select('idea_id, vote_type')
                 .eq('user_id', user.id)
-                .in('idea_id', approvedIdeasData.map((idea: any) => idea.id));
+                .in('idea_id', finalIdeasData.map((idea: any) => idea.id));
               
               const userReactionsData: { [key: string]: boolean | null } = {};
               
               // Initialize all reactions as null
-              approvedIdeasData.forEach((idea: any) => {
+              finalIdeasData.forEach((idea: any) => {
                 userReactionsData[idea.id] = null;
               });
 
@@ -156,6 +288,41 @@ export default function InspirerCornerScreen() {
               setUserReactions(userReactionsData);
             } catch (error) {
               console.error('Error loading user reactions:', error);
+            }
+          })();
+
+          // Load user poll responses in background (non-blocking)
+          (async () => {
+            try {
+              // Get ideas with polls
+              const ideasWithPolls = finalIdeasData.filter((idea: any) => idea.poll_id);
+              
+              if (ideasWithPolls.length > 0) {
+                const { data: userPollResponses } = await supabase
+                  .from('poll_responses')
+                  .select('poll_id, selected_option')
+                  .eq('user_id', user.id)
+                  .in('poll_id', ideasWithPolls.map((idea: any) => idea.poll_id));
+                
+                const userPollResponsesData: { [key: string]: number | null } = {};
+                
+                // Initialize all poll responses as null
+                ideasWithPolls.forEach((idea: any) => {
+                  userPollResponsesData[idea.id] = null;
+                });
+
+                // Map the poll responses
+                userPollResponses?.forEach(response => {
+                  const idea = ideasWithPolls.find((idea: any) => idea.poll_id === response.poll_id);
+                  if (idea) {
+                    userPollResponsesData[idea.id] = response.selected_option;
+                  }
+                });
+                
+                setUserPollResponses(userPollResponsesData);
+              }
+            } catch (error) {
+              console.error('Error loading user poll responses:', error);
             }
           })();
         }
@@ -462,6 +629,48 @@ export default function InspirerCornerScreen() {
     }
   };
 
+  const handlePollVoteFromCard = async (ideaId: string, optionIndex: number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.id) return;
+
+    try {
+      // Set loading state for this specific poll
+      setPollVotingLoading(prev => ({ ...prev, [`${ideaId}-${optionIndex}`]: true }));
+
+      const { error } = await IdeasService.submitPollResponse({
+        poll_id: ideas.find(idea => idea.id === ideaId)?.poll?.id || '',
+        user_id: user.id,
+        user_name: userProfile?.name || user.email || 'Anonymous User',
+        user_role: userRole || 'trainee',
+        selected_option: optionIndex
+      });
+
+      if (error) {
+        console.error('Error submitting poll vote:', error);
+        Alert.alert('Error', 'Failed to submit vote. Please try again.');
+        return;
+      }
+
+      // Update local state
+      setUserPollResponses(prev => ({ ...prev, [ideaId]: optionIndex }));
+      
+      // Reload ideas to get updated vote counts
+      await loadIdeasAndReactions();
+      
+      Alert.alert('Success', 'Your vote has been recorded!');
+    } catch (error) {
+      console.error('Error submitting poll vote:', error);
+      Alert.alert('Error', 'Failed to submit vote. Please try again.');
+    } finally {
+      // Clear loading state
+      setPollVotingLoading(prev => ({ ...prev, [`${ideaId}-${optionIndex}`]: false }));
+    }
+  };
+
+  const togglePollExpansion = (ideaId: string) => {
+    setExpandedPolls(prev => ({ ...prev, [ideaId]: !prev[ideaId] }));
+  };
+
   const displayedIdeas = useMemo(() => 
     showAllIdeas ? ideas : ideas.slice(0, 3), 
     [showAllIdeas, ideas]
@@ -539,7 +748,19 @@ export default function InspirerCornerScreen() {
           <View style={styles.sectionContainer}>
             <Text style={[styles.sectionTitle, { color: primaryText }]}>Community Ideas</Text>
             
-            {displayedIdeas.map((item) => (
+            {displayedIdeas.map((item) => {
+              // Debug logging for each item
+              console.log('🔍 Rendering item:', {
+                id: item.id,
+                title: item.title,
+                status: item.status,
+                hasPoll: item.hasPoll,
+                poll: item.poll,
+                userRole: userRole,
+                shouldShowPoll: item.hasPoll && item.poll && userRole !== 'admin' && (item.status === 'Approved' || item.status === 'In Progress')
+              });
+              
+              return (
               <TouchableOpacity 
                 key={item.id} 
                 style={[styles.ideaCard, { backgroundColor: cardBg }]}
@@ -619,25 +840,111 @@ export default function InspirerCornerScreen() {
                      </TouchableOpacity>
                   </View>
 
-                  {/* Poll Section - Simplified */}
-                  {item.hasPoll && item.poll && (
-                    <View style={styles.pollSection}>
-                      <Text style={[styles.pollQuestion, { color: primaryText }]}>
-                        📊 Poll: {item.poll.question}
-                      </Text>
-                      <Text style={[styles.pollVoteCount, { color: secondaryText }]}>
-                        {item.poll_total_responses || 0} votes • Poll available
-                      </Text>
-                      <TouchableOpacity 
-                        style={styles.viewResultsButton}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          openPollVotingModal(item);
-                        }}
-                      >
-                        <Text style={[styles.viewResultsText, { color: '#007AFF' }]}>View Poll</Text>
-                      </TouchableOpacity>
-                    </View>
+                  {/* Poll Voting Section */}
+                  {item.hasPoll && item.poll && userRole !== 'admin' && (item.status === 'Approved' || item.status === 'In Progress') && (
+                    <TouchableOpacity 
+                      style={[styles.pollCard, { backgroundColor: isDarkMode ? '#2A2A2A' : '#FFFFFF' }]}
+                      onPress={() => togglePollExpansion(item.id)}
+                      activeOpacity={0.8}
+                    >
+                      {/* Poll Header - Always Visible */}
+                      <View style={styles.pollHeader}>
+                        <View style={styles.pollIconContainer}>
+                          <Text style={[styles.pollIcon, { color: isDarkMode ? '#4A90E2' : '#007AFF' }]}>📊</Text>
+                        </View>
+                        <View style={styles.pollTitleContainer}>
+                          <Text style={[styles.pollTitle, { color: isDarkMode ? '#FFFFFF' : '#1A1A1A' }]}>
+                            Poll Question
+                          </Text>
+                          <Text style={[styles.pollQuestion, { color: isDarkMode ? '#E0E0E0' : '#333333' }]}>
+                            {item.poll.question}
+                          </Text>
+                        </View>
+                        <View style={styles.pollExpandIcon}>
+                          <Text style={[styles.pollExpandIconText, { color: isDarkMode ? '#999999' : '#666666' }]}>
+                            {expandedPolls[item.id] ? '▼' : '▶'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Poll Options - Only Visible When Expanded */}
+                      {expandedPolls[item.id] && (
+                        <>
+                          <View style={styles.pollOptionsContainer}>
+                            {item.poll.options.map((option: string, optionIndex: number) => {
+                              const isSelected = userPollResponses[item.id] === optionIndex;
+                              const isLoading = pollVotingLoading[`${item.id}-${optionIndex}`];
+                              
+                              return (
+                                <TouchableOpacity
+                                  key={optionIndex}
+                                  style={[
+                                    styles.pollOptionButton,
+                                    isSelected && { 
+                                      backgroundColor: isDarkMode ? '#4A90E2' : '#007AFF',
+                                      borderColor: isDarkMode ? '#4A90E2' : '#007AFF'
+                                    },
+                                    isLoading && styles.pollOptionButtonDisabled
+                                  ]}
+                                  onPress={() => handlePollVoteFromCard(item.id, optionIndex)}
+                                  disabled={isLoading}
+                                >
+                                  <View style={styles.pollOptionContent}>
+                                    <View style={styles.pollOptionTextContainer}>
+                                      <Text style={[
+                                        styles.pollOptionText,
+                                        { color: isSelected ? '#FFFFFF' : (isDarkMode ? '#E0E0E0' : '#333333') }
+                                      ]}>
+                                        {option}
+                                      </Text>
+                                    </View>
+                                    
+                                    {/* Selection Indicator */}
+                                    <View style={styles.pollOptionIndicator}>
+                                      {isSelected ? (
+                                        <View style={[styles.pollOptionCheck, { backgroundColor: '#FFFFFF' }]}>
+                                          <Text style={[styles.pollOptionCheckText, { color: isDarkMode ? '#4A90E2' : '#007AFF' }]}>✓</Text>
+                                        </View>
+                                      ) : (
+                                        <View style={[styles.pollOptionCircle, { borderColor: isDarkMode ? '#666666' : '#CCCCCC' }]} />
+                                      )}
+                                    </View>
+                                  </View>
+                                  
+                                  {/* Loading State */}
+                                  {isLoading && (
+                                    <View style={styles.pollOptionLoading}>
+                                      <Text style={[styles.pollOptionLoadingText, { color: isDarkMode ? '#999999' : '#666666' }]}>
+                                        Voting...
+                                      </Text>
+                                    </View>
+                                  )}
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+
+                          {/* User's Current Vote Display */}
+                          {userPollResponses[item.id] !== null && userPollResponses[item.id] !== undefined && (
+                            <View style={[styles.userVoteContainer, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F8F9FA' }]}>
+                              <Text style={[styles.userVoteLabel, { color: isDarkMode ? '#999999' : '#666666' }]}>
+                                Your vote:
+                              </Text>
+                              <Text style={[styles.userVoteText, { color: isDarkMode ? '#4A90E2' : '#007AFF' }]}>
+                                {item.poll.options[userPollResponses[item.id]!]}
+                              </Text>
+                            </View>
+                          )}
+
+                          {/* Poll Stats */}
+                          <View style={[styles.pollStatsContainer, { borderTopColor: isDarkMode ? '#444444' : '#E0E0E0' }]}>
+                            <Text style={[styles.pollStatsText, { color: isDarkMode ? '#999999' : '#666666' }]}>
+                              {item.poll_total_responses || 0} total votes
+                            </Text>
+                          </View>
+                        </>
+                      )}
+                    </TouchableOpacity>
                   )}
                   
                 {/* Expanded Content */}
@@ -666,7 +973,8 @@ export default function InspirerCornerScreen() {
                   </View>
                 )}
                    </TouchableOpacity>
-            ))}
+            );
+            })}
 
             {/* View All Ideas Button */}
             {!showAllIdeas && ideas.length > 3 && (
@@ -950,20 +1258,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
   },
-  pollSection: {
-    marginTop: 12,
-    padding: 12,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-  },
-  pollQuestion: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-
   pollModalQuestion: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -1110,17 +1404,149 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  pollVoteCount: {
-    fontSize: 12,
+  pollCard: {
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  pollHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  pollIconContainer: {
+    backgroundColor: '#E0E0E0',
+    borderRadius: 10,
+    padding: 8,
+    marginRight: 12,
+  },
+  pollIcon: {
+    fontSize: 24,
+  },
+  pollTitleContainer: {
+    flex: 1,
+  },
+  pollTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  pollOptionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  pollOptionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginVertical: 4,
+    width: '48%', // Two options per row
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  pollOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  pollOptionTextContainer: {
+    flex: 1,
+  },
+  pollOptionText: {
+    fontSize: 14,
     fontWeight: '500',
+    marginRight: 8,
+  },
+  pollOptionIndicator: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#CCCCCC',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pollOptionCircle: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  pollOptionCheck: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pollOptionCheckText: {
+    fontSize: 12,
+  },
+  userVoteContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  userVoteLabel: {
+    fontSize: 12,
+    marginRight: 8,
+  },
+  pollStatsContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  pollStatsText: {
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  pollQuestion: {
+    fontSize: 16,
+    fontWeight: '600',
     marginBottom: 8,
   },
-  viewResultsButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+  pollOptionButtonDisabled: {
+    opacity: 0.6,
   },
-  viewResultsText: {
+  pollOptionLoading: {
+    position: 'absolute',
+    right: 12,
+    top: '50%',
+    transform: [{ translateY: -8 }],
+  },
+  pollOptionLoadingText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontStyle: 'italic',
+  },
+  userVoteText: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  pollExpandIcon: {
+    marginLeft: 10,
+  },
+  pollExpandIconText: {
+    fontSize: 18,
   },
 }); 
