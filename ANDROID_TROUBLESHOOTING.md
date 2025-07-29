@@ -1,124 +1,112 @@
-# Android Troubleshooting Guide
+# حل مشاكل Android في MITConnect
 
-## ✅ **Fixed Android Issues:**
+## ⚠️ المشكلة: "Packager is not running at http://192.168.8.103:8082"
 
-### 1. **Navigation Configuration**
-- ✅ Added `ideas-management` screen to navigation stack
-- ✅ Added proper Android-specific navigation options
-- ✅ Fixed gesture handling for Android
+### 🔍 **أسباب المشكلة:**
+1. **Metro bundler لا يعمل** على العنوان الصحيح
+2. **مشكلة في الشبكة** بين الكمبيوتر والهاتف
+3. **إعدادات IP غير صحيحة**
+4. **Cache قديم** في التطبيق
 
-### 2. **Android Permissions**
-- ✅ Added required Android permissions in `app.json`:
-  - `INTERNET` - For network connectivity
-  - `ACCESS_NETWORK_STATE` - For network status
-  - `WRITE_EXTERNAL_STORAGE` - For file operations
-  - `READ_EXTERNAL_STORAGE` - For file access
+### 🛠️ **الحلول:**
 
-### 3. **Package Configuration**
-- ✅ Added Android package name: `com.mitconnect.app`
-- ✅ Enabled edge-to-edge display
-- ✅ Added platform-specific configurations
-
-### 4. **Polyfills & Dependencies**
-- ✅ Enabled Node.js polyfills in `metro.config.js`
-- ✅ Added `react-native-get-random-values` import
-- ✅ Configured Buffer and crypto polyfills
-- ✅ Added all required Android dependencies
-
-### 5. **Status Bar & UI**
-- ✅ Fixed StatusBar for Android (light style)
-- ✅ Added Android-specific background colors
-- ✅ Configured proper theme handling
-
-## 🚀 **How to Test on Android:**
-
-### **Option 1: Expo Go App**
-1. Install "Expo Go" from Google Play Store
-2. Run: `npx expo start`
-3. Scan QR code with Expo Go app
-4. App will load on your Android device
-
-### **Option 2: Android Emulator**
-1. Install Android Studio
-2. Set up Android Virtual Device (AVD)
-3. Run: `npx expo start`
-4. Press `a` to open Android emulator
-
-### **Option 3: Physical Device via USB**
-1. Enable Developer Options on Android device
-2. Enable USB Debugging
-3. Connect device via USB
-4. Run: `npx expo start --android`
-
-## 🔧 **If Issues Persist:**
-
-### **Clear Cache:**
+#### **الحل 1: إعادة تشغيل Metro bundler**
 ```bash
-npx expo start --clear
-npx expo start --reset-cache
+# إيقاف الخادم الحالي (Ctrl+C)
+# ثم تشغيله من جديد
+expo start --clear
 ```
 
-### **Check Dependencies:**
+#### **الحل 2: تغيير نوع الاتصال**
 ```bash
+# تشغيل على localhost فقط
+expo start --localhost
+
+# أو تشغيل على tunnel
+expo start --tunnel
+```
+
+#### **الحل 3: فحص إعدادات الشبكة**
+1. تأكد أن الكمبيوتر والهاتف على نفس الشبكة
+2. تحقق من عنوان IP للكمبيوتر:
+   ```bash
+   ipconfig  # Windows
+   ifconfig  # Mac/Linux
+   ```
+3. استخدم العنوان الصحيح في التطبيق
+
+#### **الحل 4: مسح Cache**
+```bash
+# مسح cache في التطبيق
+expo start --clear
+
+# أو إعادة تثبيت node_modules
+rm -rf node_modules
 npm install
-npx expo install --fix
 ```
 
-### **Check Android Logs:**
+#### **الحل 5: إعدادات Android**
+1. افتح **Developer Options** في الهاتف
+2. فعّل **USB Debugging**
+3. فعّل **Allow USB Debugging**
+4. اربط الهاتف بالكمبيوتر عبر USB
+
+#### **الحل 6: استخدام Expo Go**
+1. قم بتحميل **Expo Go** من Google Play
+2. امسح QR code من الخادم
+3. أو أدخل عنوان IP يدوياً
+
+### 📱 **إعدادات التطبيق:**
+
+#### **للمطورين:**
 ```bash
-adb logcat | grep -i expo
+# تشغيل في وضع التطوير
+expo start --dev-client
+
+# تشغيل على منفذ محدد
+expo start --port 8081
 ```
 
-### **Common Android Issues:**
+#### **للمستخدمين النهائيين:**
+1. تأكد من تحديث التطبيق
+2. أعد تشغيل التطبيق
+3. تحقق من إعدادات الشبكة
 
-1. **White Screen:**
-   - Clear app cache
-   - Restart Expo development server
-   - Check for JavaScript errors
+### 🔧 **إعدادات الشبكة المتقدمة:**
 
-2. **Network Issues:**
-   - Ensure device has internet connection
-   - Check Supabase URL configuration
-   - Verify API endpoints
+#### **Windows:**
+```bash
+# فحص عنوان IP
+ipconfig /all
 
-3. **Performance Issues:**
-   - Enable Hermes engine
-   - Optimize images and assets
-   - Check for memory leaks
+# إعادة تعيين الشبكة
+netsh winsock reset
+```
 
-4. **Navigation Issues:**
-   - Clear navigation cache
-   - Check screen configurations
-   - Verify route names
+#### **Mac/Linux:**
+```bash
+# فحص عنوان IP
+ifconfig
 
-## 📱 **Android-Specific Features:**
+# إعادة تشغيل الشبكة
+sudo systemctl restart NetworkManager
+```
 
-- ✅ **Edge-to-Edge Display** - Full screen experience
-- ✅ **Adaptive Icons** - Modern Android icon support
-- ✅ **Dark Mode** - System theme integration
-- ✅ **Gesture Navigation** - Android 10+ support
-- ✅ **Status Bar** - Proper Android styling
+### 📞 **إذا لم تحل المشكلة:**
 
-## 🎯 **Testing Checklist:**
+1. **أعد تشغيل الكمبيوتر والهاتف**
+2. **تحقق من إعدادات Firewall**
+3. **جرب شبكة WiFi مختلفة**
+4. **استخدم USB connection بدلاً من WiFi**
 
-- [ ] App launches without crashes
-- [ ] Navigation works smoothly
-- [ ] All screens load properly
-- [ ] Network requests work
-- [ ] Poll voting functionality works
-- [ ] Admin features accessible
-- [ ] User authentication works
-- [ ] Dark/Light mode switching
-- [ ] Image uploads work
-- [ ] Real-time updates function
+### 🆘 **للحصول على مساعدة:**
+- تحقق من سجلات الأخطاء في وحدة تحكم المطور
+- تأكد من إصدار Expo CLI: `expo --version`
+- تحقق من إصدار Node.js: `node --version`
 
-## 📞 **Support:**
-
-If you encounter specific Android issues:
-1. Check the console logs
-2. Try clearing cache
-3. Restart the development server
-4. Check device compatibility
-5. Verify all dependencies are installed
-
-**The app should now work properly on Android devices!** 🎉 
+### ✅ **التحقق من الحل:**
+بعد تطبيق الحلول، يجب أن:
+1. يعمل Metro bundler بدون أخطاء
+2. يظهر QR code في Terminal
+3. يتصل التطبيق بالخادم بنجاح
+4. تظهر الصور والمحتوى بشكل صحيح 

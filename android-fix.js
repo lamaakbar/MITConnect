@@ -1,63 +1,96 @@
 #!/usr/bin/env node
 
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔧 Fixing Android compatibility issues...');
+console.log('🔧 Android Connection Fix Script');
+console.log('================================');
 
-// Check if all required Android dependencies are installed
-const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-
-const requiredDeps = [
-  'react-native-get-random-values',
-  'react-native-crypto',
-  'readable-stream',
-  'buffer',
-  'util'
-];
-
-const missingDeps = requiredDeps.filter(dep => !packageJson.dependencies[dep]);
-
-if (missingDeps.length > 0) {
-  console.log('❌ Missing Android dependencies:', missingDeps.join(', '));
-  console.log('Run: npm install ' + missingDeps.join(' '));
-} else {
-  console.log('✅ All Android dependencies are installed');
-}
-
-// Check if metro config is properly configured
-const metroConfigPath = 'metro.config.js';
-if (fs.existsSync(metroConfigPath)) {
-  const metroConfig = fs.readFileSync(metroConfigPath, 'utf8');
-  if (metroConfig.includes('react-native-get-random-values')) {
-    console.log('✅ Metro config is properly configured');
-  } else {
-    console.log('❌ Metro config needs polyfills for Android');
+// Function to run commands safely
+function runCommand(command, description) {
+  try {
+    console.log(`\n📋 ${description}...`);
+    const result = execSync(command, { encoding: 'utf8', stdio: 'pipe' });
+    console.log(`✅ ${description} completed successfully`);
+    return result;
+  } catch (error) {
+    console.log(`❌ ${description} failed:`, error.message);
+    return null;
   }
 }
 
-// Check app.json configuration
-const appJson = JSON.parse(fs.readFileSync('app.json', 'utf8'));
-if (appJson.expo.android && appJson.expo.android.permissions) {
-  console.log('✅ Android permissions are configured');
-} else {
-  console.log('❌ Android permissions need to be configured');
+// Function to check if port is in use
+function checkPort(port) {
+  try {
+    execSync(`netstat -ano | findstr :${port}`, { stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-console.log('\n📱 Android Compatibility Checklist:');
-console.log('1. ✅ Added Android permissions to app.json');
-console.log('2. ✅ Added Android package name');
-console.log('3. ✅ Enabled polyfills in metro.config.js');
-console.log('4. ✅ Added react-native-get-random-values import');
-console.log('5. ✅ Fixed StatusBar for Android');
-console.log('6. ✅ Added ideas-management screen to navigation');
+// Main fix process
+async function fixAndroidConnection() {
+  console.log('\n🚀 Starting Android connection fix...\n');
 
-console.log('\n🚀 To test on Android:');
-console.log('1. Run: npx expo start');
-console.log('2. Press "a" to open Android emulator');
-console.log('3. Or scan QR code with Expo Go app on Android device');
+  // 1. Kill any existing Metro processes
+  console.log('🔄 Step 1: Killing existing Metro processes...');
+  try {
+    execSync('taskkill /f /im node.exe', { stdio: 'pipe' });
+    console.log('✅ Killed existing Node.js processes');
+  } catch (error) {
+    console.log('ℹ️ No existing processes to kill');
+  }
 
-console.log('\n🔧 If issues persist:');
-console.log('1. Clear cache: npx expo start --clear');
-console.log('2. Reset metro: npx expo start --reset-cache');
-console.log('3. Check Android logs: adb logcat'); 
+  // 2. Clear Metro cache
+  console.log('\n🧹 Step 2: Clearing Metro cache...');
+  runCommand('npx expo start --clear', 'Clearing Expo cache');
+
+  // 3. Check network configuration
+  console.log('\n🌐 Step 3: Checking network configuration...');
+  const ipconfig = runCommand('ipconfig', 'Getting IP configuration');
+  
+  if (ipconfig) {
+    const lines = ipconfig.split('\n');
+    const ipv4Line = lines.find(line => line.includes('IPv4 Address'));
+    if (ipv4Line) {
+      const ip = ipv4Line.split(':')[1]?.trim();
+      console.log(`📱 Your IP address: ${ip}`);
+      console.log(`🔗 Use this IP in your Android device: http://${ip}:8081`);
+    }
+  }
+
+  // 4. Check if port 8081 is available
+  console.log('\n🔍 Step 4: Checking port availability...');
+  if (checkPort(8081)) {
+    console.log('⚠️ Port 8081 is in use. Trying to free it...');
+    try {
+      execSync('netstat -ano | findstr :8081', { stdio: 'pipe' });
+    } catch (error) {
+      console.log('✅ Port 8081 is now available');
+    }
+  } else {
+    console.log('✅ Port 8081 is available');
+  }
+
+  // 5. Start Expo with tunnel option
+  console.log('\n🚀 Step 5: Starting Expo with tunnel...');
+  console.log('📱 This will create a tunnel connection that works from anywhere');
+  console.log('🔗 Scan the QR code with Expo Go app');
+  
+  try {
+    execSync('npx expo start --tunnel', { stdio: 'inherit' });
+  } catch (error) {
+    console.log('\n❌ Failed to start with tunnel. Trying localhost...');
+    try {
+      execSync('npx expo start --localhost', { stdio: 'inherit' });
+    } catch (error2) {
+      console.log('\n❌ Failed to start Expo. Please try manually:');
+      console.log('   npx expo start --clear');
+    }
+  }
+}
+
+// Run the fix
+fixAndroidConnection().catch(console.error); 

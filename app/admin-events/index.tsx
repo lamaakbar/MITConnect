@@ -200,6 +200,8 @@ const AdminEventListScreen: React.FC = () => {
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
+      // Note: MediaTypeOptions.Images is deprecated but still works in expo-image-picker v16.1.4
+      // TODO: Update to MediaType.Images when upgrading to newer version
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],

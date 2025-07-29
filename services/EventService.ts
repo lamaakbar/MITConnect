@@ -943,7 +943,7 @@ class EventService {
         date: formattedDate,
         time: formattedTime,
         location: eventData.location.trim(),
-        cover_image: eventData.image || '',
+        cover_image: eventData.coverImage || '',
         category: eventData.category,
         featured: eventData.featured,
         status: eventData.status,
@@ -991,7 +991,7 @@ class EventService {
       if (eventData.date) updateData.date = eventData.date;
       if (eventData.time) updateData.time = eventData.time;
       if (eventData.location) updateData.location = eventData.location;
-      if (eventData.image) updateData.cover_image = eventData.image;
+      if (eventData.coverImage) updateData.cover_image = eventData.coverImage;
       if (eventData.category) updateData.category = eventData.category;
       if (eventData.featured !== undefined) updateData.featured = eventData.featured;
       if (eventData.status) updateData.status = eventData.status;
@@ -1174,6 +1174,18 @@ class EventService {
    * Map Supabase event to Event interface
    */
   private mapSupabaseEventToEvent(supabaseEvent: SupabaseEvent): Event {
+    // Ensure cover_image is a valid URL or undefined
+    let coverImageUrl: string | undefined = undefined;
+    if (supabaseEvent.cover_image) {
+      // Check if it's already a full URL
+      if (supabaseEvent.cover_image.startsWith('http')) {
+        coverImageUrl = supabaseEvent.cover_image;
+      } else {
+        // If it's a relative path, construct full URL
+        coverImageUrl = supabaseEvent.cover_image;
+      }
+    }
+
     return {
       id: supabaseEvent.id,
       title: supabaseEvent.title,
@@ -1181,8 +1193,8 @@ class EventService {
       date: supabaseEvent.date,
       time: supabaseEvent.time,
       location: supabaseEvent.location,
-      image: supabaseEvent.cover_image ? { uri: supabaseEvent.cover_image } : require('../assets/images/splash-icon.png'),
-      coverImage: supabaseEvent.cover_image,
+      image: coverImageUrl ? { uri: coverImageUrl } : require('../assets/images/splash-icon.png'),
+      coverImage: coverImageUrl,
       category: supabaseEvent.category,
       registeredCount: 0, // Will be calculated separately
       featured: supabaseEvent.featured,

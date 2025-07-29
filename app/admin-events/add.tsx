@@ -18,6 +18,7 @@ import DatePickerModal from '../../components/DatePickerModal';
 import TimePickerModal from '../../components/TimePickerModal';
 import eventService from '../../services/EventService';
 import { Event } from '../../types/events';
+import { uploadImageFromLibrary } from '../../services/imageUploadService';
 
 const EVENT_TYPES = ['Seminar', 'Workshop', 'Conference', 'Meetup'];
 
@@ -26,6 +27,7 @@ const AddEventScreen: React.FC = () => {
   
   // Form state - completely admin-driven
   const [image, setImage] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [type, setType] = useState('MITC');
   const [category, setCategory] = useState('');
@@ -42,6 +44,7 @@ const AddEventScreen: React.FC = () => {
   const [materials, setMaterials] = useState('');
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Date and Time Picker states
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -50,14 +53,24 @@ const AddEventScreen: React.FC = () => {
   const [selectedTime, setSelectedTime] = useState(new Date());
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      setImage(result.assets[0].uri);
+    try {
+      setUploadingImage(true);
+      
+      // Upload image to Supabase first
+      const uploadedImageUrl = await uploadImageFromLibrary('images', 'event-covers');
+      
+      if (uploadedImageUrl) {
+        setImageUrl(uploadedImageUrl);
+        setImage(uploadedImageUrl); // For display
+        console.log('✅ Image uploaded successfully:', uploadedImageUrl);
+      } else {
+        Alert.alert('Error', 'Failed to upload image. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      Alert.alert('Error', 'Failed to upload image. Please try again.');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -144,8 +157,8 @@ const AddEventScreen: React.FC = () => {
         tags: tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
         requirements: requirements ? requirements.split(',').map(req => req.trim()).filter(req => req) : [],
         materials: materials ? materials.split(',').map(mat => mat.trim()).filter(mat => mat) : [],
-        coverImage: image || undefined,
-        image: image ? { uri: image } : require('../../assets/images/splash-icon.png'),
+        coverImage: imageUrl || undefined, // Use imageUrl for the cover image
+        image: imageUrl ? { uri: imageUrl } : require('../../assets/images/splash-icon.png'),
         registeredCount: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -179,8 +192,18 @@ const AddEventScreen: React.FC = () => {
         
         {/* Image Upload */}
         <Text style={styles.label}>Event Cover Image</Text>
-        <TouchableOpacity style={styles.imageUploadBox} onPress={pickImage} activeOpacity={0.8}>
-          {image ? (
+        <TouchableOpacity 
+          style={styles.imageUploadBox} 
+          onPress={pickImage} 
+          activeOpacity={0.8}
+          disabled={uploadingImage}
+        >
+          {uploadingImage ? (
+            <View style={{ alignItems: 'center' }}>
+              <ActivityIndicator size="large" color="#43C6AC" />
+              <Text style={styles.uploadText}>Uploading image...</Text>
+            </View>
+          ) : image ? (
             <Image source={{ uri: image }} style={styles.uploadedImage} />
           ) : (
             <View style={{ alignItems: 'center' }}>
