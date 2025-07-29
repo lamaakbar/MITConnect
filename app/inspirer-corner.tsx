@@ -88,7 +88,15 @@ export default function InspirerCornerScreen() {
             .limit(10); // Limit to first 10 for faster loading
           
           if (ideasError) {
+            // If the error is due to missing table, fall back to manual loading
+            if (ideasError.message.includes('idea_comments') || ideasError.message.includes('does not exist')) {
+              console.log('🔄 Falling back to manual loading due to missing table...');
+              break; // Exit retry loop and use manual loading
+            }
+            
+            // Only log other errors (not the missing table error)
             console.error('Error loading ideas:', ideasError);
+            
             if (ideasError.message.includes('Network') || ideasError.message.includes('fetch')) {
               retryCount++;
               if (retryCount < maxRetries) {
@@ -118,9 +126,49 @@ export default function InspirerCornerScreen() {
         }
       }
       
+      // If RPC failed due to missing table, use manual loading
       if (!approvedIdeasData) {
-        console.error('No ideas data received after retries');
-        return;
+        console.log('🔄 Using manual loading approach...');
+        
+        // Load ideas and polls separately, then match them
+        const { data: allIdeas, error: ideasError } = await supabase
+          .from('ideas')
+          .select('*')
+          .in('status', ['Approved', 'In Progress'])
+          .order('created_at', { ascending: false })
+          .limit(10);
+        
+        const { data: allPolls, error: pollsError } = await supabase
+          .from('idea_polls')
+          .select('*')
+          .eq('is_active', true);
+        
+        console.log('🔧 All ideas loaded:', allIdeas?.length);
+        console.log('🔧 All polls loaded:', allPolls?.length);
+        console.log('🔧 Ideas error:', ideasError);
+        console.log('🔧 Polls error:', pollsError);
+        
+        // Match polls to ideas manually
+        const ideasWithPolls = allIdeas?.map(idea => {
+          const matchingPoll = allPolls?.find(poll => poll.idea_id === idea.id);
+          return {
+            ...idea,
+            poll_id: matchingPoll?.id,
+            poll_question: matchingPoll?.question,
+            poll_options: matchingPoll?.options,
+            poll_total_responses: matchingPoll?.total_votes || 0
+          };
+        }) || [];
+        
+        console.log('🔧 Ideas with polls matched:', ideasWithPolls.map(idea => ({
+          id: idea.id,
+          title: idea.title,
+          hasPoll: !!idea.poll_id,
+          poll_question: idea.poll_question
+        })));
+        
+        // Use the manually matched data
+        approvedIdeasData = ideasWithPolls;
       }
 
       console.log('🔍 Raw ideas data from database:', approvedIdeasData);

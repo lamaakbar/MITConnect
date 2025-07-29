@@ -1169,12 +1169,27 @@ export default function TraineeHub() {
                         />
                         {errors[`week${idx}_hours`] && <Text style={{ color: 'red', marginBottom: 2 }}>{errors[`week${idx}_hours`]}</Text>}
                         <TextInput
-                          style={{ borderWidth: 1, borderColor: '#B2E6F7', borderRadius: 10, padding: 12, marginBottom: 8, color: '#222', backgroundColor: '#fff', fontSize: 16 }}
+                          style={{ 
+                            borderWidth: 1, 
+                            borderColor: '#B2E6F7', 
+                            borderRadius: 10, 
+                            padding: 12, 
+                            marginBottom: 8, 
+                            color: '#222', 
+                            backgroundColor: '#fff', 
+                            fontSize: 16,
+                            minHeight: 80,
+                            textAlignVertical: 'top',
+                            paddingTop: 12,
+                            paddingBottom: 12
+                          }}
                           placeholder="Task description"
                           placeholderTextColor="#888"
                           value={w.task}
                           onChangeText={v => handleWeekPlanChange(idx, 'task', v)}
                           multiline
+                          numberOfLines={4}
+                          textAlignVertical="top"
                         />
                         {errors[`week${idx}_task`] && <Text style={{ color: 'red', marginBottom: 2 }}>{errors[`week${idx}_task`]}</Text>}
                       </View>

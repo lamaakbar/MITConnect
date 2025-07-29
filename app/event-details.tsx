@@ -171,7 +171,7 @@ export default function EventDetailsScreen() {
   const getButtonState = () => {
     if (isRegistered) return { text: 'Registered', disabled: true, color: '#4CAF50' };
     if (isEventInPast()) return { text: 'Event Passed', disabled: true, color: '#FF9800' };
-    return { text: 'Register Now', disabled: false, color: isDarkMode ? '#3B82F6' : '#2563EB' };
+    return { text: 'Register Now', disabled: false, color: '#43C6AC' };
   };
 
   const buttonState = getButtonState();
@@ -380,7 +380,7 @@ export default function EventDetailsScreen() {
               { 
                 backgroundColor: buttonState.color,
                 shadowColor: buttonState.color,
-                borderColor: isDarkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(37, 99, 235, 0.2)'
+                borderColor: 'rgba(67, 198, 172, 0.2)'
               },
               buttonState.disabled && styles.registerBtnDisabled
             ]}
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   registerBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#43C6AC',
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 16,
@@ -515,13 +515,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     flexDirection: 'row',
     justifyContent: 'center',
-    shadowColor: '#2563EB',
+    shadowColor: '#43C6AC',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.2)',
+    borderColor: 'rgba(67, 198, 172, 0.2)',
   },
   registerBtnDisabled: {
     backgroundColor: '#E0E0E0',
