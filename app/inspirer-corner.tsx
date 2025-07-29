@@ -35,6 +35,7 @@ export default function InspirerCornerScreen() {
   const [userPollResponses, setUserPollResponses] = useState<{ [key: string]: number | null }>({});
   const [pollVotingLoading, setPollVotingLoading] = useState<{ [key: string]: boolean }>({});
   const [expandedPolls, setExpandedPolls] = useState<{ [key: string]: boolean }>({});
+  const [pollVoteCounts, setPollVoteCounts] = useState<{ [key: string]: { total: number; options: { [key: number]: number } } }>({});
   const [stats, setStats] = useState({
     totalIdeas: 0,
     inProgress: 0,
@@ -72,15 +73,53 @@ export default function InspirerCornerScreen() {
       // Get user session first to avoid multiple auth calls
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Load approved and in-progress ideas with polls directly from database
-      const { data: approvedIdeasData, error: ideasError } = await supabase
-        .rpc('get_ideas_with_votes')
-        .in('status', ['Approved', 'In Progress'])
-        .order('created_at', { ascending: false })
-        .limit(10); // Limit to first 10 for faster loading
+      // Add retry logic for network issues
+      let retryCount = 0;
+      const maxRetries = 3;
+      let approvedIdeasData: any = null;
       
-      if (ideasError) {
-        console.error('Error loading ideas:', ideasError);
+      while (retryCount < maxRetries) {
+        try {
+          // Load approved and in-progress ideas with polls directly from database
+          const { data, error: ideasError } = await supabase
+            .rpc('get_ideas_with_votes')
+            .in('status', ['Approved', 'In Progress'])
+            .order('created_at', { ascending: false })
+            .limit(10); // Limit to first 10 for faster loading
+          
+          if (ideasError) {
+            console.error('Error loading ideas:', ideasError);
+            if (ideasError.message.includes('Network') || ideasError.message.includes('fetch')) {
+              retryCount++;
+              if (retryCount < maxRetries) {
+                console.log(`🔄 Network error, retrying... (${retryCount}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, 2000 * retryCount)); // Exponential backoff
+                continue;
+              }
+            }
+            return;
+          }
+          
+          // If we get here, the request was successful
+          approvedIdeasData = data;
+          break;
+        } catch (networkError) {
+          retryCount++;
+          console.error(`Network error (attempt ${retryCount}/${maxRetries}):`, networkError);
+          
+          if (retryCount < maxRetries) {
+            console.log(`🔄 Retrying in ${retryCount * 2} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, 2000 * retryCount));
+          } else {
+            console.error('❌ Max retries reached, giving up');
+            Alert.alert('Connection Error', 'Unable to load ideas. Please check your internet connection and try again.');
+            return;
+          }
+        }
+      }
+      
+      if (!approvedIdeasData) {
+        console.error('No ideas data received after retries');
         return;
       }
 
@@ -267,64 +306,146 @@ export default function InspirerCornerScreen() {
         if (user?.id && finalIdeasData.length > 0) {
           (async () => {
             try {
-              const { data: userReactions } = await supabase
+              // Load all votes for these ideas to get accurate counts
+              const { data: allVotes } = await supabase
                 .from('idea_votes')
-                .select('idea_id, vote_type')
-                .eq('user_id', user.id)
+                .select('idea_id, vote_type, user_id')
                 .in('idea_id', finalIdeasData.map((idea: any) => idea.id));
               
+              // Calculate accurate vote counts
+              const voteCounts: { [key: string]: { likes: number; dislikes: number; total: number } } = {};
               const userReactionsData: { [key: string]: boolean | null } = {};
               
-              // Initialize all reactions as null
+              // Initialize counts for all ideas
               finalIdeasData.forEach((idea: any) => {
+                voteCounts[idea.id] = { likes: 0, dislikes: 0, total: 0 };
                 userReactionsData[idea.id] = null;
               });
-
-              // Map the batch results
-              userReactions?.forEach(reaction => {
-                userReactionsData[reaction.idea_id] = reaction.vote_type === 'like';
+              
+              // Count votes and track user reactions
+              allVotes?.forEach(vote => {
+                if (voteCounts[vote.idea_id]) {
+                  if (vote.vote_type === 'like') {
+                    voteCounts[vote.idea_id].likes++;
+                  } else if (vote.vote_type === 'dislike') {
+                    voteCounts[vote.idea_id].dislikes++;
+                  }
+                  voteCounts[vote.idea_id].total++;
+                  
+                  // Track current user's reaction
+                  if (vote.user_id === user.id) {
+                    userReactionsData[vote.idea_id] = vote.vote_type === 'like';
+                  }
+                }
               });
               
+              // Update ideas with accurate counts
+              setIdeas(prevIdeas => 
+                prevIdeas.map(idea => ({
+                  ...idea,
+                  likes_count: voteCounts[idea.id]?.likes || 0,
+                  dislikes_count: voteCounts[idea.id]?.dislikes || 0,
+                  total_reactions: voteCounts[idea.id]?.total || 0
+                }))
+              );
+              
               setUserReactions(userReactionsData);
+              
+              console.log('📊 Accurate vote counts calculated:', voteCounts);
+              console.log('👤 User reactions loaded:', userReactionsData);
             } catch (error) {
               console.error('Error loading user reactions:', error);
             }
           })();
 
           // Load user poll responses in background (non-blocking)
-          (async () => {
-            try {
-              // Get ideas with polls
-              const ideasWithPolls = finalIdeasData.filter((idea: any) => idea.poll_id);
-              
-              if (ideasWithPolls.length > 0) {
-                const { data: userPollResponses } = await supabase
-                  .from('poll_responses')
-                  .select('poll_id, selected_option')
-                  .eq('user_id', user.id)
-                  .in('poll_id', ideasWithPolls.map((idea: any) => idea.poll_id));
+          if (user?.id && finalIdeasData.length > 0) {
+            (async () => {
+              try {
+                // Get ideas with polls
+                const ideasWithPolls = finalIdeasData.filter((idea: any) => idea.poll_id);
                 
-                const userPollResponsesData: { [key: string]: number | null } = {};
-                
-                // Initialize all poll responses as null
-                ideasWithPolls.forEach((idea: any) => {
-                  userPollResponsesData[idea.id] = null;
-                });
-
-                // Map the poll responses
-                userPollResponses?.forEach(response => {
-                  const idea = ideasWithPolls.find((idea: any) => idea.poll_id === response.poll_id);
-                  if (idea) {
-                    userPollResponsesData[idea.id] = response.selected_option;
-                  }
-                });
-                
-                setUserPollResponses(userPollResponsesData);
+                if (ideasWithPolls.length > 0) {
+                  // Fetch all poll responses for these polls - optimized query
+                  const pollIds = ideasWithPolls.map((idea: any) => idea.poll_id);
+                  const { data: allPollResponses } = await supabase
+                    .from('poll_responses')
+                    .select('poll_id, selected_option, user_id, created_at')
+                    .in('poll_id', pollIds)
+                    .order('created_at', { ascending: false });
+                  
+                  console.log('📊 All poll responses:', allPollResponses);
+                  
+                  // Optimized vote counting - group by poll and get latest per user
+                  const voteCounts: { [key: string]: { total: number; options: { [key: number]: number } } } = {};
+                  const userResponses: { [key: string]: number | null } = {};
+                  
+                  // Group responses by poll_id for faster processing
+                  const responsesByPoll: { [key: string]: any[] } = {};
+                  allPollResponses?.forEach(response => {
+                    if (!responsesByPoll[response.poll_id]) {
+                      responsesByPoll[response.poll_id] = [];
+                    }
+                    responsesByPoll[response.poll_id].push(response);
+                  });
+                  
+                  // Process each poll
+                  pollIds.forEach(pollId => {
+                    const pollResponses = responsesByPoll[pollId] || [];
+                    
+                    // Get latest response per user (responses are already ordered by created_at desc)
+                    const userLatestResponses: { [key: string]: any } = {};
+                    pollResponses.forEach(response => {
+                      if (!userLatestResponses[response.user_id]) {
+                        userLatestResponses[response.user_id] = response;
+                      }
+                    });
+                    
+                    // Count votes from latest responses
+                    const latestResponses = Object.values(userLatestResponses);
+                    const totalVotes = latestResponses.length;
+                    const optionVotes: { [key: number]: number } = {};
+                    
+                    latestResponses.forEach(response => {
+                      const option = response.selected_option;
+                      optionVotes[option] = (optionVotes[option] || 0) + 1;
+                    });
+                    
+                    voteCounts[pollId] = { total: totalVotes, options: optionVotes };
+                    
+                    // Find current user's response
+                    const userResponse = userLatestResponses[user.id];
+                    if (userResponse) {
+                      const idea = ideasWithPolls.find((idea: any) => idea.poll_id === pollId);
+                      if (idea) {
+                        userResponses[idea.id] = userResponse.selected_option;
+                      }
+                    }
+                  });
+                  
+                  console.log('📊 Vote counts calculated:', voteCounts);
+                  console.log('👤 User responses from DB:', userResponses);
+                  
+                  setPollVoteCounts(voteCounts);
+                  
+                  // Only update user responses if we don't already have a current vote for that idea
+                  setUserPollResponses(prev => {
+                    const updated = { ...prev };
+                    Object.entries(userResponses).forEach(([ideaId, vote]) => {
+                      // Only set if we don't already have a current vote for this idea
+                      if (updated[ideaId] === undefined) {
+                        updated[ideaId] = vote;
+                      }
+                    });
+                    console.log('👤 Final userPollResponses:', updated);
+                    return updated;
+                  });
+                }
+              } catch (error) {
+                console.error('Error loading user poll responses:', error);
               }
-            } catch (error) {
-              console.error('Error loading user poll responses:', error);
-            }
-          })();
+            })();
+          }
         }
       }
     } catch (error) {
@@ -366,7 +487,7 @@ export default function InspirerCornerScreen() {
             // Was liked, now disliked
             return {
               ...idea,
-              likes_count: idea.likes_count - 1,
+              likes_count: Math.max(0, idea.likes_count - 1),
               dislikes_count: idea.dislikes_count + 1,
               total_reactions: idea.total_reactions
             };
@@ -375,7 +496,7 @@ export default function InspirerCornerScreen() {
             return {
               ...idea,
               likes_count: idea.likes_count + 1,
-              dislikes_count: idea.dislikes_count - 1,
+              dislikes_count: Math.max(0, idea.dislikes_count - 1),
               total_reactions: idea.total_reactions
             };
           } else if (previousReaction === null) {
@@ -412,9 +533,9 @@ export default function InspirerCornerScreen() {
           prevIdeas.map(idea => 
             idea.id === ideaId ? {
               ...idea,
-              likes_count: idea.likes_count - (liked ? 1 : 0),
-              dislikes_count: idea.dislikes_count - (liked ? 0 : 1),
-              total_reactions: idea.total_reactions - (previousReaction === null ? 1 : 0)
+              likes_count: Math.max(0, idea.likes_count - (liked ? 1 : 0)),
+              dislikes_count: Math.max(0, idea.dislikes_count - (liked ? 0 : 1)),
+              total_reactions: Math.max(0, idea.total_reactions - (previousReaction === null ? 1 : 0))
             } : idea
           )
         );
@@ -423,6 +544,37 @@ export default function InspirerCornerScreen() {
       }
 
       // Success - no need to refresh since we already updated optimistically
+      console.log('✅ Reaction submitted successfully');
+      
+      // Optionally refresh counts from database to ensure accuracy
+      setTimeout(async () => {
+        try {
+          const { data: allVotes } = await supabase
+            .from('idea_votes')
+            .select('idea_id, vote_type')
+            .eq('idea_id', ideaId);
+          
+          if (allVotes) {
+            const likes = allVotes.filter(v => v.vote_type === 'like').length;
+            const dislikes = allVotes.filter(v => v.vote_type === 'dislike').length;
+            
+            setIdeas(prevIdeas => 
+              prevIdeas.map(idea => 
+                idea.id === ideaId ? {
+                  ...idea,
+                  likes_count: likes,
+                  dislikes_count: dislikes,
+                  total_reactions: likes + dislikes
+                } : idea
+              )
+            );
+            
+            console.log(`🔄 Refreshed counts for idea ${ideaId}: ${likes} likes, ${dislikes} dislikes`);
+          }
+        } catch (error) {
+          console.error('Error refreshing vote counts:', error);
+        }
+      }, 1000); // Refresh after 1 second
     } catch (error) {
       console.error('Error handling reaction:', error);
       // Revert optimistic update on error
@@ -434,9 +586,9 @@ export default function InspirerCornerScreen() {
         prevIdeas.map(idea => 
           idea.id === ideaId ? {
             ...idea,
-            likes_count: idea.likes_count - (liked ? 1 : 0),
-            dislikes_count: idea.dislikes_count - (liked ? 0 : 1),
-            total_reactions: idea.total_reactions - (previousReaction === null ? 1 : 0)
+            likes_count: Math.max(0, idea.likes_count - (liked ? 1 : 0)),
+            dislikes_count: Math.max(0, idea.dislikes_count - (liked ? 0 : 1)),
+            total_reactions: Math.max(0, idea.total_reactions - (previousReaction === null ? 1 : 0))
           } : idea
         )
       );
@@ -631,38 +783,92 @@ export default function InspirerCornerScreen() {
 
   const handlePollVoteFromCard = async (ideaId: string, optionIndex: number) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.id) return;
+    if (!user?.id) {
+      Alert.alert('Error', 'You must be logged in to vote.');
+      return;
+    }
 
     try {
-      // Set loading state for this specific poll
       setPollVotingLoading(prev => ({ ...prev, [`${ideaId}-${optionIndex}`]: true }));
 
-      const { error } = await IdeasService.submitPollResponse({
-        poll_id: ideas.find(idea => idea.id === ideaId)?.poll?.id || '',
-        user_id: user.id,
-        user_name: userProfile?.name || user.email || 'Anonymous User',
-        user_role: userRole || 'trainee',
-        selected_option: optionIndex
-      });
+      const idea = ideas.find(idea => idea.id === ideaId);
+      if (!idea || !idea.poll?.id) {
+        Alert.alert('Error', 'Poll not found. Please try again.');
+        return;
+      }
+
+      const pollId = idea.poll.id;
+      const previousVote = userPollResponses[ideaId];
+
+      // Submit vote directly to database
+      let retryCount = 0;
+      const maxRetries = 3;
+      let data: any = null;
+      let error: any = null;
+      
+      while (retryCount < maxRetries) {
+        try {
+          const result = await supabase
+            .from('poll_responses')
+            .insert({
+              poll_id: pollId,
+              user_id: user.id,
+              user_name: userProfile?.name || user.email || 'Anonymous User',
+              user_role: userRole || 'trainee',
+              selected_option: optionIndex,
+              created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+          
+          data = result.data;
+          error = result.error;
+          break;
+        } catch (networkError) {
+          retryCount++;
+          console.error(`Network error during vote submission (attempt ${retryCount}/${maxRetries}):`, networkError);
+          
+          if (retryCount < maxRetries) {
+            console.log(`🔄 Retrying vote submission in ${retryCount * 1} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          } else {
+            console.error('❌ Max retries reached for vote submission');
+            Alert.alert('Connection Error', 'Unable to submit vote. Please check your internet connection and try again.');
+            return;
+          }
+        }
+      }
 
       if (error) {
-        console.error('Error submitting poll vote:', error);
+        console.error('Vote submission error:', error);
         Alert.alert('Error', 'Failed to submit vote. Please try again.');
         return;
       }
 
       // Update local state
       setUserPollResponses(prev => ({ ...prev, [ideaId]: optionIndex }));
-      
-      // Reload ideas to get updated vote counts
-      await loadIdeasAndReactions();
-      
-      Alert.alert('Success', 'Your vote has been recorded!');
+
+      // Update vote counts
+      setPollVoteCounts(prev => {
+        const currentCounts = prev[pollId] || { total: 0, options: {} };
+        const newCounts = { ...currentCounts };
+        
+        if (previousVote !== undefined && previousVote !== null) {
+          newCounts.options[previousVote] = Math.max(0, (newCounts.options[previousVote] || 0) - 1);
+          newCounts.total = Math.max(0, newCounts.total - 1);
+        }
+        
+        newCounts.options[optionIndex] = (newCounts.options[optionIndex] || 0) + 1;
+        newCounts.total = newCounts.total + 1;
+        
+        return { ...prev, [pollId]: newCounts };
+      });
+
+      Alert.alert('Success', 'Your vote has been saved!');
     } catch (error) {
-      console.error('Error submitting poll vote:', error);
+      console.error('Vote submission error:', error);
       Alert.alert('Error', 'Failed to submit vote. Please try again.');
     } finally {
-      // Clear loading state
       setPollVotingLoading(prev => ({ ...prev, [`${ideaId}-${optionIndex}`]: false }));
     }
   };
@@ -871,9 +1077,16 @@ export default function InspirerCornerScreen() {
                       {expandedPolls[item.id] && (
                         <>
                           <View style={styles.pollOptionsContainer}>
-                            {item.poll.options.map((option: string, optionIndex: number) => {
+                            {item.poll?.options.map((option: string, optionIndex: number) => {
                               const isSelected = userPollResponses[item.id] === optionIndex;
                               const isLoading = pollVotingLoading[`${item.id}-${optionIndex}`];
+                              
+                              console.log(`🔍 Poll option ${optionIndex} for idea ${item.id}:`, {
+                                option,
+                                isSelected,
+                                userVote: userPollResponses[item.id],
+                                isLoading
+                              });
                               
                               return (
                                 <TouchableOpacity
@@ -939,8 +1152,24 @@ export default function InspirerCornerScreen() {
                           {/* Poll Stats */}
                           <View style={[styles.pollStatsContainer, { borderTopColor: isDarkMode ? '#444444' : '#E0E0E0' }]}>
                             <Text style={[styles.pollStatsText, { color: isDarkMode ? '#999999' : '#666666' }]}>
-                              {item.poll_total_responses || 0} total votes
+                              {pollVoteCounts[item.poll?.id || '']?.total || 0} total votes
                             </Text>
+                            {/* Show vote counts for each option */}
+                            <View style={styles.pollOptionCounts}>
+                              {item.poll?.options.map((option: string, optionIndex: number) => {
+                                const voteCount = pollVoteCounts[item.poll?.id || '']?.options[optionIndex] || 0;
+                                console.log(`📊 Displaying vote count for ${item.poll?.id} option ${optionIndex}:`, {
+                                  option,
+                                  voteCount,
+                                  totalVotes: pollVoteCounts[item.poll?.id || '']?.total || 0
+                                });
+                                return (
+                                  <Text key={optionIndex} style={[styles.pollOptionCount, { color: isDarkMode ? '#999999' : '#666666' }]}>
+                                    {option}: {voteCount} votes
+                                  </Text>
+                                );
+                              })}
+                            </View>
                           </View>
                         </>
                       )}
@@ -1519,6 +1748,14 @@ const styles = StyleSheet.create({
   pollStatsText: {
     fontSize: 12,
     textAlign: 'center',
+  },
+  pollOptionCounts: {
+    marginTop: 8,
+    paddingHorizontal: 10,
+  },
+  pollOptionCount: {
+    fontSize: 12,
+    marginBottom: 4,
   },
   pollQuestion: {
     fontSize: 16,

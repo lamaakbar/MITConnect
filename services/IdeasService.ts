@@ -464,12 +464,18 @@ export class IdeasService {
   }): Promise<{ data: PollResponse | null; error: any }> {
     try {
       // Check if user already responded to this poll
-      const { data: existingResponse, error: checkError } = await supabase
+      const { data: existingResponses, error: checkError } = await supabase
         .from('poll_responses')
         .select('*')
         .eq('poll_id', responseData.poll_id)
-        .eq('user_id', responseData.user_id)
-        .single();
+        .eq('user_id', responseData.user_id);
+
+      if (checkError) {
+        console.error('Error checking existing response:', checkError);
+        return { data: null, error: checkError };
+      }
+
+      const existingResponse = existingResponses?.[0];
 
       if (existingResponse) {
         // Update existing response
@@ -480,19 +486,27 @@ export class IdeasService {
             created_at: new Date().toISOString()
           })
           .eq('id', existingResponse.id)
-          .select()
-          .single();
+          .select();
 
-        return { data, error };
+        if (error) {
+          console.error('Error updating poll response:', error);
+          return { data: null, error };
+        }
+
+        return { data: data?.[0] || null, error: null };
       } else {
         // Create new response
         const { data, error } = await supabase
           .from('poll_responses')
           .insert([responseData])
-          .select()
-          .single();
+          .select();
 
-        return { data, error };
+        if (error) {
+          console.error('Error creating poll response:', error);
+          return { data: null, error };
+        }
+
+        return { data: data?.[0] || null, error: null };
       }
     } catch (error) {
       console.error('Error submitting poll response:', error);
