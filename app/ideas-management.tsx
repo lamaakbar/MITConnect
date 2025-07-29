@@ -65,8 +65,62 @@ export default function IdeasManagement() {
     try {
       setLoading(true);
       
-      // Load real ideas from database using IdeasService
-      const { data, error } = await IdeasService.getAdminIdeas();
+      // Try to load ideas using the RPC function first
+      let { data, error } = await IdeasService.getAdminIdeas();
+      
+      // If RPC fails due to missing table, fall back to direct query
+      if (error && (error.message?.includes('idea_comments') || error.message?.includes('does not exist'))) {
+        console.log('🔄 RPC failed due to missing table, falling back to direct query...');
+        
+        // Load ideas directly from the ideas table
+        const { data: directData, error: directError } = await supabase
+          .from('ideas')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (directError) {
+          console.error('Error loading ideas directly:', directError);
+          Alert.alert('Error', 'Failed to load ideas. Please try again.');
+          return;
+        }
+        
+        // Also load polls data for ideas that have polls
+        const { data: pollsData, error: pollsError } = await supabase
+          .from('idea_polls')
+          .select('*')
+          .eq('is_active', true);
+        
+        if (pollsError) {
+          console.error('Error loading polls:', pollsError);
+          // Continue without polls data
+        }
+        
+        // Match polls to ideas
+        const ideasWithPolls = directData?.map(idea => {
+          const matchingPoll = pollsData?.find(poll => poll.idea_id === idea.id);
+          
+          // Handle poll_options that might be stored as JSON string
+          let pollOptions = matchingPoll?.options;
+          if (typeof pollOptions === 'string') {
+            try {
+              pollOptions = JSON.parse(pollOptions);
+            } catch (e) {
+              console.warn('Failed to parse poll_options JSON in fallback:', pollOptions);
+              pollOptions = [];
+            }
+          }
+          
+          return {
+            ...idea,
+            poll_id: matchingPoll?.id,
+            poll_question: matchingPoll?.question,
+            poll_options: pollOptions
+          };
+        }) || [];
+        
+        data = ideasWithPolls;
+        error = null;
+      }
       
       if (error) {
         console.error('Error loading ideas:', error);
@@ -76,18 +130,32 @@ export default function IdeasManagement() {
       
       if (data) {
         // Transform database ideas to match component format
-        const transformedIdeas: Idea[] = data.map(idea => ({
-          ...idea,
-          votes: idea.total_votes || 0,
-          hasPoll: !!idea.poll_id,
-          poll: idea.poll_id ? {
-            question: idea.poll_question || '',
-            options: idea.poll_options || []
-          } : undefined
-        }));
+        const transformedIdeas: Idea[] = data.map(idea => {
+          // Handle poll_options that might be stored as JSON string
+          let pollOptions = idea.poll_options;
+          if (typeof pollOptions === 'string') {
+            try {
+              pollOptions = JSON.parse(pollOptions);
+            } catch (e) {
+              console.warn('Failed to parse poll_options JSON:', pollOptions);
+              pollOptions = [];
+            }
+          }
+          
+          return {
+            ...idea,
+            votes: idea.total_votes || 0,
+            hasPoll: !!idea.poll_id,
+            poll: idea.poll_id ? {
+              question: idea.poll_question || '',
+              options: pollOptions || []
+            } : undefined
+          };
+        });
         
         setIdeas(transformedIdeas);
-        console.log('Loaded real ideas from database:', transformedIdeas.length);
+        console.log('Loaded ideas from database:', transformedIdeas.length);
+        console.log('🔍 Sample transformed idea with poll:', transformedIdeas.find(idea => idea.hasPoll));
       } else {
         setIdeas([]);
         console.log('No ideas found in database');
@@ -201,11 +269,26 @@ export default function IdeasManagement() {
     const idea = ideas.find(i => i.id === id);
     setPollModalIdea(idea || null);
     
+    console.log('🔍 Opening poll modal for idea:', {
+      id: idea?.id,
+      title: idea?.title,
+      hasPoll: idea?.hasPoll,
+      poll: idea?.poll,
+      poll_id: idea?.poll_id,
+      poll_question: idea?.poll_question,
+      poll_options: idea?.poll_options
+    });
+    
     // If idea already has a poll, pre-populate the modal for editing
     if (idea?.hasPoll && idea.poll) {
+      console.log('✅ Pre-filling poll modal with existing data:', {
+        question: idea.poll.question,
+        options: idea.poll.options
+      });
       setPollQuestion(idea.poll.question);
       setPollOptions([...idea.poll.options]);
     } else {
+      console.log('🆕 Creating new poll - resetting form');
       // Reset for new poll
       setPollQuestion('');
       setPollOptions(['', '']);
@@ -816,7 +899,7 @@ function IdeaCard({ idea, onApprove, onReject, onCreatePoll, onManage, isPending
           ) : (
             <>
               <Ionicons name="bar-chart" size={16} color="#fff" />
-              <Text style={styles.actionBtnText}>{idea.hasPoll ? 'Update Poll' : 'Add Poll'}</Text>
+              <Text style={styles.actionBtnText}>{!isPending ? 'Update Poll' : (idea.hasPoll ? 'Update Poll' : 'Add Poll')}</Text>
             </>
           )}
         </TouchableOpacity>
