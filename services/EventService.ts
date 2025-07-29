@@ -943,7 +943,7 @@ class EventService {
         date: formattedDate,
         time: formattedTime,
         location: eventData.location.trim(),
-        cover_image: eventData.coverImage || '',
+        cover_image: eventData.coverImage || null,
         category: eventData.category,
         featured: eventData.featured,
         status: eventData.status,
@@ -956,6 +956,7 @@ class EventService {
       };
 
       console.log('Inserting event data:', supabaseEvent);
+      console.log('Cover image being saved:', supabaseEvent.cover_image);
 
       const { data, error } = await supabase
         .from('events')
@@ -1176,14 +1177,18 @@ class EventService {
   private mapSupabaseEventToEvent(supabaseEvent: SupabaseEvent): Event {
     // Ensure cover_image is a valid URL or undefined
     let coverImageUrl: string | undefined = undefined;
-    if (supabaseEvent.cover_image) {
+    if (supabaseEvent.cover_image && supabaseEvent.cover_image.trim() !== '') {
       // Check if it's already a full URL
       if (supabaseEvent.cover_image.startsWith('http')) {
         coverImageUrl = supabaseEvent.cover_image;
+        console.log('✅ Event image URL found:', coverImageUrl);
       } else {
         // If it's a relative path, construct full URL
         coverImageUrl = supabaseEvent.cover_image;
+        console.log('✅ Event image path found:', coverImageUrl);
       }
+    } else {
+      console.log('❌ No cover image found for event:', supabaseEvent.title, 'cover_image value:', supabaseEvent.cover_image);
     }
 
     return {
