@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { getTodayYYYYMMDD } from '../utils/dateUtils';
 
 // Database-matching type for trainee feedback with file support
 export interface TraineeFeedback {
@@ -167,7 +168,7 @@ export class FeedbackService {
         trainee_name: traineeName,
         feedback_text: input.feedback_text.trim(),
         rating: input.rating,
-        submission_date: new Date().toISOString().split('T')[0],
+        submission_date: getTodayYYYYMMDD(),
         // Include file data if available
         ...(fileData && {
           file_name: fileData.file_name,

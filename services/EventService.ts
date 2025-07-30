@@ -1,6 +1,7 @@
 import { Event, EventStatus, EventType, EventStats, EventFeedback, UserEventTracking, EventCategory } from '../types/events';
 import { supabase, ensureAuthenticatedSession } from './supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { formatDateToYYYYMMDD, parseAndFormatDate, getTodayYYYYMMDD } from '../utils/dateUtils';
 
 // Interface for API responses
 interface ApiResponse<T> {
@@ -198,8 +199,8 @@ class EventService {
         // You can return null here if you want to prevent past dates
       }
       
-      // Format as YYYY-MM-DD for PostgreSQL
-      return dateObj.toISOString().split('T')[0];
+      // Use utility function to format date without timezone issues
+      return formatDateToYYYYMMDD(dateObj);
     } catch (error) {
       console.error('Error parsing date:', error);
       return null;
@@ -253,18 +254,22 @@ class EventService {
   }
 
   /**
-   * Calculate event status based on current date/time
+   * Calculate event status based on current date (date-only comparison)
    */
   static calculateEventStatus(eventDate: string, eventTime: string): EventStatus {
     const now = new Date();
-    const eventDateTime = new Date(`${eventDate}T${eventTime}`);
+    const eventDay = new Date(eventDate);
     
-    // If event date/time is in the past, it's 'completed'
-    if (eventDateTime < now) {
+    // Set both dates to start of day for date-only comparison
+    now.setHours(0, 0, 0, 0);
+    eventDay.setHours(0, 0, 0, 0);
+    
+    // If event date is in the past, it's 'completed'
+    if (eventDay < now) {
       return 'completed';
     }
     
-    // If event date/time is in the future, it's 'upcoming'
+    // If event date is today or in the future, it's 'upcoming'
     return 'upcoming';
   }
 
@@ -469,12 +474,13 @@ class EventService {
    */
   async getUpcomingEvents(limit: number = 5): Promise<Event[]> {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      // Get today's date in YYYY-MM-DD format without timezone issues
+      const todayString = getTodayYYYYMMDD();
       
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .gte('date', today)
+        .gte('date', todayString)
         .order('date', { ascending: true })
         .limit(limit);
 
@@ -918,8 +924,8 @@ class EventService {
           console.error('Invalid date format:', eventData.date);
           return null;
         }
-        // Format as YYYY-MM-DD for PostgreSQL
-        formattedDate = dateObj.toISOString().split('T')[0];
+        // Use utility function to format date without timezone issues
+        formattedDate = formatDateToYYYYMMDD(dateObj);
       } catch (error) {
         console.error('Error parsing date:', error);
         return null;
