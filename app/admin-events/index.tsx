@@ -33,6 +33,7 @@ import TimePickerModal from '../../components/TimePickerModal';
 
 // Import event service
 import eventService, { EventService } from '../../services/EventService';
+import { formatDateToYYYYMMDD } from '../../utils/dateUtils';
 
 const FILTERS = ['All', 'Upcoming', 'Past'];
 
@@ -159,14 +160,16 @@ const AdminEventListScreen: React.FC = () => {
   // Add state to track which event's attendees are being shown
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
 
-  // Helper function to check if event is in the past
-  const isEventInPast = (eventDate: string, eventTime: string) => {
+  // Helper function to check if event is in the past (date-only comparison)
+  const isEventInPast = (eventDate: string): boolean => {
     try {
       const today = new Date();
-      const eventDateTime = new Date(`${eventDate} ${eventTime}`);
-      return eventDateTime < today;
+      const eventDay = new Date(eventDate);
+      today.setHours(0, 0, 0, 0);
+      eventDay.setHours(0, 0, 0, 0);
+      return eventDay < today;
     } catch (error) {
-      console.error('Error parsing event date/time:', error);
+      console.error('Error parsing event date:', error);
       return false;
     }
   };
@@ -174,9 +177,9 @@ const AdminEventListScreen: React.FC = () => {
   // Use search results if searching, otherwise use all events
   const eventsToUse = search.trim() ? searchResults : events;
   
-  // Categorize events into upcoming and past
-  const upcomingEvents = eventsToUse.filter((e) => !isEventInPast(e.date, e.time));
-  const pastEvents = eventsToUse.filter((e) => isEventInPast(e.date, e.time));
+  // Categorize events into upcoming and past (date-only comparison)
+  const upcomingEvents = eventsToUse.filter((e) => !isEventInPast(e.date));
+  const pastEvents = eventsToUse.filter((e) => isEventInPast(e.date));
   
   // Filter events based on selected filter
   let filteredEvents: any[] = [];
@@ -220,7 +223,7 @@ const AdminEventListScreen: React.FC = () => {
   const onDateConfirm = (date: Date) => {
     setSelectedDate(date);
     // Format date as YYYY-MM-DD for better compatibility with validation
-    const formattedDate = date.toISOString().split('T')[0];
+    const formattedDate = formatDateToYYYYMMDD(date);
     
     // Update the appropriate date field based on which modal is open
     if (showEditModal) {

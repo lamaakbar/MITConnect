@@ -218,14 +218,16 @@ export default function EventsScreen() {
     updateStatuses();
   }, []);
 
-  // Helper function to check if event is in the past
-  const isEventInPast = (eventDate: string, eventTime: string) => {
+  // Helper function to check if event is in the past (date-only comparison)
+  const isEventInPast = (eventDate: string): boolean => {
     try {
       const today = new Date();
-      const eventDateTime = new Date(`${eventDate} ${eventTime}`);
-      return eventDateTime < today;
+      const eventDay = new Date(eventDate);
+      today.setHours(0, 0, 0, 0);
+      eventDay.setHours(0, 0, 0, 0);
+      return eventDay < today;
     } catch (error) {
-      console.error('Error parsing event date/time:', error);
+      console.error('Error parsing event date:', error);
       return false;
     }
   };
@@ -233,9 +235,9 @@ export default function EventsScreen() {
   // Use search results if searching, otherwise use all events
   const eventsToUse = search.trim() ? searchResults : events;
   
-  // Categorize events into upcoming and past
-  const upcomingEvents = eventsToUse.filter((e) => !isEventInPast(e.date, e.time));
-  const pastEvents = eventsToUse.filter((e) => isEventInPast(e.date, e.time));
+  // Categorize events into upcoming and past (date-only comparison)
+  const upcomingEvents = eventsToUse.filter((e) => !isEventInPast(e.date));
+  const pastEvents = eventsToUse.filter((e) => isEventInPast(e.date));
 
   // Filter events based on tab
   let filteredEvents: any[] = [];
@@ -254,7 +256,7 @@ export default function EventsScreen() {
 
   // Helper function to get button text and state for an event
   const getEventButtonState = (eventId: string, eventDate: string, eventTime: string) => {
-    const isPast = isEventInPast(eventDate, eventTime);
+    const isPast = isEventInPast(eventDate);
     const isRegistered = registered.includes(eventId);
     const isCompleted = userEventStatuses[eventId]?.status === 'completed';
     

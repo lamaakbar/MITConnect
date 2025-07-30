@@ -20,6 +20,7 @@ import TimePickerModal from '../../../components/TimePickerModal';
 import eventService from '../../../services/EventService';
 import { Event } from '../../../types/events';
 import { uploadImageFromLibrary } from '../../../services/imageUploadService';
+import { formatDateToYYYYMMDD } from '../../../utils/dateUtils';
 
 const EVENT_TYPES = ['Seminar', 'Workshop', 'Conference', 'Meetup'];
 
@@ -152,11 +153,8 @@ const EditEventScreen: React.FC = () => {
 
   const onDateConfirm = (date: Date) => {
     setSelectedDate(date);
-    const formattedDate = date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    // Format date as YYYY-MM-DD for database storage
+    const formattedDate = formatDateToYYYYMMDD(date);
     setDate(formattedDate);
     setShowDatePicker(false);
     
