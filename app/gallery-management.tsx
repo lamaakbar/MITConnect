@@ -550,12 +550,7 @@ export default function GalleryManagement() {
           <Text style={[styles.headerTitle, { color: textColor }]}>
             MIT<Text style={{ color: '#3CB371' }}>Connect</Text>
           </Text>
-          <TouchableOpacity 
-            style={[styles.addButton, { backgroundColor: '#3CB371' }]}
-            onPress={() => setShowCreate(true)}
-          >
-            <Ionicons name="add" size={24} color="#fff" />
-          </TouchableOpacity>
+          <View style={{ width: 40 }} />
         </View>
         <View style={[styles.mainContainer, { backgroundColor }]}>
           {/* Search Bar */}
@@ -970,35 +965,41 @@ export default function GalleryManagement() {
             backDestination={undefined}
             onBackPress={() => setSelectedAlbumId(null)}
             showLogo={false}
-            rightComponent={
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <TouchableOpacity
-                  style={[styles.addBtn, { marginRight: 8 }]}
-                  onPress={handleAddPhotosToAlbum}
-                  accessibilityLabel="Add photos to album"
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="add" size={20} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.editBtn, { marginRight: 8 }]}
-                  onPress={openEditModal}
-                  accessibilityLabel="Edit album"
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="create-outline" size={20} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.deleteBtn]}
-                  onPress={() => handleDeleteAlbum(selectedAlbumId!)}
-                  accessibilityLabel="Delete album"
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="trash-outline" size={20} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            }
+            titleSize={18}
           />
+          
+          {/* Admin-only action buttons */}
+          {userRole === 'admin' && (
+            <View style={styles.albumActionButtons}>
+              <TouchableOpacity
+                style={[styles.albumActionBtn, styles.editAlbumBtn]}
+                onPress={openEditModal}
+                accessibilityLabel="Edit album"
+                activeOpacity={0.7}
+              >
+                <Ionicons name="create-outline" size={18} color="#fff" />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.albumActionBtn, styles.deleteAlbumBtn]}
+                onPress={() => handleDeleteAlbum(selectedAlbumId!)}
+                accessibilityLabel="Delete album"
+                activeOpacity={0.7}
+              >
+                <Ionicons name="trash-outline" size={18} color="#fff" />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.albumActionBtn, styles.addPhotoBtn]}
+                onPress={handleAddPhotosToAlbum}
+                accessibilityLabel="Add photos to album"
+                activeOpacity={0.7}
+              >
+                <Ionicons name="add" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          )}
+          
           <FlatList
             key={`album-detail-${selectedAlbumId}`}
             data={currentAlbum.photos}
@@ -1022,7 +1023,6 @@ export default function GalleryManagement() {
                     </View>
                   )}
                   <View style={styles.photoWidgetOverlay} />
-                  <Text style={{ color: '#888', fontSize: 10, margin: 2, textAlign: 'center' }}>{item.uri}</Text>
                   <TouchableOpacity
                     style={styles.photoDeleteBtnWidget}
                     onPress={() => handleAnimatedDeletePhoto(currentAlbum, index)}
@@ -1124,16 +1124,6 @@ export default function GalleryManagement() {
         title="Gallery Management"
         backDestination={undefined}
         showLogo={false}
-        rightComponent={
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => setShowCreateModal(true)}
-            accessibilityLabel="Create new album"
-            activeOpacity={0.7}
-          >
-            <Ionicons name="add" size={20} color="#fff" />
-          </TouchableOpacity>
-        }
       />
       
       {/* Search Bar */}
@@ -1923,5 +1913,37 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Album Action Buttons Styles
+  albumActionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    gap: 12,
+  },
+  albumActionBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  editAlbumBtn: {
+    backgroundColor: '#FF9500',
+  },
+  deleteAlbumBtn: {
+    backgroundColor: '#FF3B30',
+  },
+  addPhotoBtn: {
+    backgroundColor: '#34C759',
   },
 }); 

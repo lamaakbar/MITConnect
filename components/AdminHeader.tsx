@@ -18,6 +18,7 @@ interface AdminHeaderProps {
   showDarkModeToggle?: boolean;
   showAccountButton?: boolean;
   showMenuButton?: boolean;
+  titleSize?: number;
 }
 
 export default function AdminHeader({
@@ -31,6 +32,7 @@ export default function AdminHeader({
   showDarkModeToggle = false,
   showAccountButton = false,
   showMenuButton = false,
+  titleSize,
 }: AdminHeaderProps) {
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -102,7 +104,7 @@ export default function AdminHeader({
             <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', letterSpacing: 0.5 }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
           </View>
         ) : (
-          <Text style={[styles.headerTitle, { color: textColor, fontSize: 20, fontWeight: 'bold', marginLeft: 8, marginTop: 0 }]} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
+          <Text style={[styles.headerTitle, { color: textColor, fontSize: titleSize || 20, fontWeight: 'bold', marginLeft: 8, marginTop: 0 }]} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
         )}
       </View>
       {/* Center Section - Title (absolutely centered) - only when logo is shown */}
