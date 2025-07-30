@@ -52,6 +52,9 @@ export default function AdminLoginScreen() {
       <Pressable style={styles.button} onPress={handleLogin} disabled={loading}>
         <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Login'}</Text>
       </Pressable>
+      
+      {/* Team Credit */}
+      <Text style={styles.creditText}>Made by IT Pulse Team – Summer 2025</Text>
     </View>
   );
 }
@@ -91,5 +94,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  creditText: {
+    color: '#888',
+    fontSize: 11,
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    opacity: 0.8,
+    paddingHorizontal: 16,
   },
 }); 

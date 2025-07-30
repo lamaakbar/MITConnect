@@ -76,6 +76,7 @@ export default function TraineeHome() {
 
   // Highlights state
   const [highlightCards, setHighlightCards] = useState<any[]>([]);
+  const [loadingHighlights, setLoadingHighlights] = useState(true);
 
   // Trainee Hub modal state
   const [showHub, setShowHub] = useState(false);
@@ -89,6 +90,7 @@ export default function TraineeHome() {
   const [loadingBookOfMonth, setLoadingBookOfMonth] = useState(true);
   const [ratings, setRatings] = useState<any[]>([]);
   const [averageRating, setAverageRating] = useState(0);
+  const [showFooter, setShowFooter] = useState(false);
 
   // Debug logging
   console.log('TraineeHome: Current userRole:', userRole, 'isInitialized:', isInitialized);
@@ -158,12 +160,17 @@ export default function TraineeHome() {
   // Fetch highlights from Supabase
   useEffect(() => {
     const loadHighlights = async () => {
+      setLoadingHighlights(true);
       try {
+        console.log('🔄 Loading highlights...');
         const data = await fetchHighlights();
-        setHighlightCards(data);
+        console.log('✅ Highlights loaded:', data?.length || 0, 'items');
+        setHighlightCards(data || []);
       } catch (error) {
-        console.error('Error loading highlights:', error);
+        console.error('❌ Error loading highlights:', error);
         setHighlightCards([]);
+      } finally {
+        setLoadingHighlights(false);
       }
     };
     
@@ -503,7 +510,16 @@ export default function TraineeHome() {
           </View>
         )}
 
-        <ScrollView contentContainerStyle={[styles.scrollContent, {flexGrow: 1}]} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          contentContainerStyle={[styles.scrollContent, {flexGrow: 1}]} 
+          showsVerticalScrollIndicator={false}
+          onScroll={(event) => {
+            const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+            const isCloseToBottom = contentOffset.y + layoutMeasurement.height >= contentSize.height - 50;
+            setShowFooter(isCloseToBottom);
+          }}
+          scrollEventThrottle={16}
+        >
           {highlightCards.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="star-outline" size={64} color="#ccc" />
@@ -520,35 +536,75 @@ export default function TraineeHome() {
                 </View>
                 <Text style={[styles.sectionTitle, { color: textColor }]}>Featured This Week</Text>
               </View>
-              <AutoCarousel
-                data={highlightCards}
-                cardWidth={320}
-                renderItem={({ item, index }) => (
-                  <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() => console.log('Clicked highlight:', item.title)}
-                    style={{
-                      borderRadius: 24,
-                      overflow: 'hidden',
-                      width: 320,
-                      height: 180,
-                      marginBottom: 18,
-                      marginRight: index !== highlightCards.length - 1 ? 16 : 0,
-                    }}
-                  >
-                    {item.image_url ? (
-                      <Image
-                        source={{ uri: item.image_url }}
-                        style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
-                      />
-                    ) : (
-                      <View style={{ width: '100%', height: '100%', backgroundColor: '#ccc', justifyContent: 'center', alignItems: 'center' }}>
-                        <Text>No Image</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                )}
-              />
+              {loadingHighlights ? (
+                <View style={{
+                  height: 180,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: isDarkMode ? '#2A2A2A' : '#F8F8F8',
+                  borderRadius: 24,
+                  marginHorizontal: 16,
+                }}>
+                  <ActivityIndicator size="large" color="#43C6AC" />
+                  <Text style={{
+                    marginTop: 12,
+                    fontSize: 16,
+                    color: isDarkMode ? '#E0E0E0' : '#666',
+                    fontWeight: '500'
+                  }}>
+                    Loading featured content...
+                  </Text>
+                </View>
+              ) : highlightCards.length > 0 ? (
+                <AutoCarousel
+                  data={highlightCards}
+                  cardWidth={320}
+                  renderItem={({ item, index }) => (
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => console.log('Clicked highlight:', item.title)}
+                      style={{
+                        borderRadius: 24,
+                        overflow: 'hidden',
+                        width: 320,
+                        height: 180,
+                        marginBottom: 18,
+                        marginRight: index !== highlightCards.length - 1 ? 16 : 0,
+                      }}
+                    >
+                      {item.image_url ? (
+                        <Image
+                          source={{ uri: item.image_url }}
+                          style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
+                        />
+                      ) : (
+                        <View style={{ width: '100%', height: '100%', backgroundColor: '#ccc', justifyContent: 'center', alignItems: 'center' }}>
+                          <Text>No Image</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                />
+              ) : (
+                <View style={{
+                  height: 180,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: isDarkMode ? '#2A2A2A' : '#F8F8F8',
+                  borderRadius: 24,
+                  marginHorizontal: 16,
+                }}>
+                  <Ionicons name="star-outline" size={48} color={isDarkMode ? '#666' : '#999'} />
+                  <Text style={{
+                    marginTop: 12,
+                    fontSize: 16,
+                    color: isDarkMode ? '#E0E0E0' : '#666',
+                    fontWeight: '500'
+                  }}>
+                    No featured content available
+                  </Text>
+                </View>
+              )}
             </>
           )}
           
@@ -747,6 +803,16 @@ export default function TraineeHome() {
             </View>
           )}
         </ScrollView>
+        
+        {/* Team Credit - Only visible when scrolled to bottom */}
+        {showFooter && (
+          <View style={styles.creditContainer}>
+            <Text style={[styles.creditText, { color: secondaryTextColor }]}>
+              Made by IT Pulse Team – Summer 2025
+            </Text>
+          </View>
+        )}
+        
         <View style={[styles.tabBar, { backgroundColor: isDarkMode ? '#23272b' : '#fff', borderTopColor: isDarkMode ? '#2D333B' : '#eee' }]}>
           <TouchableOpacity 
             style={styles.tabBtn} 
@@ -1303,5 +1369,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '500',
     marginTop: 2,
+  },
+  creditContainer: {
+    position: 'absolute',
+    bottom: 80,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    zIndex: 1,
+  },
+  creditText: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    opacity: 0.8,
   },
 }); 

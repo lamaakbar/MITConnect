@@ -6,6 +6,9 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Welcome to MIT Connect</Text>
       <Text style={styles.subtitle}>Your portal to events, resources, and community.</Text>
+      
+      {/* Team Credit */}
+      <Text style={styles.creditText}>Made by IT Pulse Team – Summer 2025</Text>
     </View>
   );
 }
@@ -27,6 +30,18 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     paddingHorizontal: 20,
+  },
+  creditText: {
+    fontSize: 11,
+    color: '#888',
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    opacity: 0.8,
+    paddingHorizontal: 16,
   },
 }); 
 

@@ -30,6 +30,7 @@ export default function AdminHome() {
   const [availableEventsCount, setAvailableEventsCount] = useState(0);
   const [approvedIdeasCount, setApprovedIdeasCount] = useState(0);
   const [traineeCount, setTraineeCount] = useState(0);
+  const [showFooter, setShowFooter] = useState(false);
 
   // Fetch real data from database
   useEffect(() => {
@@ -211,6 +212,12 @@ export default function AdminHome() {
       {/* Scrollable Content */}
       <ScrollView 
         style={styles.scrollContainer}
+        onScroll={(event) => {
+          const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+          const isCloseToBottom = contentOffset.y + layoutMeasurement.height >= contentSize.height - 50;
+          setShowFooter(isCloseToBottom);
+        }}
+        scrollEventThrottle={16}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={true}
@@ -377,6 +384,15 @@ export default function AdminHome() {
           </View>
                  </TouchableOpacity>
        </ScrollView>
+
+       {/* Team Credit - Only visible when scrolled to bottom */}
+       {showFooter && (
+         <View style={styles.creditContainer}>
+           <Text style={[styles.creditText, { color: colors.textSecondary }]}>
+             Made by IT Pulse Team – Summer 2025
+           </Text>
+         </View>
+       )}
 
        {/* Bottom Tab Bar */}
        <AdminTabBar activeTab="home" isDarkMode={isDarkMode} />
@@ -610,5 +626,21 @@ const styles = StyleSheet.create({
   closeButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  creditContainer: {
+    position: 'absolute',
+    bottom: 100,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    zIndex: 1,
+  },
+  creditText: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    opacity: 0.8,
   },
 }); 

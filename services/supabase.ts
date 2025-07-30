@@ -250,19 +250,22 @@ export const withRetry = async <T>(
 // Highlight management functions
 export const fetchHighlights = async () => {
   try {
+    console.log('🔄 Fetching highlights from database...');
+    
     const { data, error } = await supabase
       .from('highlights')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching highlights:', error);
+      console.error('❌ Error fetching highlights:', error);
       throw error;
     }
 
+    console.log('✅ Highlights fetched successfully:', data?.length || 0, 'items');
     return data || [];
   } catch (error) {
-    console.error('Error in fetchHighlights:', error);
+    console.error('❌ Error in fetchHighlights:', error);
     throw error;
   }
 };

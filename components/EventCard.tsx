@@ -40,6 +40,11 @@ const EventCard: React.FC<EventCardProps> = ({
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
 
+  // Debug event data
+  console.log('EventCard render for:', event.title);
+  console.log('Event coverImage:', event.coverImage);
+  console.log('Event image:', event.image);
+
   // Debug viewAs state
   console.log('EventCard: viewAs state:', viewAs);
 
@@ -70,12 +75,16 @@ const EventCard: React.FC<EventCardProps> = ({
 
   // Handle image loading
   const handleImageLoad = () => {
+    console.log('Image loaded successfully for event:', event.title);
+    console.log('Image source:', event.coverImage ? { uri: event.coverImage } : event.image);
     setImageLoading(false);
     setImageError(false);
   };
 
   const handleImageError = (error: any) => {
-    console.log('Image loading error:', error.nativeEvent.error);
+    console.log('Image loading error for event:', event.title, 'Error:', error.nativeEvent.error);
+    console.log('Event coverImage:', event.coverImage);
+    console.log('Event image:', event.image);
     setImageLoading(false);
     setImageError(true);
   };
@@ -102,7 +111,7 @@ const EventCard: React.FC<EventCardProps> = ({
         )}
         
         <Image 
-          source={event.coverImage ? { uri: event.coverImage } : event.image} 
+          source={event.coverImage ? { uri: event.coverImage } : (event.image || require('../assets/images/splash-icon.png'))} 
           style={[
             styles.eventCoverImage,
             imageError && styles.imageError

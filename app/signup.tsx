@@ -201,6 +201,9 @@ export default function SignupScreen() {
           <Pressable style={styles.button} onPress={handleSignup} disabled={loading}>
             <Text style={styles.buttonText}>{loading ? 'Signing up...' : 'Sign Up'}</Text>
           </Pressable>
+          
+          {/* Team Credit */}
+          <Text style={styles.creditText}>Made by IT Pulse Team – Summer 2025</Text>
         </View>
       </View>
     </LinearGradient>
@@ -308,5 +311,17 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     letterSpacing: 0.5,
+  },
+  creditText: {
+    color: '#888',
+    fontSize: 11,
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    opacity: 0.8,
+    paddingHorizontal: 16,
   },
 }); 

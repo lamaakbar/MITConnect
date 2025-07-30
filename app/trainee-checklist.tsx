@@ -548,54 +548,51 @@ export default function TraineeChecklist() {
         </>
       )}
 
-      {/* Progress Section */}
-      <View style={{
-        backgroundColor: userRole === 'trainee' && isDarkMode ? darkCard : '#fff',
-        marginHorizontal: 16,
-        marginTop: 16,
-        borderRadius: 16,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        elevation: 2,
-      }}>
-        <View style={styles.progressHeader}>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E' }}>Progress</Text>
-          <Text style={{ fontSize: 16, fontWeight: '600', color: userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759' }}>{completed}/{CHECKLIST_ITEMS.length}</Text>
-        </View>
-        
-        <View style={{ marginBottom: 8 }}>
-          <View style={{
-            height: 8,
-            borderRadius: 4,
-            overflow: 'hidden',
-            backgroundColor: userRole === 'trainee' && isDarkMode ? darkBorder : '#F2F2F7',
-          }}>
-            <Animated.View
-              style={{
-                height: '100%',
-                backgroundColor: userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759',
-                borderRadius: 4,
-                width: `${progress * 100}%`,
-              }}
-            />
-          </View>
-        </View>
-        
-        <Text style={{ fontSize: 14, color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93', textAlign: 'center', fontWeight: '500' }}>
-          {Math.round(progress * 100)}% Complete
-        </Text>
-        
-
-      </View>
-
-      {/* Checklist Items and Feedback Section */}
+      {/* Scrollable Content */}
       <ScrollView 
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Progress Section */}
+        <View style={{
+          backgroundColor: userRole === 'trainee' && isDarkMode ? darkCard : '#fff',
+          marginTop: 16,
+          marginBottom: 24,
+          borderRadius: 16,
+          padding: 20,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.06,
+          shadowRadius: 6,
+          elevation: 2,
+        }}>
+          <View style={styles.progressHeader}>
+            <Text style={{ fontSize: 18, fontWeight: '600', color: userRole === 'trainee' && isDarkMode ? darkText : '#1C1C1E' }}>Progress</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759' }}>{completed}/{CHECKLIST_ITEMS.length}</Text>
+          </View>
+          
+          <View style={{ marginBottom: 8 }}>
+            <View style={{
+              height: 8,
+              borderRadius: 4,
+              overflow: 'hidden',
+              backgroundColor: userRole === 'trainee' && isDarkMode ? darkBorder : '#F2F2F7',
+            }}>
+              <Animated.View
+                style={{
+                  height: '100%',
+                  backgroundColor: userRole === 'trainee' && isDarkMode ? darkHighlight : '#34C759',
+                  borderRadius: 4,
+                  width: `${progress * 100}%`,
+                }}
+              />
+            </View>
+          </View>
+          
+          <Text style={{ fontSize: 14, color: userRole === 'trainee' && isDarkMode ? darkSecondary : '#8E8E93', textAlign: 'center', fontWeight: '500' }}>
+            {Math.round(progress * 100)}% Complete
+          </Text>
+        </View>
         {/* Loading indicator */}
         {isLoadingProgress && (
           <View style={{ 
