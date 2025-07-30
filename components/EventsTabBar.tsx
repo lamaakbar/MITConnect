@@ -10,19 +10,19 @@ const TABS = [
   {
     key: 'home',
     label: 'Home',
-    icon: (color: string) => <Ionicons name="home-outline" size={22} color={color} />,
+    icon: (color: string) => <Ionicons name="home-outline" size={24} color={color} />,
     route: '/employee-home',
   },
   {
     key: 'events',
     label: 'Events',
-    icon: (color: string) => <MaterialIcons name="event" size={22} color={color} />,
+    icon: (color: string) => <MaterialIcons name="event" size={24} color={color} />,
     route: '/events',
   },
   {
     key: 'gallery',
     label: 'Gallery',
-    icon: (color: string) => <Ionicons name="image-outline" size={22} color={color} />,
+    icon: (color: string) => <Ionicons name="image-outline" size={24} color={color} />,
     route: '/gallery',
   },
 ];
@@ -68,8 +68,8 @@ export default function EventsTabBar() {
       styles.tabBar, 
       { 
         backgroundColor: colors.background,
-        paddingBottom: insets.bottom + (Platform.OS === 'ios' ? 8 : 16),
-        paddingTop: Platform.OS === 'android' ? 8 : 0,
+        paddingBottom: insets.bottom + (Platform.OS === 'ios' ? 8 : 20),
+        paddingTop: Platform.OS === 'android' ? 12 : 0,
       }
     ]}>
       {TABS.map(tab => {
@@ -78,7 +78,10 @@ export default function EventsTabBar() {
         return (
           <TouchableOpacity
             key={tab.key}
-            style={styles.tabBtn}
+            style={[
+              styles.tabBtn,
+              Platform.OS === 'android' && styles.tabBtnAndroid
+            ]}
             onPress={() => {
               if (pathname !== route) {
                 router.replace(route as any);
@@ -86,8 +89,14 @@ export default function EventsTabBar() {
             }}
             activeOpacity={0.7}
           >
-            {tab.icon(colors.icon)}
-            <Text style={[styles.tabLabel, { color: colors.label }]}>{tab.label}</Text>
+            {tab.icon(isActive ? colors.active : colors.icon)}
+            <Text style={[
+              styles.tabLabel, 
+              { color: isActive ? colors.active : colors.label },
+              Platform.OS === 'android' && styles.tabLabelAndroid
+            ]}>
+              {tab.label}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -112,15 +121,43 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    ...Platform.select({
+      android: {
+        minHeight: 80,
+        paddingVertical: 16,
+        paddingBottom: 24,
+      }
+    }),
   },
   tabBtn: {
     flex: 1,
     alignItems: 'center',
     paddingVertical: 4,
+    ...Platform.select({
+      android: {
+        minHeight: 56,
+        justifyContent: 'center',
+        paddingVertical: 8,
+      }
+    }),
+  },
+  tabBtnAndroid: {
+    borderRadius: 8,
+    marginHorizontal: 4,
   },
   tabLabel: {
     fontSize: 10,
     fontWeight: '500',
     marginTop: 2,
+    ...Platform.select({
+      android: {
+        fontSize: 12,
+        fontWeight: '600',
+        marginTop: 4,
+      }
+    }),
+  },
+  tabLabelAndroid: {
+    textAlign: 'center',
   },
 }); 

@@ -48,7 +48,7 @@ export default function AdminHeader({
     if (onBackPress) {
       onBackPress();
     } else if (backDestination) {
-      router.push(backDestination);
+      router.push(backDestination as any);
     } else {
       router.back();
     }

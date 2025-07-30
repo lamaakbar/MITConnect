@@ -886,7 +886,11 @@ export default function TraineeHub() {
                 paddingVertical: 2, 
                 justifyContent: 'center',
                 zIndex: 1,
-                elevation: 1,
+                elevation: Platform.OS === 'android' ? 2 : 1,
+                shadowColor: Platform.OS === 'android' ? '#000' : undefined,
+                shadowOpacity: Platform.OS === 'android' ? 0.1 : undefined,
+                shadowRadius: Platform.OS === 'android' ? 2 : undefined,
+                shadowOffset: Platform.OS === 'android' ? { width: 0, height: 1 } : undefined,
               }}>
                 <RNPickerSelect
                   onValueChange={setSelectedProgram}
@@ -907,18 +911,15 @@ export default function TraineeHub() {
                       backgroundColor: 'transparent'
                     },
                     inputAndroid: { 
-                      height: 40, 
+                      height: 48, 
                       fontSize: 16, 
                       color: isDarkMode ? darkText : textColor, 
-                      paddingHorizontal: 4, 
+                      paddingHorizontal: 16, 
+                      paddingVertical: 8,
                       fontWeight: '600', 
                       backgroundColor: 'transparent',
-                      ...Platform.select({
-                        android: {
-                          paddingLeft: 8,
-                          paddingRight: 32,
-                        }
-                      })
+                      textAlignVertical: 'center',
+                      includeFontPadding: false,
                     },
                     placeholder: { 
                       color: isDarkMode ? darkSecondary : secondaryTextColor,
@@ -927,13 +928,14 @@ export default function TraineeHub() {
                     },
                     iconContainer: {
                       top: 0,
-                      right: 8,
-                      height: 40,
+                      right: 12,
+                      height: 48,
                       justifyContent: 'center',
                       alignItems: 'center',
                       position: 'absolute',
                       zIndex: 2,
                       backgroundColor: 'transparent',
+                      width: 40,
                     },
                     viewContainer: {
                       flex: 1,
@@ -943,26 +945,26 @@ export default function TraineeHub() {
                     },
                   }}
                   useNativeAndroidPickerStyle={false}
+                  touchableWrapperProps={{
+                    activeOpacity: 0.7,
+                    style: Platform.OS === 'android' ? {
+                      flex: 1,
+                      height: 48,
+                      justifyContent: 'center',
+                    } : undefined,
+                  }}
                   Icon={() => (
-                    <View style={{ 
-                      position: 'absolute', 
-                      right: 8, 
-                      top: 0, 
-                      bottom: 0, 
-                      height: 40, 
-                      justifyContent: 'center', 
+                    <View style={{
+                      width: 40,
+                      height: Platform.OS === 'android' ? 48 : 40,
+                      justifyContent: 'center',
                       alignItems: 'center',
-                      zIndex: 2,
-                      ...Platform.select({
-                        android: {
-                          backgroundColor: 'transparent',
-                        }
-                      })
+                      backgroundColor: 'transparent',
                     }}>
                       <Ionicons 
                         name="chevron-down" 
-                        size={20} 
-                        color={isDarkMode ? darkSecondary : secondaryTextColor} 
+                        size={24} 
+                        color={isDarkMode ? '#AEB6C1' : '#888'} 
                       />
                     </View>
                   )}
@@ -1094,18 +1096,22 @@ export default function TraineeHub() {
                               </View>
                             </Modal>
                           </>
-                        ) : (
-                          <View style={{ 
+                                                ) : (
+                          <View style={{
                             borderWidth: 1, 
                             borderColor: isDarkMode ? '#2D333B' : '#B2E6F7', 
                             borderRadius: 8, 
                             marginBottom: 4, 
                             flexDirection: 'row', 
                             alignItems: 'center', 
-                            height: 54,
+                            height: 56,
                             backgroundColor: isDarkMode ? '#23272b' : '#fff',
                             zIndex: 1,
-                            elevation: 1,
+                            elevation: 2,
+                            shadowColor: '#000',
+                            shadowOpacity: 0.1,
+                            shadowRadius: 2,
+                            shadowOffset: { width: 0, height: 1 },
                           }}>
                             <RNPickerSelect
                               onValueChange={value => handleWeekPlanChange(idx, 'department', value)}
@@ -1119,14 +1125,17 @@ export default function TraineeHub() {
                               }))}
                               style={{
                                 inputAndroid: { 
-                                  height: 44, 
-                                  padding: 10, 
+                                  height: 56, 
+                                  paddingHorizontal: 16, 
+                                  paddingVertical: 8,
                                   color: isDarkMode ? '#fff' : '#222', 
                                   flex: 1,
                                   backgroundColor: 'transparent',
                                   fontSize: 16,
                                   fontWeight: '500',
                                   textAlign: 'left',
+                                  textAlignVertical: 'center',
+                                  includeFontPadding: false,
                                 },
                                 inputIOS: {
                                   height: 44,
@@ -1144,13 +1153,14 @@ export default function TraineeHub() {
                                 },
                                 iconContainer: {
                                   top: 0,
-                                  right: 10,
-                                  height: 54,
+                                  right: 12,
+                                  height: 56,
                                   justifyContent: 'center',
                                   alignItems: 'center',
                                   position: 'absolute',
                                   zIndex: 2,
                                   backgroundColor: 'transparent',
+                                  width: 40,
                                 },
                                 viewContainer: {
                                   flex: 1,
@@ -1162,14 +1172,26 @@ export default function TraineeHub() {
                               useNativeAndroidPickerStyle={false}
                               touchableWrapperProps={{
                                 activeOpacity: 0.7,
+                                style: {
+                                  flex: 1,
+                                  height: 56,
+                                  justifyContent: 'center',
+                                }
                               }}
                               Icon={() => (
-                                <Ionicons 
-                                  name="chevron-down" 
-                                  size={20} 
-                                  color={isDarkMode ? '#AEB6C1' : '#888'} 
-                                  style={{ marginRight: 10 }} 
-                                />
+                                <View style={{
+                                  width: 40,
+                                  height: 56,
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                  backgroundColor: 'transparent',
+                                }}>
+                                  <Ionicons 
+                                    name="chevron-down" 
+                                    size={24} 
+                                    color={isDarkMode ? '#AEB6C1' : '#888'} 
+                                  />
+                                </View>
                               )}
                             />
                           </View>

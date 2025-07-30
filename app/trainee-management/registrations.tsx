@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, ScrollView, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import RNPickerSelect from 'react-native-picker-select';
 import { supabase } from '../../services/supabase';
@@ -59,7 +59,8 @@ export default function TraineeRegistrations() {
   const textColor = useThemeColor({}, 'text');
   const secondaryTextColor = isDarkMode ? '#9BA1A6' : '#888';
   const dividerColor = isDarkMode ? '#23272b' : '#F2F4F7';
-  const dropdownTextColor = '#222';
+  const dropdownTextColor = isDarkMode ? '#FFFFFF' : '#000000';
+  const dropdownBackgroundColor = isDarkMode ? '#000000' : '#FFFFFF';
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -111,48 +112,218 @@ export default function TraineeRegistrations() {
       </View>
       <View style={styles.filterRow}>
         <View style={{ flex: 1, marginRight: 8 }}>
-          <TouchableOpacity activeOpacity={1} style={{ flex: 1 }}>
-          <RNPickerSelect
-            onValueChange={setDepartment}
-            value={department}
-            placeholder={{ label: 'Select Department...', value: '', color: dropdownTextColor }}
-            items={DEPARTMENTS.map(dep => ({ label: dep, value: dep, color: dropdownTextColor }))}
-            style={{
-              inputAndroid: { height: 44, padding: 10, color: dropdownTextColor, flex: 1 },
-              inputIOS: { height: 44, padding: 10, color: dropdownTextColor, flex: 1 },
-              placeholder: { color: dropdownTextColor },
-              iconContainer: { top: 0, right: 10, height: 44, justifyContent: 'center', alignItems: 'center', position: 'absolute', flexDirection: 'row' },
-            }}
-            useNativeAndroidPickerStyle={false}
-            Icon={() => (
-              <View style={{ height: 44, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' }}>
-                <Ionicons name="chevron-down" size={20} color={dropdownTextColor} />
-              </View>
-            )}
-          />
-          </TouchableOpacity>
+          <View style={{
+            borderWidth: 1,
+            borderColor: isDarkMode ? '#2D333B' : '#E0E0E0',
+            borderRadius: 8,
+            backgroundColor: dropdownBackgroundColor,
+            elevation: Platform.OS === 'android' ? 2 : 0,
+            shadowColor: Platform.OS === 'android' ? '#000' : undefined,
+            shadowOpacity: Platform.OS === 'android' ? 0.1 : undefined,
+            shadowRadius: Platform.OS === 'android' ? 2 : undefined,
+            shadowOffset: Platform.OS === 'android' ? { width: 0, height: 1 } : undefined,
+          }}>
+            <RNPickerSelect
+              onValueChange={setDepartment}
+              value={department}
+              placeholder={{ 
+                label: 'Select Department...', 
+                value: '', 
+                color: '#000000'
+              }}
+              items={DEPARTMENTS.map(dep => ({ 
+                label: dep, 
+                value: dep, 
+                color: '#000000',
+                style: Platform.OS === 'android' && isDarkMode ? {
+                  backgroundColor: '#000000',
+                  color: '#000000',
+                } : undefined,
+              }))}
+              modalProps={{
+                style: Platform.OS === 'android' && isDarkMode ? {
+                  backgroundColor: '#000000',
+                } : undefined,
+              }}
+              style={{
+                inputAndroid: { 
+                  height: 56, 
+                  paddingHorizontal: 16, 
+                  paddingVertical: 8,
+                  color: '#000000', 
+                  flex: 1,
+                  fontSize: 16,
+                  fontWeight: '500',
+                  textAlignVertical: 'center',
+                  includeFontPadding: false,
+                  backgroundColor: 'transparent',
+                  ...(Platform.OS === 'android' && isDarkMode && {
+                    color: '#FFFFFF',
+                    fontWeight: '600',
+                  }),
+                  ...(Platform.OS === 'android' && !isDarkMode && {
+                    color: '#000000',
+                    fontWeight: '600',
+                  }),
+                },
+                inputIOS: { 
+                  height: 44, 
+                  padding: 10, 
+                  color: '#000000', 
+                  flex: 1,
+                  fontSize: 16,
+                  fontWeight: '500',
+                },
+                placeholder: { 
+                  color: '#000000',
+                  fontSize: 16,
+                  fontWeight: '500',
+                },
+                iconContainer: { 
+                  top: 0, 
+                  right: 12, 
+                  height: 56, 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  position: 'absolute',
+                  width: 40,
+                },
+                viewContainer: {
+                  flex: 1,
+                },
+                headlessAndroidContainer: {
+                  flex: 1,
+                },
+              }}
+              useNativeAndroidPickerStyle={false}
+              touchableWrapperProps={{
+                activeOpacity: 0.7,
+                style: Platform.OS === 'android' ? {
+                  flex: 1,
+                  height: 56,
+                  justifyContent: 'center',
+                } : undefined,
+              }}
+              Icon={() => (
+                <View style={{
+                  width: 40,
+                  height: 56,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: 'transparent',
+                }}>
+                  <Ionicons name="chevron-down" size={24} color={dropdownTextColor} />
+                </View>
+              )}
+            />
+          </View>
         </View>
         <View style={{ flex: 1 }}>
-          <TouchableOpacity activeOpacity={1} style={{ flex: 1 }}>
-          <RNPickerSelect
-            onValueChange={setProgram}
-            value={program}
-            placeholder={{ label: 'Select Program...', value: '', color: dropdownTextColor }}
-            items={PROGRAMS.map(prog => ({ label: prog, value: prog, color: dropdownTextColor }))}
-            style={{
-              inputAndroid: { height: 44, padding: 10, color: dropdownTextColor, flex: 1 },
-              inputIOS: { height: 44, padding: 10, color: dropdownTextColor, flex: 1 },
-              placeholder: { color: dropdownTextColor },
-              iconContainer: { top: 0, right: 10, height: 44, justifyContent: 'center', alignItems: 'center', position: 'absolute', flexDirection: 'row' },
-            }}
-            useNativeAndroidPickerStyle={false}
-            Icon={() => (
-              <View style={{ height: 44, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' }}>
-                <Ionicons name="chevron-down" size={20} color={dropdownTextColor} />
-              </View>
-            )}
-          />
-          </TouchableOpacity>
+          <View style={{
+            borderWidth: 1,
+            borderColor: isDarkMode ? '#ffffff' : '#000000',
+            borderRadius: 8,
+            backgroundColor: dropdownBackgroundColor,
+            elevation: Platform.OS === 'android' ? 2 : 0,
+            shadowColor: Platform.OS === 'android' ? '#000' : undefined,
+            shadowOpacity: Platform.OS === 'android' ? 0.1 : undefined,
+            shadowRadius: Platform.OS === 'android' ? 2 : undefined,
+            shadowOffset: Platform.OS === 'android' ? { width: 0, height: 1 } : undefined,
+          }}>
+            <RNPickerSelect
+              onValueChange={setProgram}
+              value={program}
+              placeholder={{ 
+                label: 'Select Program...', 
+                value: '', 
+                color: '#000000'
+              }}
+              items={PROGRAMS.map(prog => ({ 
+                label: prog, 
+                value: prog, 
+                color: '#000000',
+                style: Platform.OS === 'android' && isDarkMode ? {
+                  backgroundColor: '#000000',
+                  color: '#000000',
+                } : undefined,
+              }))}
+              modalProps={{
+                style: Platform.OS === 'android' && isDarkMode ? {
+                  backgroundColor: '#000000',
+                } : undefined,
+              }}
+              style={{
+                inputAndroid: { 
+                  height: 56, 
+                  paddingHorizontal: 16, 
+                  paddingVertical: 8,
+                  color: '#000000', 
+                  flex: 1,
+                  fontSize: 16,
+                  fontWeight: '500',
+                  textAlignVertical: 'center',
+                  includeFontPadding: false,
+                  backgroundColor: 'transparent',
+                  ...(Platform.OS === 'android' && isDarkMode && {
+                    color: '#FFFFFF',
+                    fontWeight: '600',
+                  }),
+                  ...(Platform.OS === 'android' && !isDarkMode && {
+                    color: '#000000',
+                    fontWeight: '600',
+                  }),
+                },
+                inputIOS: { 
+                  height: 44, 
+                  padding: 10, 
+                  color: '#000000', 
+                  flex: 1,
+                  fontSize: 16,
+                  fontWeight: '500',
+                },
+                placeholder: { 
+                  color: '#000000',
+                  fontSize: 16,
+                  fontWeight: '500',
+                },
+                iconContainer: { 
+                  top: 0, 
+                  right: 12, 
+                  height: 56, 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  position: 'absolute',
+                  width: 40,
+                },
+                viewContainer: {
+                  flex: 1,
+                },
+                headlessAndroidContainer: {
+                  flex: 1,
+                },
+              }}
+              useNativeAndroidPickerStyle={false}
+              touchableWrapperProps={{
+                activeOpacity: 0.7,
+                style: Platform.OS === 'android' ? {
+                  flex: 1,
+                  height: 56,
+                  justifyContent: 'center',
+                } : undefined,
+              }}
+              Icon={() => (
+                <View style={{
+                  width: 40,
+                  height: 56,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: 'transparent',
+                }}>
+                  <Ionicons name="chevron-down" size={24} color={dropdownTextColor} />
+                </View>
+              )}
+            />
+          </View>
         </View>
       </View>
       {filtered.length === 0 && (

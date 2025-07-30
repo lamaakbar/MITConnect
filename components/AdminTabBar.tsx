@@ -77,50 +77,55 @@ export default function AdminTabBar({ activeTab }: AdminTabBarProps) {
     {
       key: 'home',
       label: 'Home',
-      icon: (color: string) => <Feather name="home" size={22} color={color} />, // keep existing icon for now
+      icon: (color: string) => <Feather name="home" size={24} color={color} />,
       route: '/admin-home',
     },
     {
       key: 'events',
       label: 'Events',
-      icon: (color: string) => <Feather name="calendar" size={22} color={color} />, // keep existing icon for now
+      icon: (color: string) => <Feather name="calendar" size={24} color={color} />,
       route: '/admin-events',
     },
     {
       key: 'books',
       label: 'Books',
-      icon: (color: string) => <MaterialIcons name="menu-book" size={22} color={color} />, // keep existing icon for now
+      icon: (color: string) => <MaterialIcons name="menu-book" size={24} color={color} />,
       route: '/books-management',
     },
   ];
-
-  const iconColor = colors.icon; // Use the default icon color for all tabs
 
   return (
     <View style={[
       styles.tabBar, 
       { 
         backgroundColor: colors.cardBackground,
-        paddingBottom: insets.bottom + (Platform.OS === 'ios' ? 8 : 16),
-        paddingTop: Platform.OS === 'android' ? 8 : 0,
+        paddingBottom: insets.bottom + (Platform.OS === 'ios' ? 8 : 20),
+        paddingTop: Platform.OS === 'android' ? 12 : 0,
       }
     ]}>
-      {TABS.map((tab) => (
-        <TouchableOpacity 
-          key={tab.key}
-          style={styles.tabItem} 
-          onPress={() => handleTabPress(tab.key)}
-          activeOpacity={0.7}
-        >
-          {tab.icon(iconColor)}
-          <Text style={[
-            styles.tabLabel, 
-            { color: colors.textSecondary } // Use the same color for all labels
-          ]}>
-            {tab.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
+      {TABS.map((tab) => {
+        const isActive = pathname === tab.route;
+        return (
+          <TouchableOpacity 
+            key={tab.key}
+            style={[
+              styles.tabItem,
+              Platform.OS === 'android' && styles.tabItemAndroid
+            ]} 
+            onPress={() => handleTabPress(tab.key)}
+            activeOpacity={0.7}
+          >
+            {tab.icon(isActive ? colors.activeIcon : colors.icon)}
+            <Text style={[
+              styles.tabLabel, 
+              { color: isActive ? colors.activeIcon : colors.textSecondary },
+              Platform.OS === 'android' && styles.tabLabelAndroid
+            ]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -142,15 +147,43 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    ...Platform.select({
+      android: {
+        minHeight: 80,
+        paddingVertical: 16,
+        paddingBottom: 24,
+      }
+    }),
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     paddingVertical: Platform.OS === 'ios' ? 6 : 4,
+    ...Platform.select({
+      android: {
+        minHeight: 56,
+        justifyContent: 'center',
+        paddingVertical: 8,
+      }
+    }),
+  },
+  tabItemAndroid: {
+    borderRadius: 8,
+    marginHorizontal: 4,
   },
   tabLabel: {
     fontSize: Platform.OS === 'ios' ? 11 : 10,
     fontWeight: '500',
     marginTop: Platform.OS === 'ios' ? 4 : 2,
+    ...Platform.select({
+      android: {
+        fontSize: 12,
+        fontWeight: '600',
+        marginTop: 4,
+      }
+    }),
+  },
+  tabLabelAndroid: {
+    textAlign: 'center',
   },
 }); 
