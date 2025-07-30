@@ -90,6 +90,7 @@ export default function TraineeHome() {
   const [loadingBookOfMonth, setLoadingBookOfMonth] = useState(true);
   const [ratings, setRatings] = useState<any[]>([]);
   const [averageRating, setAverageRating] = useState(0);
+  const [showFooter, setShowFooter] = useState(false);
 
   // Debug logging
   console.log('TraineeHome: Current userRole:', userRole, 'isInitialized:', isInitialized);
@@ -509,7 +510,16 @@ export default function TraineeHome() {
           </View>
         )}
 
-        <ScrollView contentContainerStyle={[styles.scrollContent, {flexGrow: 1}]} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          contentContainerStyle={[styles.scrollContent, {flexGrow: 1}]} 
+          showsVerticalScrollIndicator={false}
+          onScroll={(event) => {
+            const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+            const isCloseToBottom = contentOffset.y + layoutMeasurement.height >= contentSize.height - 50;
+            setShowFooter(isCloseToBottom);
+          }}
+          scrollEventThrottle={16}
+        >
           {highlightCards.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="star-outline" size={64} color="#ccc" />
@@ -793,6 +803,16 @@ export default function TraineeHome() {
             </View>
           )}
         </ScrollView>
+        
+        {/* Team Credit - Only visible when scrolled to bottom */}
+        {showFooter && (
+          <View style={styles.creditContainer}>
+            <Text style={[styles.creditText, { color: secondaryTextColor }]}>
+              Made by IT Pulse Team – Summer 2025
+            </Text>
+          </View>
+        )}
+        
         <View style={[styles.tabBar, { backgroundColor: isDarkMode ? '#23272b' : '#fff', borderTopColor: isDarkMode ? '#2D333B' : '#eee' }]}>
           <TouchableOpacity 
             style={styles.tabBtn} 
@@ -1349,5 +1369,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '500',
     marginTop: 2,
+  },
+  creditContainer: {
+    position: 'absolute',
+    bottom: 80,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    zIndex: 1,
+  },
+  creditText: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    opacity: 0.8,
   },
 }); 

@@ -301,7 +301,8 @@ const AdminEventListScreen: React.FC = () => {
         date: formattedDate,
         time: normalizedTime,
         location: addLocation,
-        image: addImage,
+        coverImage: addImage ? addImage : undefined, // Fixed: Use coverImage field for database storage
+        image: addImage ? { uri: addImage } : require('../../assets/images/splash-icon.png'),
         category: addType as any,
         registeredCount: 0,
         featured: false,
