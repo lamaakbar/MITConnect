@@ -34,6 +34,8 @@ import TimePickerModal from '../../components/TimePickerModal';
 // Import event service
 import eventService, { EventService } from '../../services/EventService';
 import { formatDateToYYYYMMDD } from '../../utils/dateUtils';
+import { uploadImageFromLibrary } from '../../services/imageUploadService';
+import { Event, EventStatus } from '../../types/events';
 
 const FILTERS = ['All', 'Upcoming', 'Past'];
 
@@ -202,16 +204,19 @@ const AdminEventListScreen: React.FC = () => {
   }
 
   const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      // Note: MediaTypeOptions.Images is deprecated but still works in expo-image-picker v16.1.4
-      // TODO: Update to MediaType.Images when upgrading to newer version
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      setAddImage(result.assets[0].uri);
+    try {
+      // Upload image to Supabase first
+      const uploadedImageUrl = await uploadImageFromLibrary('event-images', 'event-covers');
+      
+      if (uploadedImageUrl) {
+        setAddImage(uploadedImageUrl);
+        console.log('✅ Image uploaded successfully:', uploadedImageUrl);
+      } else {
+        Alert.alert('Error', 'Failed to upload image. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      Alert.alert('Error', 'Failed to upload image. Please try again.');
     }
   };
 
@@ -306,10 +311,10 @@ const AdminEventListScreen: React.FC = () => {
         location: addLocation,
         coverImage: addImage ? addImage : undefined, // Fixed: Use coverImage field for database storage
         image: addImage ? { uri: addImage } : require('../../assets/images/splash-icon.png'),
-        category: addType as any,
+        category: addType,
         registeredCount: 0,
         featured: false,
-        status: 'upcoming',
+        status: 'upcoming' as EventStatus,
         type: 'MITC'
       });
 
@@ -404,7 +409,7 @@ const AdminEventListScreen: React.FC = () => {
           time: normalizedTime,
           location: editLocation,
           coverImage: editImage || undefined,
-          category: editType as any,
+          category: editType,
           type: 'MITC'
         });
 

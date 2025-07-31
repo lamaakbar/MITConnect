@@ -17,7 +17,7 @@ import {
 import DatePickerModal from '../../components/DatePickerModal';
 import TimePickerModal from '../../components/TimePickerModal';
 import eventService from '../../services/EventService';
-import { Event } from '../../types/events';
+import { Event, EventStatus } from '../../types/events';
 import { uploadImageFromLibrary } from '../../services/imageUploadService';
 import { formatDateToYYYYMMDD } from '../../utils/dateUtils';
 
@@ -58,7 +58,7 @@ const AddEventScreen: React.FC = () => {
       setUploadingImage(true);
       
       // Upload image to Supabase first
-      const uploadedImageUrl = await uploadImageFromLibrary('images', 'event-covers');
+      const uploadedImageUrl = await uploadImageFromLibrary('event-images', 'event-covers');
       
       if (uploadedImageUrl) {
         setImageUrl(uploadedImageUrl);
@@ -149,8 +149,8 @@ const AddEventScreen: React.FC = () => {
         location: location.trim(),
         description: description.trim(),
         organizer: organizer.trim(),
-        maxCapacity: parseInt(maxCapacity) || 0,
-        status: status as any,
+        maxCapacity: maxCapacity ? parseInt(maxCapacity) || 0 : 0,
+        status: status as EventStatus,
         featured: featured,
         tags: tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
         requirements: requirements ? requirements.split(',').map(req => req.trim()).filter(req => req) : [],
