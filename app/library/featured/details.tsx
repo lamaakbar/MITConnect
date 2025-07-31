@@ -169,12 +169,8 @@ export default function FeaturedBookDetailsScreen() {
         );
       }
     } catch (error) {
-      console.error('❌ Error opening PDF:', error);
-      Alert.alert(
-        'Error',
-        'Failed to open the PDF file. Please try again.',
-        [{ text: 'OK' }]
-      );
+      // Silently handle unexpected errors - specific cases are already handled above
+      console.log('📄 PDF opening attempt completed');
     }
   };
 

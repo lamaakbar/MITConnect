@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { Text } from 'react-native';
 import { supabase } from '../services/supabase';
 import { getGenreColor } from '../constants/Genres';
+import { useUserContext } from './UserContext';
 
 export type Book = {
   id: string;
@@ -28,6 +29,7 @@ const BookContext = createContext<BookContextType | null>(null);
 export function BookProvider({ children }: { children: ReactNode }) {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
+  const { effectiveRole } = useUserContext();
 
   // Function to fetch real book cover from OpenLibrary
   const fetchBookCover = async (title: string, author: string): Promise<string | null> => {
@@ -246,27 +248,35 @@ export function BookProvider({ children }: { children: ReactNode }) {
       
       if (bookError) throw bookError;
       
-      // Get all employees and trainees
-      const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id')
-        .in('role', ['employee', 'trainee']);
-      
-      if (usersError) throw usersError;
-      
-      // Link book to all employees and trainees
-      const userBooks = users.map((user: { id: string }) => ({
-        user_id: user.id,
-        book_id: insertedBook.id,
-        status: 'assigned',
-        assigned_at: new Date().toISOString(),
-      }));
-      
-      const { error: userBooksError } = await supabase
-        .from('user_books')
-        .insert(userBooks);
-      
-      if (userBooksError) throw userBooksError;
+      // Only admins can assign books to all users
+      if (effectiveRole === 'admin') {
+        // Get all employees and trainees
+        const { data: users, error: usersError } = await supabase
+          .from('users')
+          .select('id')
+          .in('role', ['employee', 'trainee']);
+        
+        if (usersError) throw usersError;
+        
+        // Link book to all employees and trainees
+        const userBooks = users.map((user: { id: string }) => ({
+          user_id: user.id,
+          book_id: insertedBook.id,
+          status: 'assigned',
+          assigned_at: new Date().toISOString(),
+        }));
+        
+        const { error: userBooksError } = await supabase
+          .from('user_books')
+          .insert(userBooks);
+        
+        if (userBooksError) {
+          console.warn('⚠️ Could not assign book to all users (RLS policy issue):', userBooksError);
+          // Continue without throwing error - book was still added successfully
+        }
+      } else {
+        console.log('ℹ️ Non-admin user added book - skipping user assignments');
+      }
       
       // Refresh the books list from Supabase to get the latest data
       await fetchBooks();
