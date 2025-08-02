@@ -202,6 +202,12 @@ export default function SignupScreen() {
             <Text style={styles.buttonText}>{loading ? 'Signing up...' : 'Sign Up'}</Text>
           </Pressable>
           
+          {/* Back to Login Button */}
+          <Pressable style={styles.backButton} onPress={() => router.replace('/')}>
+            <Ionicons name="arrow-back" size={18} color="#1976D2" style={{ marginRight: 8 }} />
+            <Text style={styles.backButtonText}>Back to Login</Text>
+          </Pressable>
+          
           {/* Team Credit */}
           <Text style={styles.creditText}>Made by IT Pulse Team – Summer 2025</Text>
         </View>
@@ -311,6 +317,24 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     letterSpacing: 0.5,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    marginTop: 16,
+    borderWidth: 1.5,
+    borderColor: '#e0eaff',
+  },
+  backButtonText: {
+    color: '#1976D2',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   creditText: {
     color: '#888',
