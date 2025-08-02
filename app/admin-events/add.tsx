@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import DatePickerModal from '../../components/DatePickerModal';
 import TimePickerModal from '../../components/TimePickerModal';
+import { AddEventButton } from '../../components/AddEventButton';
 import eventService from '../../services/EventService';
 import { Event, EventStatus } from '../../types/events';
 import { uploadImageFromLibrary } from '../../services/imageUploadService';
@@ -389,17 +390,12 @@ const AddEventScreen: React.FC = () => {
         />
         
         {/* Create Event Button */}
-        <Pressable 
-          style={[styles.createBtn, saving && styles.createBtnDisabled]} 
+        <AddEventButton
           onPress={createEvent}
+          label="Create Event"
           disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.createBtnText}>Create Event</Text>
-          )}
-        </Pressable>
+          loading={saving}
+        />
       </View>
 
       {/* Date Picker Modal */}
