@@ -108,14 +108,24 @@ export default function EventsManagement() {
     <View style={{ flex: 1, backgroundColor }}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+            {/* Header */}
+              <View style={[styles.header, { 
+                paddingTop: insets.top,
+                paddingHorizontal: 16,
+                paddingBottom: 12,
+              }]}>  
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: textColor }]}>
-          MIT<Text style={{ color: '#3CB371' }}>Connect</Text>
-        </Text>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{
+            fontSize: 18,
+            fontWeight: 'bold',
+            letterSpacing: 0.5,
+            color: textColor,
+            textAlign: 'center',
+          }}>Events Management</Text>
+        </View>
         <TouchableOpacity 
           style={[styles.addButton, { backgroundColor: '#3CB371' }]}
           onPress={() => setShowAddModal(true)}

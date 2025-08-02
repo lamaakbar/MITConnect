@@ -107,8 +107,9 @@ export default function ShopManagementScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <AdminHeader 
+              <AdminHeader
         title="Shop Management"
+        showLogo={false}
         rightComponent={
           <Ionicons name="pricetags" size={24} color="#4F8EF7" />
         }

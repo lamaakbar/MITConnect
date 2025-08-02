@@ -285,19 +285,20 @@ export default function EventsScreen() {
           <TouchableOpacity onPress={handleBack} style={{ padding: 4, marginRight: 8 }}>
             <Ionicons name="arrow-back" size={24} color={iconColor} />
           </TouchableOpacity>
-          <Text style={{
-            fontSize: 22,
-            fontWeight: '700',
-            letterSpacing: 0.5,
-            flex: 1,
-            textAlign: 'center',
-            color: isDarkMode ? darkText : textColor
-          }}>
-            MIT<Text style={{ color: darkHighlight }}>Connect</Text>
-            {viewAs && (
-              <Text style={{ color: '#FF6B6B', fontSize: 12, fontWeight: 'normal' }}> (Preview Mode)</Text>
-            )}
-          </Text>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{
+              fontSize: 18,
+              fontWeight: 'bold',
+              letterSpacing: 0.5,
+              color: isDarkMode ? darkText : textColor,
+              textAlign: 'center',
+            }}>
+              Events
+              {viewAs && (
+                <Text style={{ color: '#FF6B6B', fontSize: 12, fontWeight: 'normal' }}> (Preview Mode)</Text>
+              )}
+            </Text>
+          </View>
           <View style={{ width: 32 }} />
         </View>
       )}

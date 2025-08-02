@@ -139,10 +139,12 @@ export default function AdminHome() {
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       
                            {/* Header */}
-        <View style={[styles.header, { 
+                <View style={[styles.header, { 
           backgroundColor: colors.cardBackground,
-          borderBottomColor: colors.border
-        }]}>
+          borderBottomColor: colors.border,
+          paddingTop: insets.top,
+          paddingBottom: 12,
+        }]}>  
           <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} />
           <Text style={[styles.appName, { color: colors.text }]}>
             <Text style={{ color: colors.text }}>MIT</Text>
@@ -412,10 +414,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 27,
+    paddingTop: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    marginTop: 35,
+    marginTop: 20,
   },
   headerLeft: {
     flexDirection: 'row',

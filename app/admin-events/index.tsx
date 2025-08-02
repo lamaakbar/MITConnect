@@ -591,10 +591,34 @@ const AdminEventListScreen: React.FC = () => {
   return (
     <>
       <SafeAreaView style={{ flex: 1, backgroundColor }}>
-      {/* Unified Admin Header */}
-      <AdminHeader 
-        title=""
-      />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      
+      {/* Header */}
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: insets.top + (Platform.OS === 'ios' ? -40 : 15),
+        paddingBottom: 12,
+        backgroundColor: cardBackground,
+        borderBottomWidth: 1,
+        borderBottomColor: borderColor,
+      }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+          <Ionicons name="arrow-back" size={24} color={textColor} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{
+            fontSize: 18,
+            fontWeight: 'bold',
+            letterSpacing: 0.5,
+            color: textColor,
+            textAlign: 'center',
+          }}>Events Management</Text>
+        </View>
+        <View style={{ width: 32 }} />
+      </View>
 
       {/* Search Bar */}
       <View style={[styles.searchBar, { backgroundColor: searchBackground }]}>

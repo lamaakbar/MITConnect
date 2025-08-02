@@ -359,20 +359,19 @@ export default function EmployeeHome() {
     <RoleGuard allowedRoles={['employee']}>
       <View style={[styles.safeArea, { backgroundColor }]}> 
       <StatusBar style={isDarkMode ? 'light' : 'dark'} translucent backgroundColor="transparent" />
-      <View style={[styles.header, { 
+            <View style={[styles.header, { 
         backgroundColor: cardBackground, 
         borderBottomColor: borderColor, 
-        paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 10 : 16),
-        paddingBottom: Platform.OS === 'ios' ? 6 : 12,
-      }]}> 
-        <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} /> 
+        paddingTop: insets.top,
+        paddingBottom: 12,
+      }]}>   
+        <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} />
         <Text style={[styles.appName, { color: textColor }]}>
-          <Text style={{ color: textColor }}>MIT</Text>
-          <Text style={{ color: '#43C6AC' }}>Connect</Text>
+          MIT<Text style={{ color: '#43C6AC' }}>Connect</Text>
           {viewAs && (
             <Text style={{ color: '#FF6B6B', fontSize: 12, fontWeight: 'normal' }}> (Preview Mode)</Text>
           )}
-        </Text> 
+        </Text>
         <View style={styles.headerIcons}> 
           <TouchableOpacity onPress={() => router.push('/library')} style={styles.headerIcon}> 
             <Ionicons name="library-outline" size={22} color={iconColor} /> 
@@ -726,25 +725,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingTop: 10,
-    paddingBottom: 6,
-    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    marginTop: 20,
   },
   logo: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    marginRight: 6,
+    width: 32,
+    height: 32,
+    marginRight: 8,
+    marginLeft: 24,
   },
   appName: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: 'bold',
     letterSpacing: 0.5,
     flex: 1,
     textAlign: 'center',
+    marginLeft: 32,
   },
   headerIcons: {
     flexDirection: 'row',

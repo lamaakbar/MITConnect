@@ -171,7 +171,7 @@ export default function MyEventsScreen() {
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Image source={require('../assets/images/icon.png')} style={{ width: 32, height: 32, marginRight: 8 }} />
-          <Text style={styles.headerTitle}>MIT<Text style={{ color: '#43C6AC' }}>Connect</Text></Text>
+          <Text style={styles.headerTitle}>My Events</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Feather name="globe" size={20} color="#222" style={styles.headerIcon} />

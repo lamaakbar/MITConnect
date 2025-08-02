@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../components/ThemeContext';
 import { useThemeColor } from '../../hooks/useThemeColor';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TraineeOverview from './overview';
 import TraineeRegistrations from './registrations';
 import TraineeProgress from './progress';
@@ -26,6 +27,7 @@ export default function TraineeManagementIndex() {
   const cardBackground = isDarkMode ? '#1E1E1E' : '#fff';
   const borderColor = isDarkMode ? '#2A2A2A' : '#E5E7E9';
   const iconColor = useThemeColor({}, 'icon');
+  const insets = useSafeAreaInsets();
 
   let ContentComponent;
   if (selectedTab === 'dashboard') ContentComponent = <TraineeOverview />;
@@ -36,48 +38,39 @@ export default function TraineeManagementIndex() {
 
   return (
     <View style={{ flex: 1, backgroundColor }}>
-      <View style={{ height: 48 }} />
-      
-      {/* Premium Enhanced Header */}
-      <View style={[
-        styles.headerContainer, 
-        { 
-          backgroundColor: cardBackground,
-          shadowColor: isDarkMode ? '#000' : '#1F2937',
-        }
-      ]}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity 
-            style={[
-              styles.backButton, 
-              { 
-                backgroundColor: isDarkMode ? '#2A2A2A' : '#F8F9FA',
-                shadowColor: isDarkMode ? '#000' : '#1F2937',
-              }
-            ]} 
-            onPress={() => router.push('/admin-home')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chevron-back" size={24} color={iconColor} />
-          </TouchableOpacity>
-          
-          <View style={styles.headerTitleContainer}>
-            <Text style={[styles.headerTitle, { color: textColor }]}>Trainee Management</Text>
-            <Text style={[styles.headerSubtitle, { color: secondaryTextColor }]}>
-              Manage trainee data and progress
-            </Text>
-          </View>
-          
-          <View style={{ width: 44 }} />
+      {/* Header */}
+      <View style={{
+        paddingTop: insets.top,
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+        backgroundColor: cardBackground,
+        borderBottomWidth: 1,
+        borderBottomColor: borderColor,
+        flexDirection: 'row',
+        alignItems: 'center',
+      }}>
+        <TouchableOpacity onPress={() => router.push('/admin-home')} style={{ padding: 4, marginRight: 8 }}>
+          <Ionicons name="arrow-back" size={24} color={iconColor} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{
+            fontSize: 18,
+            fontWeight: 'bold',
+            letterSpacing: 0.5,
+            color: textColor,
+            textAlign: 'center',
+          }}>Trainee Management</Text>
         </View>
-        
-        {/* Integrated Tab Navigation */}
-        <View style={[
-          styles.integratedTabContainer,
-          {
-            backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0',
-          }
-        ]}>
+        <View style={{ width: 32 }} />
+      </View>
+      
+      {/* Integrated Tab Navigation */}
+      <View style={[
+        styles.integratedTabContainer,
+        {
+          backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0',
+        }
+      ]}>  
           {TABS.map((tab, index) => (
             <TouchableOpacity
               key={tab.key}
@@ -110,8 +103,8 @@ export default function TraineeManagementIndex() {
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
       </View>
+      
       <View style={{ flex: 1 }}>
         {ContentComponent}
       </View>

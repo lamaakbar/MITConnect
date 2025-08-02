@@ -247,7 +247,8 @@ Generated from MITConnect Admin Dashboard`;
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor }]}>
-        <AdminHeader 
+        <AdminHeader
+          showLogo={false} 
           title="Trainee Feedback" 
           backDestination="/trainee-management"
         />

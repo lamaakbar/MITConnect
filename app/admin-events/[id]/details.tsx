@@ -10,8 +10,10 @@ import {
     View,
     ActivityIndicator,
     TouchableOpacity,
+    StatusBar,
+    Platform,
 } from 'react-native';
-import AdminHeader from '../../../components/AdminHeader';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import eventService from '../../../services/EventService';
 import { Event } from '../../../types/events';
 import { useTheme } from '../../../components/ThemeContext';
@@ -102,11 +104,41 @@ const EventDetailsScreen: React.FC = () => {
     fetchEventData();
   }, [id]);
 
+  const insets = useSafeAreaInsets();
+
   // Show loading state
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: cardBackground }]}>
-        <AdminHeader title="" backDestination="/admin-events" />
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        
+        {/* Header */}
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 16,
+          paddingTop: insets.top,
+          paddingBottom: 12,
+          backgroundColor: cardBackground,
+          borderBottomWidth: 1,
+          borderBottomColor: borderColor,
+        }}>
+          <TouchableOpacity onPress={() => router.push('/admin-events')} style={{ padding: 4, marginRight: 8 }}>
+            <Ionicons name="arrow-back" size={24} color={textColor} />
+          </TouchableOpacity>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{
+              fontSize: 18,
+              fontWeight: 'bold',
+              letterSpacing: 0.5,
+              color: textColor,
+              textAlign: 'center',
+            }}>Event Details</Text>
+          </View>
+          <View style={{ width: 32 }} />
+        </View>
+        
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#43C6AC" />
           <Text style={[styles.loadingText, { color: secondaryTextColor }]}>Loading event details...</Text>
@@ -119,7 +151,35 @@ const EventDetailsScreen: React.FC = () => {
   if (error || !event) {
     return (
       <View style={[styles.container, { backgroundColor: cardBackground }]}>
-        <AdminHeader title="" backDestination="/admin-events" />
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        
+        {/* Header */}
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 16,
+          paddingTop: insets.top,
+          paddingBottom: 12,
+          backgroundColor: cardBackground,
+          borderBottomWidth: 1,
+          borderBottomColor: borderColor,
+        }}>
+          <TouchableOpacity onPress={() => router.push('/admin-events')} style={{ padding: 4, marginRight: 8 }}>
+            <Ionicons name="arrow-back" size={24} color={textColor} />
+          </TouchableOpacity>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{
+              fontSize: 18,
+              fontWeight: 'bold',
+              letterSpacing: 0.5,
+              color: textColor,
+              textAlign: 'center',
+            }}>Event Details</Text>
+          </View>
+          <View style={{ width: 32 }} />
+        </View>
+        
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={64} color="#ff6b6b" />
           <Text style={[styles.errorText, { color: '#ff6b6b' }]}>{error || 'Event not found'}</Text>
@@ -142,14 +202,36 @@ const EventDetailsScreen: React.FC = () => {
       day: 'numeric' 
     });
   };
-
+  
   return (
     <View style={[styles.container, { backgroundColor: cardBackground }]}>
-      <AdminHeader title="" backDestination="/admin-events" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       
-      {/* Event Details Title */}
-      <View style={styles.titleContainer}>
-        <Text style={[styles.pageTitle, { color: textColor }]}>Event Details</Text>
+      {/* Header */}
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: insets.top + (Platform.OS === 'ios' ? -40 : 15),
+        paddingBottom: 12,
+        backgroundColor: cardBackground,
+        borderBottomWidth: 1,
+        borderBottomColor: borderColor,
+      }}>
+        <TouchableOpacity onPress={() => router.push('/admin-events')} style={{ padding: 4, marginRight: 8 }}>
+          <Ionicons name="arrow-back" size={24} color={textColor} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{
+            fontSize: 18,
+            fontWeight: 'bold',
+            letterSpacing: 0.5,
+            color: textColor,
+            textAlign: 'center',
+          }}>Event Details</Text>
+        </View>
+        <View style={{ width: 32 }} />
       </View>
       
       <ScrollView style={[styles.scroll, { backgroundColor: cardBackground }]} contentContainerStyle={styles.scrollContent}>

@@ -437,9 +437,9 @@ export default function BookDetails() {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 18,
-        paddingTop: insets.top + 10,
-        paddingBottom: 6,
+        paddingHorizontal: 16,
+        paddingTop: insets.top,
+        paddingBottom: 12,
         backgroundColor: isDarkMode ? '#23272b' : cardBackground,
         borderBottomWidth: 1,
         borderBottomColor: isDarkMode ? '#2D333B' : borderColor,
@@ -447,9 +447,15 @@ export default function BookDetails() {
         <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
           <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? '#fff' : textColor }}>
-          MIT<Text style={{ color: '#43C6AC' }}>Connect</Text>
-        </Text>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{
+            fontSize: 18,
+            fontWeight: 'bold',
+            letterSpacing: 0.5,
+            color: isDarkMode ? '#fff' : textColor,
+            textAlign: 'center',
+          }}>Book Details</Text>
+        </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={toggleTheme} style={{ padding: 4, marginRight: 8 }}>
             <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={24} color={textColor} />

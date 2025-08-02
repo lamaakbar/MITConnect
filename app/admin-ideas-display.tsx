@@ -212,7 +212,7 @@ export default function AdminIdeasDisplay() {
   return (
     <View style={[styles.container, { backgroundColor }]}>
       <SafeAreaView style={styles.safeArea}>
-        <AdminHeader title="Ideas Management" />
+        <AdminHeader title="Ideas Management" showLogo={false} />
         
         {/* Stats Overview */}
         <View style={styles.statsContainer}>

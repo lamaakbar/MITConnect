@@ -566,9 +566,9 @@ export default function BookClubScreen() {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 18,
-        paddingTop: insets.top + 10,
-        paddingBottom: 6,
+        paddingHorizontal: 16,
+        paddingTop: insets.top,
+        paddingBottom: 12,
         backgroundColor: isDarkMode ? darkCard : cardBackground,
         borderBottomWidth: 1,
         borderBottomColor: isDarkMode ? darkBorder : borderColor,
@@ -576,9 +576,15 @@ export default function BookClubScreen() {
         <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
           <Ionicons name="arrow-back" size={24} color={iconColor} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
-          MIT<Text style={{ color: darkHighlight }}>Connect</Text>
-        </Text>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{
+            fontSize: 18,
+            fontWeight: 'bold',
+            letterSpacing: 0.5,
+            color: isDarkMode ? darkText : textColor,
+            textAlign: 'center',
+          }}>Book Club</Text>
+        </View>
         <TouchableOpacity 
           onPress={() => router.push('/library')} 
           style={{ 

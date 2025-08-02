@@ -44,12 +44,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingTop: 10,
-    paddingBottom: 6,
-    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F2F2F7',
+    marginTop: 20,
   },
   headerTitle: {
     fontSize: 22,
@@ -691,36 +690,29 @@ export default function TraineeHub() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: isDarkMode ? darkCard : cardBackground }}>
-      <View style={[
-        styles.header, 
-        { 
-          backgroundColor: isDarkMode ? darkCard : cardBackground, 
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 16,
+          paddingTop: insets.top + (Platform.OS === 'ios' ? -40 : 15),
+          paddingBottom: 12,
+          backgroundColor: isDarkMode ? darkCard : cardBackground,
+          borderBottomWidth: 1,
           borderBottomColor: isDarkMode ? darkBorder : borderColor,
-          paddingTop: Math.max(insets.top, Platform.OS === 'ios' ? 10 : 16),
-          paddingBottom: Platform.OS === 'ios' ? 12 : 16,
-        }
-      ]}>
-        <TouchableOpacity 
-          onPress={() => router.back()} 
-          style={{ 
-            padding: 8, 
-            marginRight: 8,
-            marginTop: Platform.OS === 'android' ? 4 : 0,
-          }}
-        >
+        }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
           <Ionicons name="arrow-back" size={24} color={iconColor} />
         </TouchableOpacity>
-        <Text style={{ 
-          fontSize: 22, 
-          fontWeight: '700', 
-          letterSpacing: 0.5, 
-          flex: 1, 
-          textAlign: 'center', 
-          color: isDarkMode ? darkText : textColor,
-          marginTop: Platform.OS === 'android' ? 4 : 0,
-        }}>
-          MIT<Text style={{ color: darkHighlight }}>Connect</Text>
-        </Text>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{
+            fontSize: 18,
+            fontWeight: 'bold',
+            letterSpacing: 0.5,
+            color: isDarkMode ? darkText : textColor,
+            textAlign: 'center',
+          }}>Trainee Hub</Text>
+        </View>
         <View style={{ width: 32 }} />
       </View>
       <View style={[
@@ -783,10 +775,8 @@ export default function TraineeHub() {
       >
         {tab === 'Departments' && (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
-            {/* Welcome message and visuals from Welcome screen */}
+            {/* Welcome message */}
             <View style={{ alignItems: 'center', marginTop: 24, marginBottom: 16 }}>
-              {/* You can add your logo or illustration here if needed */}
-              <Text style={{ fontWeight: 'bold', fontSize: 22, marginBottom: 18, textAlign: 'center', color: isDarkMode ? darkHighlight : '#43C6AC' }}>Trainee Hub</Text>
               <Text style={{ color: isDarkMode ? darkSecondary : '#888', fontSize: 15, marginBottom: 8 }}>Lets start your Journey!</Text>
             </View>
             {/* Department Cards - keep all text and headlines as in Welcome screen, but remove select/continue buttons */}

@@ -78,7 +78,7 @@ export default function AdminHeader({
       { 
         backgroundColor: cardBackground,
         borderBottomColor: 'transparent',
-        paddingTop: 0,
+        paddingTop: insets.top,
         paddingBottom: 12,
         paddingHorizontal: 16,
       }
@@ -101,7 +101,7 @@ export default function AdminHeader({
             <View style={[styles.logoCircle, { backgroundColor: logoCircleBg, width: 36, height: 36, borderRadius: 18 }]}> 
               <Feather name="users" size={18} color="#004080" />
             </View>
-            <Text style={{ color: textColor, fontSize: 20, fontWeight: 'bold', letterSpacing: 0.5 }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
+            <Text style={{ color: textColor, fontSize: 18, fontWeight: 'bold', letterSpacing: 0.5 }}>{title}</Text>
           </View>
         ) : (
           <Text style={[styles.headerTitle, { color: textColor, fontSize: titleSize || 20, fontWeight: 'bold', marginLeft: 8, marginTop: 0 }]} numberOfLines={1} ellipsizeMode="tail">{title}</Text>

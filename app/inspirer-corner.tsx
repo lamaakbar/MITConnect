@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Pressable, SafeAreaView, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Pressable, SafeAreaView, ScrollView, Alert, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
 import { ToastAndroid, Platform } from 'react-native';
@@ -13,6 +13,7 @@ import { IdeaLikesService, type IdeaWithLikes } from '../services/IdeaLikesServi
 import SharedIdeasService from '../services/SharedIdeasService';
 import { supabase } from '../services/supabase';
 import RoleGuard from '../components/RoleGuard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 
@@ -50,6 +51,7 @@ export default function InspirerCornerScreen() {
   const { isDarkMode } = useTheme();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
+  const insets = useSafeAreaInsets();
   
   // Debug log for user role
   console.log('🔍 Current userRole:', userRole);
@@ -973,25 +975,35 @@ export default function InspirerCornerScreen() {
   return (
     <RoleGuard allowedRoles={['trainee', 'employee']}>
     <View style={[styles.container, { backgroundColor: screenBg }]}>
-      <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
-        <View style={[styles.header, { 
-          marginTop: Platform.OS === 'android' ? 16 : 24,
-          marginBottom: Platform.OS === 'android' ? 16 : 12,
-        }]}>
-          <View style={styles.headerLeft}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                <Ionicons name="arrow-back" size={24} color={primaryText} />
-              </TouchableOpacity>
-            <View style={styles.iconContainer}>
-              <Ionicons name="bulb" size={24} color="#FF9500" />
-            </View>
-            <View>
-              <Text style={[styles.title, { color: primaryText }]}>Inspire Corner</Text>
-              <Text style={[styles.subtitle, { color: secondaryText }]}>Innovation & Ideas Hub</Text>
-            </View>
-          </View>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      {/* Header */}
+      <View style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        paddingHorizontal: 16,
+        paddingTop: insets.top,
+        paddingBottom: 12,
+        backgroundColor: cardBg,
+        borderBottomWidth: 1,
+        borderBottomColor: isDarkMode ? '#2A2A2A' : '#E0E0E0',
+      }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+          <Ionicons name="arrow-back" size={24} color={primaryText} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{
+            fontSize: 18,
+            fontWeight: 'bold',
+            letterSpacing: 0.5,
+            color: primaryText,
+            textAlign: 'center',
+          }}>Inspire Corner</Text>
         </View>
+        <View style={{ width: 32 }} />
+      </View>
+      
+      <SafeAreaView style={styles.safeArea}>
 
         {/* New Idea Button - Centered below header */}
         <View style={styles.newIdeaButtonContainer}>

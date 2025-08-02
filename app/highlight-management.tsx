@@ -234,11 +234,12 @@ export default function HighlightManagement() {
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: 'bold',
             letterSpacing: 0.5,
             color: isDarkMode ? '#fff' : '#222',
-          }}>MIT<Text style={{ color: '#3CB371' }}>Connect</Text></Text>
+            textAlign: 'center',
+          }}>Highlight Management</Text>
         </View>
         <View style={{ width: 32 }} />
       </View>
