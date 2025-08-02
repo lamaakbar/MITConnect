@@ -18,7 +18,6 @@ import { decode } from 'base64-arraybuffer';
 type Highlight = {
   id: string;
   title: string;
-  description: string;
   image_url: string | null;
   created_at: string;
   updated_at: string;
@@ -52,7 +51,6 @@ export default function HighlightManagement() {
 
   // Edit form state for Edit Modal
   const [editTitle, setEditTitle] = useState('');
-  const [editDescription, setEditDescription] = useState('');
   const [editImage, setEditImage] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
 
@@ -166,15 +164,14 @@ export default function HighlightManagement() {
   const openEditModal = (idx: number) => {
     const h = highlights[idx];
     setEditTitle(h.title);
-    setEditDescription(h.description);
     setEditImage(h.image_url);
     setEditIndex(idx);
     setShowEditModal(true);
   };
 
   const handleEditSubmit = async () => {
-    if (editIndex === null || !editTitle || !editDescription) {
-      Alert.alert('Error', 'Please fill in all fields.');
+    if (editIndex === null || !editTitle) {
+      Alert.alert('Error', 'Please enter a title.');
       return;
     }
 
@@ -187,7 +184,7 @@ export default function HighlightManagement() {
         uploadedUrl = await uploadImageToSupabase(editImage);
       }
 
-      await updateHighlight(id, editTitle, editDescription, uploadedUrl);
+      await updateHighlight(id, editTitle, uploadedUrl);
       await loadHighlights();
       setShowEditModal(false);
       setEditIndex(null);
@@ -299,18 +296,7 @@ export default function HighlightManagement() {
               onSubmitEditing={handleInputSubmit}
               blurOnSubmit
             />
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-              style={[styles.input, styles.textarea]}
-              placeholder="Edit Description..."
-              value={editDescription}
-              onChangeText={setEditDescription}
-              multiline
-              numberOfLines={4}
-              returnKeyType="done"
-              onSubmitEditing={handleInputSubmit}
-              blurOnSubmit
-            />
+
             <Text style={styles.label}>Picture</Text>
             <TouchableOpacity style={styles.uploadBtn} onPress={() => pickImage(setEditImage)} activeOpacity={0.85}>
               <Text style={styles.uploadBtnText}>{editImage ? 'Change Picture' : 'Upload Picture'}</Text>

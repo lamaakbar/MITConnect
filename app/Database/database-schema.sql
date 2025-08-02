@@ -348,14 +348,14 @@ BEGIN
             SUM(CASE WHEN vote_type = 'no' THEN 1 ELSE 0 END) as no_votes,
             SUM(CASE WHEN vote_type = 'like' THEN 1 ELSE 0 END) as like_votes,
             SUM(CASE WHEN vote_type = 'dislike' THEN 1 ELSE 0 END) as dislike_votes,
-            COUNT(*) as total_votes
+            COUNT(*)::BIGINT as total_votes
         FROM idea_votes
         GROUP BY idea_id
     ) v ON i.id = v.idea_id
     LEFT JOIN (
         SELECT 
             idea_id,
-            COUNT(*) as comment_count
+            COUNT(*)::BIGINT as comment_count
         FROM idea_comments
         GROUP BY idea_id
     ) c ON i.id = c.idea_id

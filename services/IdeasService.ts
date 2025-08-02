@@ -161,6 +161,31 @@ export class IdeasService {
     adminId: string
   ): Promise<{ data: Idea | null; error: any }> {
     try {
+      console.log(`🔍 Attempting to update idea ${ideaId} to status: ${status}`);
+      
+      // Check current user authentication
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      console.log('👤 Current user:', user?.id, 'Auth error:', authError);
+      
+      // First, check if the idea exists
+      const { data: existingIdea, error: checkError } = await supabase
+        .from('ideas')
+        .select('id, status, title')
+        .eq('id', ideaId)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Error checking idea existence:', checkError);
+        return { data: null, error: checkError };
+      }
+
+      if (!existingIdea) {
+        console.error(`❌ Idea with id ${ideaId} not found`);
+        return { data: null, error: { message: 'Idea not found' } };
+      }
+
+      console.log(`✅ Found idea: ${existingIdea.title} (current status: ${existingIdea.status})`);
+
       const updateData: any = {
         status: status,
         updated_at: new Date().toISOString()
@@ -172,14 +197,38 @@ export class IdeasService {
         updateData.approved_at = new Date().toISOString();
       }
 
+      console.log('📝 Update data:', updateData);
+      
       const { data, error } = await supabase
         .from('ideas')
         .update(updateData)
         .eq('id', ideaId)
-        .select()
-        .single();
+        .select();
 
-      return { data, error };
+      console.log('📊 Update result - data:', data, 'error:', error);
+
+      if (error) {
+        console.error('Error updating idea:', error);
+        return { data: null, error };
+      }
+
+      if (!data || data.length === 0) {
+        console.error('❌ Update returned 0 rows - possible RLS policy issue');
+        
+        // Try a direct query to see if we can still access the idea
+        const { data: recheckData, error: recheckError } = await supabase
+          .from('ideas')
+          .select('*')
+          .eq('id', ideaId)
+          .maybeSingle();
+          
+        console.log('🔍 Recheck after failed update:', recheckData, recheckError);
+        
+        return { data: null, error: { message: 'Update failed - no rows affected (possible permission issue)' } };
+      }
+
+      console.log(`✅ Successfully updated idea to status: ${data[0].status}`);
+      return { data: data[0], error: null };
     } catch (error) {
       console.error('Error updating idea status:', error);
       return { data: null, error };

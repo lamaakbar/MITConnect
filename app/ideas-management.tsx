@@ -9,8 +9,8 @@ import { useTheme } from '../components/ThemeContext';
 import AdminHeader from '../components/AdminHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IdeasService, type Idea as DatabaseIdea } from '../services/IdeasService';
-import { useUserContext } from '../components/UserContext';
 import { supabase } from '../services/supabase';
+import { useUserContext } from '../components/UserContext';
 // Simple UUID generator
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -30,6 +30,7 @@ const IDEA_STATUS = {
 
 // Add poll data to Idea type
 type Poll = {
+  id: string;
   question: string;
   options: string[];
 };
@@ -59,6 +60,69 @@ export default function IdeasManagement() {
   const [pendingPoll, setPendingPoll] = useState<{ ideaId: string, question: string, options: string[] } | null>(null);
   const [manageMenuVisible, setManageMenuVisible] = useState<string | null>(null);
   const [manageModalVisible, setManageModalVisible] = useState<string | null>(null);
+
+  // Load poll vote counts from database using same logic as Inspire Corner
+  const loadPollVoteCounts = async (ideasData?: any[]) => {
+    try {
+      const currentIdeas = ideasData || ideas;
+      const ideasWithPolls = currentIdeas.filter((idea: any) => idea.poll_id);
+      
+      if (ideasWithPolls.length > 0) {
+        const pollIds = ideasWithPolls.map((idea: any) => idea.poll_id);
+        
+        // EXACT COPY from Inspire Corner - Fetch all poll responses for these polls
+        const { data: allPollResponses, error: pollError } = await supabase
+          .from('poll_responses')
+          .select('poll_id, selected_option, user_id, created_at')
+          .in('poll_id', pollIds)
+          .order('created_at', { ascending: false });
+        
+        console.log('📊 Admin - Loading poll responses for', pollIds.length, 'polls');
+        
+        // EXACT COPY from Inspire Corner - Optimized vote counting - group by poll and get latest per user
+        const voteCounts: { [key: string]: { total: number; options: { [key: number]: number } } } = {};
+        
+        // EXACT COPY from Inspire Corner - Group responses by poll_id for faster processing
+        const responsesByPoll: { [key: string]: any[] } = {};
+        allPollResponses?.forEach(response => {
+          if (!responsesByPoll[response.poll_id]) {
+            responsesByPoll[response.poll_id] = [];
+          }
+          responsesByPoll[response.poll_id].push(response);
+        });
+        
+        // EXACT COPY from Inspire Corner - Process each poll
+        pollIds.forEach(pollId => {
+          const pollResponses = responsesByPoll[pollId] || [];
+          
+          // Get latest response per user (responses are already ordered by created_at desc)
+          const userLatestResponses: { [key: string]: any } = {};
+          pollResponses.forEach(response => {
+            if (!userLatestResponses[response.user_id]) {
+              userLatestResponses[response.user_id] = response;
+            }
+          });
+          
+          // Count votes from latest responses
+          const latestResponses = Object.values(userLatestResponses);
+          const totalVotes = latestResponses.length;
+          const optionVotes: { [key: number]: number } = {};
+          
+          latestResponses.forEach(response => {
+            const option = response.selected_option;
+            optionVotes[option] = (optionVotes[option] || 0) + 1;
+          });
+          
+          voteCounts[pollId] = { total: totalVotes, options: optionVotes };
+        });
+        
+        console.log('📊 Admin - Loaded vote counts for', Object.keys(voteCounts).length, 'polls');
+        setPollVoteCounts(voteCounts);
+      }
+    } catch (error) {
+      console.error('Error loading poll vote counts:', error);
+    }
+  };
 
   // Load ideas from database
   const loadIdeas = async () => {
@@ -147,15 +211,23 @@ export default function IdeasManagement() {
             votes: idea.total_votes || 0,
             hasPoll: !!idea.poll_id,
             poll: idea.poll_id ? {
+              id: idea.poll_id,
               question: idea.poll_question || '',
               options: pollOptions || []
             } : undefined
           };
         });
         
-        setIdeas(transformedIdeas);
-        console.log('Loaded ideas from database:', transformedIdeas.length);
-        console.log('🔍 Sample transformed idea with poll:', transformedIdeas.find(idea => idea.hasPoll));
+        // Remove duplicates by ID (as backup to SQL DISTINCT)
+        const uniqueIdeas = transformedIdeas.filter((idea, index, array) => 
+          array.findIndex(i => i.id === idea.id) === index
+        );
+        
+        setIdeas(uniqueIdeas);
+        console.log('Loaded ideas from database:', uniqueIdeas.length);
+
+        // Load poll vote counts after ideas are loaded
+        await loadPollVoteCounts(uniqueIdeas);
       } else {
         setIdeas([]);
         console.log('No ideas found in database');
@@ -171,6 +243,29 @@ export default function IdeasManagement() {
   // Load ideas on component mount
   useEffect(() => {
     loadIdeas();
+    
+    // Set up real-time subscription for poll response changes (same as Inspire Corner)
+    const pollResponsesSubscription = supabase
+      .channel('poll-responses-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen for all changes (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'poll_responses'
+        },
+        (payload) => {
+          console.log('📊 Real-time poll response change detected:', payload);
+          // Reload poll vote counts when any poll response changes
+          loadPollVoteCounts();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on component unmount
+    return () => {
+      supabase.removeChannel(pollResponsesSubscription);
+    };
   }, []);
 
   // Handle approve idea
@@ -250,11 +345,18 @@ export default function IdeasManagement() {
   const approved = ideas.filter(i => i.status === IDEA_STATUS.APPROVED).length;
   const totalVotes = ideas.reduce((sum, i) => sum + i.votes, 0);
 
-  // Function to calculate actual poll vote count
+  // State for accurate poll vote counts (same logic as Inspire Corner)
+  const [pollVoteCounts, setPollVoteCounts] = useState<{ [key: string]: { total: number; options: { [key: number]: number } } }>({});
+
+  // Function to calculate actual poll vote count (same logic as Inspire Corner)
   const getPollVoteCount = (idea: Idea) => {
-    if (!idea.poll) return 0;
-    // Return the actual poll response count from the database
-    return idea.poll_total_responses || 0;
+    if (!idea.poll?.id) {
+      return 0;
+    }
+    
+    const pollId = idea.poll.id;
+    const count = pollVoteCounts[pollId]?.total || 0;
+    return count;
   };
 
   // Toast helper
@@ -269,26 +371,11 @@ export default function IdeasManagement() {
     const idea = ideas.find(i => i.id === id);
     setPollModalIdea(idea || null);
     
-    console.log('🔍 Opening poll modal for idea:', {
-      id: idea?.id,
-      title: idea?.title,
-      hasPoll: idea?.hasPoll,
-      poll: idea?.poll,
-      poll_id: idea?.poll_id,
-      poll_question: idea?.poll_question,
-      poll_options: idea?.poll_options
-    });
-    
     // If idea already has a poll, pre-populate the modal for editing
     if (idea?.hasPoll && idea.poll) {
-      console.log('✅ Pre-filling poll modal with existing data:', {
-        question: idea.poll.question,
-        options: idea.poll.options
-      });
       setPollQuestion(idea.poll.question);
       setPollOptions([...idea.poll.options]);
     } else {
-      console.log('🆕 Creating new poll - resetting form');
       // Reset for new poll
       setPollQuestion('');
       setPollOptions(['', '']);
@@ -320,19 +407,17 @@ export default function IdeasManagement() {
     setPollError(null);
 
     try {
-      // Test database connectivity first
-      const dbTest = await IdeasService.testPollDatabase();
-      console.log('📋 Database test results:', dbTest);
-
-      if (!dbTest.success) {
-        setPollError('Database not properly configured. Please run the reset script.');
-        return;
-      }
       const pollData = {
         idea_id: pollModalIdea.id,
         question: pollQuestion.trim(),
         options: pollOptions.filter(opt => opt.trim()).map(opt => opt.trim())
       };
+
+      // Check if idea already has a poll - prevent duplicate creation
+      if (pollModalIdea.hasPoll && pollModalIdea.poll?.id) {
+        setPollError('This idea already has a poll. Delete the existing poll first to create a new one.');
+        return;
+      }
 
       const { data, error } = await IdeasService.createPoll(pollData);
 
@@ -598,6 +683,7 @@ export default function IdeasManagement() {
                 onStatusUpdate={handleStatusUpdate}
                 setManageModalVisible={setManageModalVisible}
                 getPollVoteCount={getPollVoteCount}
+                pollVoteCounts={pollVoteCounts}
               />
             ))
           )}
@@ -800,7 +886,7 @@ function StatCard({ label, value, icon }: { label: string; value: number; icon: 
 }
 
 // Idea Card Component
-function IdeaCard({ idea, onApprove, onReject, onCreatePoll, onManage, isPending, actionLoading, onMarkInProgress, onRejectFromMenu, manageMenuVisible, setManageMenuVisible, onStatusUpdate, setManageModalVisible, getPollVoteCount }: {
+function IdeaCard({ idea, onApprove, onReject, onCreatePoll, onManage, isPending, actionLoading, onMarkInProgress, onRejectFromMenu, manageMenuVisible, setManageMenuVisible, onStatusUpdate, setManageModalVisible, getPollVoteCount, pollVoteCounts }: {
   idea: Idea;
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
@@ -815,6 +901,7 @@ function IdeaCard({ idea, onApprove, onReject, onCreatePoll, onManage, isPending
   onStatusUpdate?: (id: string, status: 'Approved' | 'In Progress' | 'Rejected') => void;
   setManageModalVisible?: (id: string | null) => void;
   getPollVoteCount?: (idea: Idea) => number;
+  pollVoteCounts?: { [key: string]: { total: number; options: { [key: number]: number } } };
 }) {
   const { isDarkMode } = useTheme();
   const backgroundColor = useThemeColor({}, 'background');
@@ -849,6 +936,17 @@ function IdeaCard({ idea, onApprove, onReject, onCreatePoll, onManage, isPending
           <Text style={[styles.pollVoteCount, { color: secondaryTextColor }]}>
             {getPollVoteCount ? getPollVoteCount(idea) : 0} total votes
           </Text>
+          {/* Show vote counts for each option */}
+          <View style={styles.pollOptionCounts}>
+            {idea.poll?.options.map((option: string, optionIndex: number) => {
+              const voteCount = pollVoteCounts?.[idea.poll?.id || '']?.options[optionIndex] || 0;
+              return (
+                <Text key={optionIndex} style={[styles.pollOptionCount, { color: secondaryTextColor }]}>
+                  {option}: {voteCount} votes
+                </Text>
+              );
+            })}
+          </View>
         </View>
       )}
       <View style={styles.ideaCardActions}>
@@ -1348,6 +1446,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 8,
     fontStyle: 'italic',
+  },
+  pollOptionCounts: {
+    marginTop: 8,
+    paddingHorizontal: 10,
+  },
+  pollOptionCount: {
+    fontSize: 12,
+    marginBottom: 4,
   },
   pollModalOverlay: {
     flex: 1,

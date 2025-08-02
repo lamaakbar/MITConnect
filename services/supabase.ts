@@ -295,13 +295,12 @@ export const addHighlight = async (title: string, image_url: string | null) => {
   }
 };
 
-export const updateHighlight = async (id: string, title: string, description: string, image_url: string | null) => {
+export const updateHighlight = async (id: string, title: string, image_url: string | null) => {
   try {
     const { data, error } = await supabase
       .from('highlights')
       .update({
         title,
-        description,
         image_url,
         updated_at: new Date().toISOString(),
       })

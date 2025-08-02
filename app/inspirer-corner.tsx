@@ -893,10 +893,32 @@ export default function InspirerCornerScreen() {
         return;
       }
 
+      // Update database vote counts
+      try {
+        if (previousVote !== undefined && previousVote !== null) {
+          // Decrement previous vote count
+          await supabase.rpc('decrement_poll_vote', {
+            poll_uuid: pollId,
+            option_idx: previousVote
+          });
+        }
+        
+        // Increment new vote count
+        await supabase.rpc('increment_poll_vote', {
+          poll_uuid: pollId,
+          option_idx: optionIndex
+        });
+        
+        console.log(`✅ Updated vote counts: ${previousVote !== undefined ? `decremented option ${previousVote}, ` : ''}incremented option ${optionIndex}`);
+      } catch (countError) {
+        console.error('Error updating vote counts:', countError);
+        // Don't fail the whole vote if count update fails
+      }
+
       // Update local state
       setUserPollResponses(prev => ({ ...prev, [ideaId]: optionIndex }));
 
-      // Update vote counts
+      // Update local vote counts to match database
       setPollVoteCounts(prev => {
         const currentCounts = prev[pollId] || { total: 0, options: {} };
         const newCounts = { ...currentCounts };
