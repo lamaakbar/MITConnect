@@ -30,6 +30,8 @@ import AdminHeader from '../../components/AdminHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DatePickerModal from '../../components/DatePickerModal';
 import TimePickerModal from '../../components/TimePickerModal';
+import { AddEventButton } from '../../components/AddEventButton';
+
 
 // Import event service
 import eventService, { EventService } from '../../services/EventService';
@@ -934,17 +936,12 @@ const AdminEventListScreen: React.FC = () => {
                 {addImage && (
                   <Image source={{ uri: addImage }} style={styles.previewImage} />
                 )}
-                <TouchableOpacity
-                  style={[styles.saveBtn, addLoading && styles.saveBtnDisabled]}
+                <AddEventButton
                   onPress={handleAddEvent}
+                  label="Add Event"
                   disabled={addLoading}
-                >
-                  {addLoading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.saveBtnText}>Add Event</Text>
-                  )}
-                </TouchableOpacity>
+                  loading={addLoading}
+                />
               </ScrollView>
             </View>
           </View>
