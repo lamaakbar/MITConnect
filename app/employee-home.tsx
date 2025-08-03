@@ -357,14 +357,14 @@ export default function EmployeeHome() {
 
   return (
     <RoleGuard allowedRoles={['employee']}>
-      <View style={[styles.safeArea, { backgroundColor }]}> 
+      <View style={[styles.container, { backgroundColor }]}> 
       <StatusBar style={isDarkMode ? 'light' : 'dark'} translucent backgroundColor="transparent" />
-            <View style={[styles.header, { 
-        backgroundColor: cardBackground, 
-        borderBottomColor: borderColor, 
-        paddingTop: insets.top,
-        paddingBottom: 12,
-      }]}>   
+        <View style={[styles.header, { 
+          backgroundColor: cardBackground, 
+          borderBottomColor: borderColor, 
+          paddingTop: insets.top,
+          paddingBottom: 12,
+        }]}>   
         <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} />
         <Text style={[styles.appName, { color: textColor }]}>
           MIT<Text style={{ color: '#43C6AC' }}>Connect</Text>
@@ -717,6 +717,9 @@ export default function EmployeeHome() {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#f6f7f9',
@@ -729,7 +732,6 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    marginTop: 20,
   },
   logo: {
     width: 32,

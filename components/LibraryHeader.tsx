@@ -12,7 +12,7 @@ interface LibraryHeaderProps {
   title?: string;
 }
 
-export default function LibraryHeader({ title = "MITConnect" }: LibraryHeaderProps) {
+export default function LibraryHeader({ title = "Book Details" }: LibraryHeaderProps) {
   const router = useRouter();
   const { isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
@@ -45,8 +45,8 @@ export default function LibraryHeader({ title = "MITConnect" }: LibraryHeaderPro
         <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
           <Ionicons name="arrow-back" size={24} color={iconColor} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 22, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
-          MIT<Text style={{ color: darkHighlight }}>Connect</Text>
+        <Text style={{ fontSize: 18, fontWeight: '700', letterSpacing: 0.5, flex: 1, textAlign: 'center', color: isDarkMode ? darkText : textColor }}>
+          Book Details
         </Text>
         <View style={{ width: 32 }} />
       </View>

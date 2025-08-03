@@ -450,7 +450,7 @@ export default function BookDetails() {
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{
             fontSize: 18,
-            fontWeight: 'bold',
+            fontWeight: '700',
             letterSpacing: 0.5,
             color: isDarkMode ? '#fff' : textColor,
             textAlign: 'center',

@@ -440,9 +440,9 @@ export default function TraineeHome() {
 
   return (
     <RoleGuard allowedRoles={['trainee']}>
-      <View style={[styles.safeArea, { backgroundColor }]}>
+      <View style={[styles.container, { backgroundColor }]}>
         <StatusBar style={isDarkMode ? 'light' : 'dark'} translucent backgroundColor="transparent" />
-                <View style={[styles.header, { 
+        <View style={[styles.header, { 
           backgroundColor: cardBackground, 
           borderBottomColor: borderColor, 
           paddingTop: insets.top,
@@ -873,6 +873,9 @@ export default function TraineeHome() {
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#f6f7f9',
@@ -885,7 +888,6 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    marginTop: 20,
   },
   logo: {
     width: 32,
