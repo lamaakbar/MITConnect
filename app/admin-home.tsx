@@ -138,18 +138,13 @@ export default function AdminHome() {
     <View style={[styles.mainContainer, { backgroundColor: colors.background }]}>
       <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       
-      {/* Header background extends behind the status bar */}
-      <View style={[styles.headerBg, { 
+      {/* Header */}
+      <View style={[styles.header, { 
         backgroundColor: colors.cardBackground,
-        height: 56 + insets.top 
-      }]}>
-        {/* Header content with safe top inset */}
-        <View style={{ paddingTop: insets.top }}>
-          <View style={[styles.header, { 
-            backgroundColor: colors.cardBackground,
-            borderBottomColor: colors.border,
-            paddingBottom: 12,
-          }]}>  
+        borderBottomColor: colors.border,
+        paddingTop: insets.top,
+        paddingBottom: 12,
+      }]}>  
             <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} />
             <Text style={[styles.appName, { color: colors.text }]}>
               <Text style={{ color: colors.text }}>MIT</Text>
@@ -174,8 +169,6 @@ export default function AdminHome() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </View>
 
       {/* Return to Admin View Banner - Show when in viewAs mode */}
       {viewAs && (
@@ -220,14 +213,14 @@ export default function AdminHome() {
 
       {/* Scrollable Content */}
       <ScrollView 
-        style={styles.scrollContainer}
+        style={[styles.scrollContainer, { marginTop: 0 }]}
         onScroll={(event) => {
           const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
           const isCloseToBottom = contentOffset.y + layoutMeasurement.height >= contentSize.height - 50;
           setShowFooter(isCloseToBottom);
         }}
         scrollEventThrottle={16}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: 20 }]}
         showsVerticalScrollIndicator={false}
         bounces={true}
       >
@@ -415,17 +408,14 @@ export default function AdminHome() {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
-  headerBg: {
-    width: '100%',
-    backgroundColor: 'transparent', // Will be set dynamically
-  },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
   },
@@ -526,14 +516,17 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
+    marginTop: 0,
   },
   scrollContent: {
     padding: 20,
+    paddingTop: 20,
     paddingBottom: 100, // Extra padding for tab bar
   },
   welcome: {
     fontSize: 15,
     marginBottom: 8,
+    marginTop: 8,
     fontWeight: '500',
   },
   sectionTitle: {
