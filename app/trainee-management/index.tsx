@@ -113,10 +113,31 @@ export default function TraineeManagementIndex() {
 }
 
 const styles = StyleSheet.create({
-  // Enhanced Header Styles
-  headerContainer: {
+  // Header Styles
+  header: {
     paddingHorizontal: 16,
     paddingVertical: 14,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerBg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: -1,
+  },
+  headerRegistrations: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 0, // Override paddingTop for the specific case
+  },
+  // Enhanced Header Styles
+  headerContainer: {
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 3 },

@@ -136,39 +136,46 @@ export default function AdminHome() {
 
   return (
     <View style={[styles.mainContainer, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       
-                           {/* Header */}
-                <View style={[styles.header, { 
-          backgroundColor: colors.cardBackground,
-          borderBottomColor: colors.border,
-          paddingTop: insets.top,
-          paddingBottom: 12,
-        }]}>  
-          <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} />
-          <Text style={[styles.appName, { color: colors.text }]}>
-            <Text style={{ color: colors.text }}>MIT</Text>
-            <Text style={{ color: '#43C6AC' }}>Connect</Text>
-          </Text>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity 
-              style={[styles.themeButton, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]}
-              onPress={toggleTheme}
-            >
-              <Ionicons 
-                name={isDarkMode ? 'sunny' : 'moon'} 
-                size={20} 
-                color={isDarkMode ? '#FFD700' : '#666'} 
-              />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.addButton, { backgroundColor: '#3CB371' }]}
-              onPress={() => setProfileVisible(true)}
-            >
-              <Ionicons name="person-circle-outline" size={24} color="#fff" />
-            </TouchableOpacity>
+      {/* Header background extends behind the status bar */}
+      <View style={[styles.headerBg, { 
+        backgroundColor: colors.cardBackground,
+        height: 56 + insets.top 
+      }]}>
+        {/* Header content with safe top inset */}
+        <View style={{ paddingTop: insets.top }}>
+          <View style={[styles.header, { 
+            backgroundColor: colors.cardBackground,
+            borderBottomColor: colors.border,
+            paddingBottom: 12,
+          }]}>  
+            <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} />
+            <Text style={[styles.appName, { color: colors.text }]}>
+              <Text style={{ color: colors.text }}>MIT</Text>
+              <Text style={{ color: '#43C6AC' }}>Connect</Text>
+            </Text>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity 
+                style={[styles.themeButton, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]}
+                onPress={toggleTheme}
+              >
+                <Ionicons 
+                  name={isDarkMode ? 'sunny' : 'moon'} 
+                  size={20} 
+                  color={isDarkMode ? '#FFD700' : '#666'} 
+                />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.addButton, { backgroundColor: '#3CB371' }]}
+                onPress={() => setProfileVisible(true)}
+              >
+                <Ionicons name="person-circle-outline" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
+      </View>
 
       {/* Return to Admin View Banner - Show when in viewAs mode */}
       {viewAs && (
@@ -263,22 +270,22 @@ export default function AdminHome() {
                 </Text>
               </TouchableOpacity>
             </View>
-                         {viewAs && (
-               <TouchableOpacity
-                 style={styles.resetViewButton}
-                 onPress={() => {
-                   console.log('Reset to Admin View button pressed');
-                   console.log('Current viewAs state:', viewAs);
-                   setViewAs(null);
-                   console.log('viewAs state set to null');
-                   router.replace('/admin-home');
-                 }}
-               >
-                 <Text style={[styles.resetViewText, { color: '#3CB371' }]}>
-                   🔁 Reset to Admin View
-                 </Text>
-               </TouchableOpacity>
-             )}
+            {viewAs && (
+              <TouchableOpacity
+                style={styles.resetViewButton}
+                onPress={() => {
+                  console.log('Reset to Admin View button pressed');
+                  console.log('Current viewAs state:', viewAs);
+                  setViewAs(null);
+                  console.log('viewAs state set to null');
+                  router.replace('/admin-home');
+                }}
+              >
+                <Text style={[styles.resetViewText, { color: '#3CB371' }]}>
+                  🔁 Reset to Admin View
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
         
@@ -311,10 +318,10 @@ export default function AdminHome() {
               <View style={[styles.iconBox, { backgroundColor: '#F5EEF8' }]}> 
                 <MaterialCommunityIcons name="calendar-star" size={22} color="#7D3C98" />
               </View>
-                             <View style={{ flex: 1 }}>
-                 <Text style={[styles.cardTitle, { color: colors.text }]}>Events Management</Text>
-                 <Text style={[styles.cardLink, { color: '#3CB371' }]}>{availableEventsCount} available events</Text>
-               </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Events Management</Text>
+                <Text style={[styles.cardLink, { color: '#3CB371' }]}>{availableEventsCount} available events</Text>
+              </View>
               <Feather name="calendar" size={22} color="#7D3C98" />
             </View>
           </View>
@@ -327,10 +334,10 @@ export default function AdminHome() {
               <View style={[styles.iconBox, { backgroundColor: '#F5EEF8' }]}> 
                 <Feather name="activity" size={22} color="#7D3C98" />
               </View>
-                             <View style={{ flex: 1 }}>
-                 <Text style={[styles.cardTitle, { color: colors.text }]}>Ideas Management</Text>
-                 <Text style={[styles.cardLink, { color: '#7D3C98' }]}>{approvedIdeasCount} approved</Text>
-               </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Ideas Management</Text>
+                <Text style={[styles.cardLink, { color: '#7D3C98' }]}>{approvedIdeasCount} approved</Text>
+              </View>
               <Feather name="zap" size={22} color="#7D3C98" />
             </View>
           </View>
@@ -343,10 +350,10 @@ export default function AdminHome() {
               <View style={[styles.iconBox, { backgroundColor: '#FEF5E7' }]}> 
                 <FontAwesome5 name="user-friends" size={20} color="#F39C12" />
               </View>
-                             <View style={{ flex: 1 }}>
-                 <Text style={[styles.cardTitle, { color: colors.text }]}>Trainee Management</Text>
-                 <Text style={[styles.cardLink, { color: '#F39C12' }]}>{traineeCount} trainees in progress</Text>
-               </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Trainee Management</Text>
+                <Text style={[styles.cardLink, { color: '#F39C12' }]}>{traineeCount} trainees in progress</Text>
+              </View>
               <Feather name="user" size={22} color="#F39C12" />
             </View>
           </View>
@@ -359,10 +366,10 @@ export default function AdminHome() {
               <View style={[styles.iconBox, { backgroundColor: '#FEF5E7' }]}> 
                 <Feather name="image" size={22} color="#E67E22" />
               </View>
-                             <View style={{ flex: 1 }}>
-                 <Text style={[styles.cardTitle, { color: colors.text }]}>Gallery Management</Text>
-                 <Feather name="upload" size={16} color={colors.icon} style={{ marginTop: 2 }} />
-               </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Gallery Management</Text>
+                <Feather name="upload" size={16} color={colors.icon} style={{ marginTop: 2 }} />
+              </View>
               <Feather name="image" size={22} color="#E67E22" />
             </View>
           </View>
@@ -375,39 +382,43 @@ export default function AdminHome() {
               <View style={[styles.iconBox, { backgroundColor: '#FCF3CF' }]}> 
                 <MaterialIcons name="menu-book" size={22} color="#F4D03F" />
               </View>
-                             <View style={{ flex: 1 }}>
-                 <Text style={[styles.cardTitle, { color: colors.text }]}>Books Management</Text>
-                 <TouchableOpacity onPress={() => router.push('/add-book')} activeOpacity={0.7}>
-                   <Text style={[styles.cardLink, { color: '#004080' }]}>Add Book</Text>
-                 </TouchableOpacity>
-               </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Books Management</Text>
+                <TouchableOpacity onPress={() => router.push('/add-book')} activeOpacity={0.7}>
+                  <Text style={[styles.cardLink, { color: '#004080' }]}>Add Book</Text>
+                </TouchableOpacity>
+              </View>
               <MaterialIcons name="menu-book" size={22} color="#F4D03F" />
             </View>
           </View>
-                 </TouchableOpacity>
-       </ScrollView>
+        </TouchableOpacity>
+      </ScrollView>
 
-       {/* Team Credit - Only visible when scrolled to bottom */}
-       {showFooter && (
-         <View style={styles.creditContainer}>
-           <Text style={[styles.creditText, { color: colors.textSecondary }]}>
-             Made by IT Pulse Team – Summer 2025
-           </Text>
-         </View>
-       )}
+      {/* Team Credit - Only visible when scrolled to bottom */}
+      {showFooter && (
+        <View style={styles.creditContainer}>
+          <Text style={[styles.creditText, { color: colors.textSecondary }]}>
+            Made by IT Pulse Team – Summer 2025
+          </Text>
+        </View>
+      )}
 
-       {/* Bottom Tab Bar */}
-       <AdminTabBar activeTab="home" isDarkMode={isDarkMode} />
+      {/* Bottom Tab Bar */}
+      <AdminTabBar activeTab="home" isDarkMode={isDarkMode} />
 
-       {/* Account Modal */}
-       <ProfileModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
-     </View>
-   );
- }
+      {/* Account Modal */}
+      <ProfileModal visible={profileVisible} onClose={() => setProfileVisible(false)} />
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
+  },
+  headerBg: {
+    width: '100%',
+    backgroundColor: 'transparent', // Will be set dynamically
   },
   header: {
     flexDirection: 'row',
@@ -417,7 +428,6 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    marginTop: 20,
   },
   headerLeft: {
     flexDirection: 'row',
