@@ -8,6 +8,7 @@ import { useTheme } from '../components/ThemeContext';
 import ProfileModal from '../components/ProfileModal';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { useUserContext } from '../components/UserContext';
 import { supabase } from '../services/supabase';
 
@@ -135,15 +136,16 @@ export default function AdminHome() {
   const colors = getThemeColors();
 
   return (
-    <View style={[styles.mainContainer, { backgroundColor: colors.background }]}>
+    <View style={[styles.mainContainer, { backgroundColor: colors.cardBackground }]}>
       <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       
       {/* Header */}
       <View style={[styles.header, { 
         backgroundColor: colors.cardBackground,
-        borderBottomColor: colors.border,
         paddingTop: insets.top,
-        paddingBottom: 12,
+        paddingBottom: 8,
+        marginTop: 0,
+        borderWidth: 0,
       }]}>  
             <Image source={require('../assets/images/mitconnect-logo.png')} style={styles.logo} />
             <Text style={[styles.appName, { color: colors.text }]}>
@@ -213,7 +215,7 @@ export default function AdminHome() {
 
       {/* Scrollable Content */}
       <ScrollView 
-        style={[styles.scrollContainer, { marginTop: 0 }]}
+        style={[styles.scrollContainer, { marginTop: 0, backgroundColor: colors.background }]}
         onScroll={(event) => {
           const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
           const isCloseToBottom = contentOffset.y + layoutMeasurement.height >= contentSize.height - 50;
@@ -409,6 +411,9 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: 'transparent',
+    borderWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
   },
 
   header: {
@@ -416,8 +421,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingBottom: 8,
+    paddingTop: 0,
+    marginTop: 0,
+    elevation: 0,
+    shadowOpacity: 0,
+    borderWidth: 0,
+    minHeight: 56,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -430,7 +440,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     marginRight: 8,
-    marginLeft: 24,
+    marginLeft: 0,
   },
   appName: {
     fontSize: 20,
@@ -438,7 +448,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     flex: 1,
     textAlign: 'center',
-    marginLeft: 32, // Move text more to the right
+    marginLeft: 0,
   },
   viewAsContainer: {
     borderRadius: 16,
@@ -493,7 +503,7 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   themeButton: {
     width: 36,

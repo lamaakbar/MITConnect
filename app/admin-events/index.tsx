@@ -592,8 +592,8 @@ const AdminEventListScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   return (
     <>
-      <SafeAreaView style={{ flex: 1, backgroundColor }}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <View style={{ flex: 1, backgroundColor }}>
+      <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       
       {/* Header */}
       <View style={{
@@ -601,13 +601,14 @@ const AdminEventListScreen: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingTop: insets.top + (Platform.OS === 'ios' ? -40 : 15),
-        paddingBottom: 12,
+        paddingTop: insets.top,
+        paddingBottom: 8,
         backgroundColor: cardBackground,
         borderBottomWidth: 1,
         borderBottomColor: borderColor,
+        minHeight: 56,
       }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, marginRight: 8 }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 8, marginRight: 8 }}>
           <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -1235,7 +1236,7 @@ const AdminEventListScreen: React.FC = () => {
          </View>
        </Modal>
 
-     </SafeAreaView>
+     </View>
      </>
    );
  };

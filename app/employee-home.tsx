@@ -542,7 +542,7 @@ export default function EmployeeHome() {
                         <Ionicons name="ellipsis-horizontal" size={18} color={secondaryTextColor} />
                       </View>
                       <Text style={[styles.eventTitle, { color: textColor }]} numberOfLines={2}>{item.title}</Text>
-                      <Text style={styles.eventDesc} numberOfLines={2}>{item.description}</Text>
+                      <Text style={styles.eventDesc} numberOfLines={3}>{item.description}</Text>
                     </View>
                     <View style={styles.eventCardActions}>
                       <TouchableOpacity
@@ -569,12 +569,12 @@ export default function EmployeeHome() {
                       <View style={styles.eventCardFooter}>
                         <View style={styles.eventFooterItem}>
                           <Ionicons name="calendar-outline" size={16} color="#7B61FF" />
-                          <Text style={styles.eventFooterText}>{item.date}</Text>
+                          <Text style={styles.eventFooterText} numberOfLines={1}>{item.date}</Text>
                         </View>
                         {item.time ? (
                           <View style={styles.eventFooterItem}>
                             <Ionicons name="time-outline" size={16} color="#7B61FF" />
-                            <Text style={styles.eventFooterText}>{item.time}</Text>
+                            <Text style={styles.eventFooterText} numberOfLines={1}>{item.time}</Text>
                           </View>
                         ) : null}
                       </View>
@@ -788,29 +788,29 @@ const styles = StyleSheet.create({
   },
   eventCard: {
     backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 18,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     width: 260,
-    height: 180,
+    minHeight: 200,
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
-    justifyContent: 'space-between',
   },
   eventCardContent: {
     flex: 1,
     marginBottom: 12,
   },
   eventCardActions: {
-    marginTop: 'auto',
+    marginTop: 12,
   },
   eventCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   eventDaysLeft: {
     backgroundColor: '#F2F2F7',
@@ -824,21 +824,23 @@ const styles = StyleSheet.create({
   eventTitle: {
     fontSize: 17,
     fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: 8,
     lineHeight: 22,
   },
   eventDesc: {
     fontSize: 14,
     color: '#888',
-    marginBottom: 10,
+    marginBottom: 12,
     lineHeight: 18,
   },
   eventBtn: {
     backgroundColor: '#E6F0FF',
     borderRadius: 10,
-    paddingVertical: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
+    alignSelf: 'flex-start',
   },
   eventBtnText: {
     color: '#2196F3',
@@ -848,18 +850,22 @@ const styles = StyleSheet.create({
   eventCardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 0,
+    marginTop: 8,
+    flexWrap: 'wrap',
   },
   eventFooterItem: {
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 16,
+    flexShrink: 1,
+    minWidth: 0,
   },
   eventFooterText: {
     color: '#7B61FF',
     fontSize: 13,
-    marginLeft: 4,
+    marginLeft: 6,
     fontWeight: '500',
+    flexShrink: 1,
   },
   portalRow: {
     flexDirection: 'row',

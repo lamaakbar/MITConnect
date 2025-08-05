@@ -140,7 +140,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingBottom: 16,
-    borderBottomWidth: 1,
     minHeight: Platform.OS === 'ios' ? 60 : 56,
   },
   headerLeft: {
