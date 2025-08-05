@@ -110,7 +110,7 @@ const EventDetailsScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: cardBackground }]}>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        <StatusBar translucent backgroundColor={cardBackground} barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         
         {/* Header */}
         <View style={{
@@ -151,7 +151,7 @@ const EventDetailsScreen: React.FC = () => {
   if (error || !event) {
     return (
       <View style={[styles.container, { backgroundColor: cardBackground }]}>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        <StatusBar translucent backgroundColor={cardBackground} barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         
         {/* Header */}
         <View style={{
@@ -205,7 +205,7 @@ const EventDetailsScreen: React.FC = () => {
   
   return (
     <View style={[styles.container, { backgroundColor: cardBackground }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <StatusBar translucent backgroundColor={cardBackground} barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       
       {/* Header */}
       <View style={{
@@ -213,13 +213,24 @@ const EventDetailsScreen: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingTop: insets.top + (Platform.OS === 'ios' ? -40 : 15),
-        paddingBottom: 12,
+        paddingTop: insets.top,
+        paddingBottom: 8,
         backgroundColor: cardBackground,
         borderBottomWidth: 1,
         borderBottomColor: borderColor,
+        minHeight: 56,
       }}>
-        <TouchableOpacity onPress={() => router.push('/admin-events')} style={{ padding: 4, marginRight: 8 }}>
+        <TouchableOpacity 
+          onPress={() => router.push('/admin-events')} 
+          style={{ 
+            padding: 8, 
+            marginRight: 8,
+            minWidth: 44,
+            minHeight: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>

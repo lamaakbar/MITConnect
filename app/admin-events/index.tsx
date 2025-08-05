@@ -20,6 +20,7 @@ import {
   SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -64,6 +65,7 @@ const getEventImageSource = (event: any) => {
 
 const AdminEventListScreen: React.FC = () => {
   const router = useRouter();
+  const navigation = useNavigation();
   const { isDarkMode } = useTheme();
   const { handleEventDeletion, updateEventInContext, addEventToContext } = useEventContext();
   // Theme colors
@@ -590,10 +592,16 @@ const AdminEventListScreen: React.FC = () => {
   );
 
   const insets = useSafeAreaInsets();
+  
+  // Disable native header to prevent conflicts
+  useEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
+  
   return (
     <>
       <View style={{ flex: 1, backgroundColor }}>
-      <StatusBar translucent backgroundColor="transparent" barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <StatusBar translucent backgroundColor={cardBackground} barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       
       {/* Header */}
       <View style={{
@@ -608,7 +616,20 @@ const AdminEventListScreen: React.FC = () => {
         borderBottomColor: borderColor,
         minHeight: 56,
       }}>
-        <TouchableOpacity onPress={() => router.back()} style={{ padding: 8, marginRight: 8 }}>
+        <TouchableOpacity 
+          onPress={() => {
+            // Navigate directly to Admin Home
+            router.replace('/admin-home');
+          }} 
+          style={{ 
+            padding: 8, 
+            marginRight: 8,
+            minWidth: 44,
+            minHeight: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>

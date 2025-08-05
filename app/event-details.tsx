@@ -9,9 +9,11 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import eventService from '../services/EventService';
 import { Event } from '../types/events';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 
 export default function EventDetailsScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { id, from } = useLocalSearchParams();
   const { registerEvent, registered, bookmarks, bookmarkEvent, unbookmarkEvent, getUserEventStatus, fetchUserEvents } = useEventContext();
   const { userRole, viewAs, setViewAs } = useUserContext();
@@ -63,6 +65,11 @@ export default function EventDetailsScreen() {
       router.replace('/events');
     }
   };
+
+  // Disable native header to prevent conflicts
+  useEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   // Fetch event data from database
   useEffect(() => {
@@ -210,20 +217,55 @@ export default function EventDetailsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: cardBackground }}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
+      <StatusBar translucent backgroundColor={cardBackground} barStyle={isDarkMode ? "light-content" : "dark-content"} />
       
-      {/* Header */}
-      <View style={[styles.headerRow, { borderBottomColor: borderColor }]}>
-        <TouchableOpacity onPress={handleBackNavigation} style={styles.iconBtn}>
+      {/* Fixed Header */}
+      <View style={{
+        paddingTop: insets.top,
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: cardBackground,
+        borderBottomWidth: 1,
+        borderBottomColor: borderColor,
+        minHeight: 56,
+      }}>
+        <TouchableOpacity 
+          onPress={handleBackNavigation} 
+          style={{
+            padding: 8,
+            minWidth: 44,
+            minHeight: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: textColor }]}>
+        <Text style={{
+          fontSize: 18,
+          fontWeight: 'bold',
+          color: textColor,
+          textAlign: 'center',
+          flex: 1,
+        }}>
           Event Details
           {viewAs && (
             <Text style={{ color: '#FF6B6B', fontSize: 12, fontWeight: 'normal' }}> (Preview Mode)</Text>
           )}
         </Text>
-        <TouchableOpacity style={styles.iconBtn} onPress={handleShare}>
+        <TouchableOpacity 
+          style={{
+            padding: 8,
+            minWidth: 44,
+            minHeight: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onPress={handleShare}
+        >
           <Feather name="share-2" size={22} color={textColor} />
         </TouchableOpacity>
       </View>
@@ -429,22 +471,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingTop: 80,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  iconBtn: {
-    padding: 8,
-  },
+
   imageContainer: {
     alignItems: 'center',
     marginTop: 16,
