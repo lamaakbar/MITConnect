@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, FlatList, SafeAreaView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, usePathname } from 'expo-router';
@@ -18,6 +18,7 @@ import { fetchHighlights } from '../services/supabase';
 import { supabase } from '../services/supabase';
 import { getGenreColor } from '../constants/Genres';
 import RoleGuard from '../components/RoleGuard';
+import eventService from '../services/EventService';
 
 // BookOfMonth type definition
 // (copied from app/bookclub.tsx)
@@ -55,6 +56,37 @@ export default function EmployeeHome() {
   // Debug viewAs state
   console.log('EmployeeHome: viewAs state:', viewAs);
 
+  // Function to check registration status for an event
+  const checkEventRegistrationStatus = async (eventId: string) => {
+    try {
+      setCheckingRegistration(prev => ({ ...prev, [eventId]: true }));
+      const userStatus = await eventService.getUserEventStatus(eventId);
+      if (userStatus) {
+        // Check if the user status is 'registered' or 'attended'
+        const isRegistered = userStatus.status === 'registered' || userStatus.status === 'attended';
+        setEventRegistrationStatus(prev => ({ ...prev, [eventId]: isRegistered }));
+      } else {
+        // Fallback: check if the event is in the registered array from context
+        setEventRegistrationStatus(prev => ({ ...prev, [eventId]: registered.includes(eventId) }));
+      }
+    } catch (error) {
+      console.error('Error checking registration status for event:', eventId, error);
+      // Fallback: check if the event is in the registered array from context
+      setEventRegistrationStatus(prev => ({ ...prev, [eventId]: registered.includes(eventId) }));
+    } finally {
+      setCheckingRegistration(prev => ({ ...prev, [eventId]: false }));
+    }
+  };
+
+  // Check registration status for all events when component loads
+  useEffect(() => {
+    if (events.length > 0) {
+      events.forEach(event => {
+        checkEventRegistrationStatus(event.id);
+      });
+    }
+  }, [events]);
+
   // Highlights state
   const [highlightCards, setHighlightCards] = useState<any[]>([]);
   const [loadingHighlights, setLoadingHighlights] = useState(true);
@@ -64,6 +96,8 @@ export default function EmployeeHome() {
   const [ratings, setRatings] = useState<any[]>([]);
   const [averageRating, setAverageRating] = useState(0);
   const [showFooter, setShowFooter] = useState(false);
+  const [eventRegistrationStatus, setEventRegistrationStatus] = useState<{[key: string]: boolean}>({});
+  const [checkingRegistration, setCheckingRegistration] = useState<{[key: string]: boolean}>({});
 
   // Handle fromLogin navigation
   useEffect(() => {
@@ -548,22 +582,53 @@ export default function EmployeeHome() {
                       <TouchableOpacity
                         style={[
                           styles.eventBtn,
-                          registered.includes(item.id) && styles.eventBtnRegistered
+                          { 
+                            backgroundColor: eventRegistrationStatus[item.id] ? '#6C757D' : '#43C6AC',
+                            opacity: eventRegistrationStatus[item.id] ? 0.7 : 1
+                          }
                         ]}
                         activeOpacity={0.85}
-                        onPress={(e) => {
+                        onPress={async (e) => {
                           e.stopPropagation(); // Prevent navigation to event details
-                          if (!registered.includes(item.id)) {
-                            registerEvent(item.id);
+                          if (!eventRegistrationStatus[item.id]) {
+                            try {
+                              const result = await registerEvent(item.id);
+                              if (result.success) {
+                                // Update registration status immediately
+                                setEventRegistrationStatus(prev => ({ ...prev, [item.id]: true }));
+                                // Show success message
+                                Alert.alert('Success', result.message);
+                                // Navigate to event details screen
+                                router.push({
+                                  pathname: '/event-details',
+                                  params: { id: item.id, from: 'employee-home' }
+                                });
+                              } else {
+                                // Show appropriate error message
+                                if (result.alreadyRegistered) {
+                                  // Update registration status if already registered
+                                  setEventRegistrationStatus(prev => ({ ...prev, [item.id]: true }));
+                                  Alert.alert('Already Registered', result.message);
+                                } else {
+                                  Alert.alert('Registration Failed', result.message);
+                                }
+                              }
+                            } catch (error) {
+                              console.error('Registration error:', error);
+                              Alert.alert('Error', 'Failed to register for event. Please try again.');
+                            }
+                          } else {
+                            Alert.alert('Already Registered', '⚠️ You already registered for this event.');
                           }
                         }}
-                        disabled={registered.includes(item.id)}
+                        disabled={eventRegistrationStatus[item.id] || checkingRegistration[item.id]}
                       >
                         <Text style={[
                           styles.eventBtnText,
-                          registered.includes(item.id) && styles.eventBtnTextRegistered
+                          { color: '#FFFFFF' }
                         ]}>
-                          {registered.includes(item.id) ? '✅ Registered' : 'Register Now!'}
+                          {checkingRegistration[item.id] ? 'Checking...' : 
+                           eventRegistrationStatus[item.id] ? '✅ Already Registered' : 'Register Now!'}
                         </Text>
                       </TouchableOpacity>
                       <View style={styles.eventCardFooter}>

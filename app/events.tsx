@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, StatusBar, ActivityIndicator, RefreshControl, Animated } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ScrollView, StatusBar, ActivityIndicator, RefreshControl, Animated, Alert } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useEventContext } from '../components/EventContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -455,9 +455,37 @@ export default function EventsScreen() {
                         bookmarkEvent(item.id);
                       }
                     }}
-                    onRegister={() => {
+                    onRegister={async () => {
                       if (!getEventButtonState(item.id, item.date, item.time).disabled) {
-                        registerEvent(item.id);
+                        try {
+                          console.log('🔵 Starting registration for event:', item.id);
+                          
+                          const result = await registerEvent(item.id);
+                          console.log('🔵 Registration result:', result);
+                          
+                          if (result.success) {
+                            // Show success feedback
+                            console.log('🔵 Showing success alert');
+                            Alert.alert('Success', result.message);
+                            // Navigate to event details screen
+                            router.push({
+                              pathname: '/event-details',
+                              params: { id: item.id, from: 'events' }
+                            });
+                          } else {
+                            console.log('🔵 Registration returned false');
+                            if (result.alreadyRegistered) {
+                              Alert.alert('Already Registered', result.message);
+                            } else {
+                              Alert.alert('Registration Failed', result.message);
+                            }
+                          }
+                        } catch (error) {
+                          console.error('🔴 Registration failed:', error);
+                          Alert.alert('Error', 'Failed to register for event. Please try again.');
+                        }
+                      } else {
+                        console.log('🔵 Registration button is disabled');
                       }
                     }}
                     onPress={() => router.push({ pathname: '/event-details', params: { id: item.id, from: 'events' } })}
@@ -490,9 +518,27 @@ export default function EventsScreen() {
                         bookmarkEvent(item.id);
                       }
                     }}
-                    onRegister={() => {
+                    onRegister={async () => {
                       if (!getEventButtonState(item.id, item.date, item.time).disabled) {
-                        registerEvent(item.id);
+                        try {
+                          const result = await registerEvent(item.id);
+                          if (result.success) {
+                            Alert.alert('Success', result.message);
+                            router.push({
+                              pathname: '/event-details',
+                              params: { id: item.id, from: 'events' }
+                            });
+                          } else {
+                            if (result.alreadyRegistered) {
+                              Alert.alert('Already Registered', result.message);
+                            } else {
+                              Alert.alert('Registration Failed', result.message);
+                            }
+                          }
+                        } catch (error) {
+                          console.error('Registration failed:', error);
+                          Alert.alert('Error', 'Failed to register for event. Please try again.');
+                        }
                       }
                     }}
                     onPress={() => router.push({ pathname: '/event-details', params: { id: item.id, from: 'events' } })}
@@ -546,9 +592,27 @@ export default function EventsScreen() {
                     bookmarkEvent(item.id);
                   }
                 }}
-                onRegister={() => {
+                onRegister={async () => {
                   if (!getEventButtonState(item.id, item.date, item.time).disabled) {
-                    registerEvent(item.id);
+                    try {
+                      const result = await registerEvent(item.id);
+                      if (result.success) {
+                        Alert.alert('Success', result.message);
+                        router.push({
+                          pathname: '/event-details',
+                          params: { id: item.id, from: 'events' }
+                        });
+                      } else {
+                        if (result.alreadyRegistered) {
+                          Alert.alert('Already Registered', result.message);
+                        } else {
+                          Alert.alert('Registration Failed', result.message);
+                        }
+                      }
+                    } catch (error) {
+                      console.error('Registration failed:', error);
+                      Alert.alert('Error', 'Failed to register for event. Please try again.');
+                    }
                   }
                 }}
                 onPress={() => router.push({ pathname: '/event-details', params: { id: item.id, from: 'events' } })}
@@ -625,9 +689,18 @@ export default function EventsScreen() {
                         bookmarkEvent(item.id);
                       }
                     }}
-                    onRegister={() => {
+                    onRegister={async () => {
                       if (!getEventButtonState(item.id, item.date, item.time).disabled) {
-                        registerEvent(item.id);
+                        try {
+                          const success = await registerEvent(item.id);
+                          if (success) {
+                            // Show success feedback without navigation
+                            // This prevents the black screen issue on certain devices
+                            console.log('Registration successful for event:', item.id);
+                          }
+                        } catch (error) {
+                          console.error('Registration failed:', error);
+                        }
                       }
                     }}
                     onPress={() => router.push({ pathname: '/event-details', params: { id: item.id, from: 'events' } })}
@@ -657,9 +730,27 @@ export default function EventsScreen() {
                         bookmarkEvent(item.id);
                       }
                     }}
-                    onRegister={() => {
+                    onRegister={async () => {
                       if (!getEventButtonState(item.id, item.date, item.time).disabled) {
-                        registerEvent(item.id);
+                        try {
+                          const result = await registerEvent(item.id);
+                          if (result.success) {
+                            Alert.alert('Success', result.message);
+                            router.push({
+                              pathname: '/event-details',
+                              params: { id: item.id, from: 'events' }
+                            });
+                          } else {
+                            if (result.alreadyRegistered) {
+                              Alert.alert('Already Registered', result.message);
+                            } else {
+                              Alert.alert('Registration Failed', result.message);
+                            }
+                          }
+                        } catch (error) {
+                          console.error('Registration failed:', error);
+                          Alert.alert('Error', 'Failed to register for event. Please try again.');
+                        }
                       }
                     }}
                     onPress={() => router.push({ pathname: '/event-details', params: { id: item.id, from: 'events' } })}

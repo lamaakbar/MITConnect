@@ -212,9 +212,16 @@ const EventCard: React.FC<EventCardProps> = ({
             buttonDisabled && [styles.registerBtnDisabled, { backgroundColor: disabledButtonBg }]
           ]}
           onPress={() => {
-            // Prevent registration in "View As" mode
+            // Allow registration even in "View As" mode, but show a different message
             if (viewAs) {
-              Alert.alert('Preview Mode', 'You are in preview mode. Please return to Admin view to register for events.');
+              Alert.alert(
+                'Preview Mode', 
+                'You are in preview mode. This registration will be processed as an admin action.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Register', onPress: () => onRegister() }
+                ]
+              );
               return;
             }
             onRegister();

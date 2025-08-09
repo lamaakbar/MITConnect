@@ -39,6 +39,7 @@ import eventService, { EventService } from '../../services/EventService';
 import { formatDateToYYYYMMDD } from '../../utils/dateUtils';
 import { uploadImageFromLibrary } from '../../services/imageUploadService';
 import { Event, EventStatus } from '../../types/events';
+import { supabase } from '../../services/supabase';
 
 const FILTERS = ['All', 'Upcoming', 'Past'];
 
@@ -151,7 +152,31 @@ const AdminEventListScreen: React.FC = () => {
     try {
       setLoading(true);
       const fetchedEvents = await eventService.getAllEvents();
-      setEvents(fetchedEvents);
+      
+      // Fetch attendee counts for each event
+      const eventsWithAttendeeCounts = await Promise.all(
+        fetchedEvents.map(async (event) => {
+          try {
+            const { count } = await supabase
+              .from('event_attendees')
+              .select('*', { count: 'exact' })
+              .eq('event_id', event.id);
+            
+            return {
+              ...event,
+              attendeeCount: count || 0
+            };
+          } catch (error) {
+            console.error(`Error fetching attendee count for event ${event.id}:`, error);
+            return {
+              ...event,
+              attendeeCount: 0
+            };
+          }
+        })
+      );
+      
+      setEvents(eventsWithAttendeeCounts);
     } catch (error) {
       console.error('Error fetching events:', error);
     } finally {
@@ -178,6 +203,11 @@ const AdminEventListScreen: React.FC = () => {
       console.error('Error parsing event date:', error);
       return false;
     }
+  };
+
+  // Function to refresh events with updated attendee counts
+  const refreshEventsWithAttendeeCounts = async () => {
+    await fetchEvents();
   };
 
   // Use search results if searching, otherwise use all events
@@ -763,6 +793,9 @@ const AdminEventListScreen: React.FC = () => {
                             onPress={() => openAttendeesModal(event.id)}
                           >
                             <Ionicons name="people" size={20} color="#3CB371" />
+                            <Text style={[styles.attendeeCount, { color: '#3CB371' }]}>
+                              {event.attendeeCount || 0}
+                            </Text>
                           </TouchableOpacity>
                           <TouchableOpacity 
                             style={styles.actionBtn}
@@ -808,6 +841,9 @@ const AdminEventListScreen: React.FC = () => {
                             onPress={() => openAttendeesModal(event.id)}
                           >
                             <Ionicons name="people" size={20} color="#888" />
+                            <Text style={[styles.attendeeCount, { color: '#888' }]}>
+                              {event.attendeeCount || 0}
+                            </Text>
                           </TouchableOpacity>
                           <TouchableOpacity 
                             style={styles.actionBtn}
@@ -848,6 +884,9 @@ const AdminEventListScreen: React.FC = () => {
                       onPress={() => openAttendeesModal(event.id)}
                     >
                       <Ionicons name="people" size={20} color="#3CB371" />
+                      <Text style={[styles.attendeeCount, { color: '#3CB371' }]}>
+                        {event.attendeeCount || 0}
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                       style={styles.actionBtn}
@@ -1440,6 +1479,12 @@ const styles = StyleSheet.create({
   actionBtn: {
     padding: 8,
     marginBottom: 4,
+    alignItems: 'center',
+  },
+  attendeeCount: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginTop: 2,
   },
   modalOverlay: {
     flex: 1,

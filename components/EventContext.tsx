@@ -12,7 +12,7 @@ interface LegacyEventContextType {
   registered: string[];
   bookmarkEvent: (id: string) => Promise<boolean>;
   unbookmarkEvent: (id: string) => Promise<boolean>;
-  registerEvent: (id: string) => Promise<boolean>;
+  registerEvent: (id: string) => Promise<{ success: boolean; message: string; alreadyRegistered?: boolean }>;
   unregisterEvent: (id: string) => Promise<boolean>;
 
   getUserEventStatus: (eventId: string) => Promise<UserEventTracking | null>;
@@ -351,29 +351,35 @@ export const EventProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // User operations
-  const registerEvent = async (eventId: string): Promise<boolean> => {
+  const registerEvent = async (eventId: string): Promise<{ success: boolean; message: string; alreadyRegistered?: boolean }> => {
     try {
-      console.log('Registering for event:', eventId);
+      console.log('🟡 EventContext: Registering for event:', eventId);
       
-      const success = await eventService.registerForEvent(eventId);
+      const result = await eventService.registerForEvent(eventId);
       
-      console.log('Registration result:', success);
+      console.log('🟡 EventContext: Registration result:', result);
       
-      if (success) {
+      if (result.success) {
+        console.log('🟡 EventContext: Registration successful, updating state');
         setRegistered(prev => {
           const newState = prev.includes(eventId) ? prev : [...prev, eventId];
-          console.log('Updated registered state:', newState);
+          console.log('🟡 EventContext: Updated registered state:', newState);
           return newState;
         });
         // Refresh user events
+        console.log('🟡 EventContext: Refreshing user events');
         await fetchUserEvents();
+        
+        console.log('🟡 EventContext: Returning success for registration');
+        return result;
       }
       
-      return success;
+      console.log('🟡 EventContext: Registration failed, returning result');
+      return result;
     } catch (err) {
+      console.error('🟡 EventContext: Error registering for event:', err);
       setError('Failed to register for event');
-      console.error('Error registering for event:', err);
-      return false;
+      return { success: false, message: 'Failed to register for event' };
     }
   };
 
