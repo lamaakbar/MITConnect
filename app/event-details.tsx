@@ -23,6 +23,8 @@ export default function EventDetailsScreen() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUserRegistered, setIsUserRegistered] = useState<boolean>(false);
+  const [checkingRegistration, setCheckingRegistration] = useState<boolean>(true);
 
   // Debug viewAs state
   console.log('EventDetails: viewAs state:', viewAs);
@@ -71,6 +73,27 @@ export default function EventDetailsScreen() {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
+  // Function to check if user is registered for this event
+  const checkUserRegistrationStatus = async (eventId: string) => {
+    try {
+      setCheckingRegistration(true);
+      const userStatus = await getUserEventStatus(eventId);
+      if (userStatus) {
+        // Check if the user status is 'registered' or 'attended'
+        setIsUserRegistered(userStatus.status === 'registered' || userStatus.status === 'attended');
+      } else {
+        // Fallback: check if the event is in the registered array from context
+        setIsUserRegistered(registered.includes(eventId));
+      }
+    } catch (error) {
+      console.error('Error checking registration status:', error);
+      // Fallback: check if the event is in the registered array from context
+      setIsUserRegistered(registered.includes(eventId));
+    } finally {
+      setCheckingRegistration(false);
+    }
+  };
+
   // Fetch event data from database
   useEffect(() => {
     const fetchEventData = async () => {
@@ -99,6 +122,8 @@ export default function EventDetailsScreen() {
         if (eventData) {
           setEvent(eventData);
           setError(null);
+          // Check user registration status for this event
+          await checkUserRegistrationStatus(id as string);
         } else {
           setError('This event is no longer available');
         }
@@ -112,6 +137,17 @@ export default function EventDetailsScreen() {
 
     fetchEventData();
   }, [id]);
+
+  // Refresh registration status when component focuses
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (event && id) {
+        checkUserRegistrationStatus(id as string);
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, event, id]);
 
   // Show loading state
   if (loading) {
@@ -142,7 +178,8 @@ export default function EventDetailsScreen() {
   }
 
   const isBookmarked = bookmarks.includes(event.id);
-  const isRegistered = registered.includes(event.id);
+  // Use the dynamic registration status instead of the context array
+  const isRegistered = isUserRegistered;
 
   // Check if event is in the past (more lenient comparison)
   const isEventInPast = () => {
@@ -176,7 +213,8 @@ export default function EventDetailsScreen() {
 
   // Get button state
   const getButtonState = () => {
-    if (isRegistered) return { text: 'Registered', disabled: true, color: '#4CAF50' };
+    if (checkingRegistration) return { text: 'Checking...', disabled: true, color: '#6C757D' };
+    if (isRegistered) return { text: '✅ Already Registered', disabled: true, color: '#6C757D' };
     if (isEventInPast()) return { text: 'Event Passed', disabled: true, color: '#FF9800' };
     return { text: 'Register Now', disabled: false, color: '#43C6AC' };
   };
@@ -194,7 +232,7 @@ export default function EventDetailsScreen() {
     }
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     // Prevent registration in "View As" mode
     if (viewAs) {
       Alert.alert('Preview Mode', 'You are in preview mode. Please return to Admin view to register for events.');
@@ -207,12 +245,30 @@ export default function EventDetailsScreen() {
     }
     
     if (isRegistered) {
-      Alert.alert('Already Registered', 'You\'re already registered for this event!');
+      Alert.alert('Already Registered', '⚠️ You already registered for this event!');
       return;
     }
     
-    registerEvent(event.id);
-    router.push('registration-success' as any);
+    try {
+      const result = await registerEvent(event.id);
+      if (result.success) {
+        // Update the registration status immediately
+        setIsUserRegistered(true);
+        Alert.alert('Success', result.message);
+        // Stay on the same screen since we're already on event details
+      } else {
+        if (result.alreadyRegistered) {
+          // Update the registration status if already registered
+          setIsUserRegistered(true);
+          Alert.alert('Already Registered', result.message);
+        } else {
+          Alert.alert('Registration Failed', result.message);
+        }
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      Alert.alert('Error', 'Failed to register for event. Please try again.');
+    }
   };
 
   return (
@@ -420,16 +476,22 @@ export default function EventDetailsScreen() {
             style={[
               styles.registerBtn, 
               { 
-                backgroundColor: buttonState.color,
-                shadowColor: buttonState.color,
-                borderColor: 'rgba(67, 198, 172, 0.2)'
+                backgroundColor: buttonState.disabled ? '#6C757D' : buttonState.color,
+                shadowColor: buttonState.disabled ? '#6C757D' : buttonState.color,
+                borderColor: buttonState.disabled ? 'rgba(108, 117, 125, 0.2)' : 'rgba(67, 198, 172, 0.2)',
+                opacity: buttonState.disabled ? 0.7 : 1
               },
               buttonState.disabled && styles.registerBtnDisabled
             ]}
             onPress={handleRegister}
             disabled={buttonState.disabled}
           >
-            <Text style={styles.registerBtnText}>{buttonState.text}</Text>
+            <Text style={[
+              styles.registerBtnText,
+              { color: buttonState.disabled ? '#FFFFFF' : '#FFFFFF' }
+            ]}>
+              {buttonState.text}
+            </Text>
           </TouchableOpacity>
 
           {/* Return to Admin Button - Only show in View As mode */}

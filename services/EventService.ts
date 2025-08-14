@@ -586,8 +586,10 @@ class EventService {
   /**
    * Register user for an event
    */
-  async registerForEvent(eventId: string): Promise<boolean> {
+  async registerForEvent(eventId: string): Promise<{ success: boolean; message: string; alreadyRegistered?: boolean }> {
     try {
+      console.log('🟢 EventService: Starting registration for event:', eventId);
+      
       // Get the authenticated user
       const {
         data: { user },
@@ -595,9 +597,11 @@ class EventService {
       } = await supabase.auth.getUser();
 
       if (authError || !user?.id) {
-        console.error('User not authenticated');
-        return false;
+        console.error('🟢 EventService: User not authenticated');
+        return { success: false, message: 'User not authenticated' };
       }
+
+      console.log('🟢 EventService: User authenticated:', user.id);
 
       // Check if user is already registered
       const { data: existingRegistration, error: checkError } = await supabase
@@ -608,14 +612,16 @@ class EventService {
         .maybeSingle();
 
       if (checkError) {
-        console.error('Error checking existing registration:', checkError);
-        return false;
+        console.error('🟢 EventService: Error checking existing registration:', checkError);
+        return { success: false, message: 'Error checking registration status' };
       }
 
       if (existingRegistration) {
-        console.log('User already registered for this event');
-        return false;
+        console.log('🟢 EventService: User already registered for this event');
+        return { success: false, message: '⚠️ You already registered for this event.', alreadyRegistered: true };
       }
+
+      console.log('🟢 EventService: No existing registration found, proceeding with registration');
 
       // Register user for the event
       const { error } = await supabase
@@ -627,15 +633,15 @@ class EventService {
         });
 
       if (error) {
-        console.error('Error registering for event:', error);
-        return false;
+        console.error('🟢 EventService: Error registering for event:', error);
+        return { success: false, message: 'Failed to register for event. Please try again.' };
       }
 
-      console.log('Successfully registered for event:', { eventId, userId: user.id });
-      return true;
+      console.log('🟢 EventService: Successfully registered for event:', { eventId, userId: user.id });
+      return { success: true, message: '✅ Registration successful!' };
     } catch (error) {
-      console.error('Error registering for event:', error);
-      return false;
+      console.error('🟢 EventService: Error registering for event:', error);
+      return { success: false, message: 'An unexpected error occurred. Please try again.' };
     }
   }
 

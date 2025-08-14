@@ -9,11 +9,29 @@ export default function RegistrationSuccessScreen() {
   const router = useRouter();
   const { events, registered } = useEventContext();
   const { getHomeRoute } = useUserContext();
+  
+  console.log('🟣 RegistrationSuccess: registered array:', registered);
+  console.log('🟣 RegistrationSuccess: events array length:', events.length);
+  
   // Get the last registered event
   const lastRegisteredId = registered.length > 0 ? registered[registered.length - 1] : null;
   const event = lastRegisteredId ? events.find(e => e.id === lastRegisteredId) : null;
+  
+  console.log('🟣 RegistrationSuccess: lastRegisteredId:', lastRegisteredId);
+  console.log('🟣 RegistrationSuccess: event found:', !!event);
 
-  if (!event) return <View style={styles.center}><Text>No event found.</Text></View>;
+  // If no event is found, show a generic success message
+  if (!event) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.successTitle}>Registration Successful!</Text>
+        <Text style={styles.eventDesc}>You have been successfully registered for the event.</Text>
+        <TouchableOpacity style={styles.doneBtn} onPress={() => router.replace(getHomeRoute() as any)}>
+          <Text style={styles.doneBtnText}>Done</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const handleAddToCalendar = () => {
     Alert.alert('Calendar', 'Event added to your calendar (simulated).');
