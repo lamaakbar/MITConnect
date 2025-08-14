@@ -18,9 +18,20 @@ import {
   ToastAndroid,
   ScrollView,
   StatusBar,
+  Dimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+
+// Try to import required modules for photo saving
+let MediaLibrary: any = null;
+let FileSystem: any = null;
+try {
+  MediaLibrary = require('expo-media-library');
+  FileSystem = require('expo-file-system');
+} catch (error) {
+  console.log('Required modules not available');
+}
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -83,6 +94,7 @@ export default function GalleryManagement() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
   
   // Function to handle image loading errors
   const handleImageError = (imageUri: string) => {
@@ -501,6 +513,69 @@ export default function GalleryManagement() {
       Alert.alert('Error', 'Failed to delete photo. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Save photo to device (same as user gallery)
+  const handleDownloadPhoto = async (photoSource: any) => {
+    try {
+      if (!MediaLibrary || !FileSystem) {
+        Alert.alert('Not Available', 'Photo saving is not available in this environment.');
+        return;
+      }
+
+      // Request permissions first
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Photo album access is required to save photos. Please allow access when prompted.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Extract the image URL
+      let imageUrl = '';
+      if (photoSource && photoSource.uri) {
+        imageUrl = photoSource.uri;
+      } else if (typeof photoSource === 'string') {
+        imageUrl = photoSource;
+      }
+
+      // Validate that we have a valid URL
+      if (!imageUrl || typeof imageUrl !== 'string') {
+        Alert.alert(
+          'Invalid Image',
+          'This image cannot be downloaded. Please try a different photo.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      // Download the image to local storage first
+      const fileName = `photo_${Date.now()}.jpg`;
+      const localUri = FileSystem.documentDirectory + fileName;
+      
+      const downloadResult = await FileSystem.downloadAsync(imageUrl, localUri);
+      
+      if (downloadResult.status !== 200) {
+        throw new Error('Failed to download image');
+      }
+
+      // Save the downloaded image to photo album
+      await MediaLibrary.saveToLibraryAsync(downloadResult.uri);
+
+      // Show success message
+      Alert.alert(
+        'Success!', 
+        'Photo has been downloaded and saved to your photo album successfully.',
+        [{ text: 'OK' }]
+      );
+      
+    } catch (error) {
+      console.error('Save error:', error);
+      Alert.alert('Error', 'Failed to download and save photo. Please try again.');
     }
   };
 
@@ -1020,27 +1095,47 @@ export default function GalleryManagement() {
               const hasError = imageErrors.has(item.uri);
               return (
                 <Animated.View style={[styles.photoWidgetListItem, deleteAnimIdx === index && { opacity: deleteAnim, transform: [{ scale: deleteAnim }] }]}>
-                  {!hasError ? (
-                    <Image
-                      source={{ uri: item.uri }}
-                      style={styles.photoWidgetListImg}
-                      onError={() => handleImageError(item.uri)}
-                    />
-                  ) : (
-                    <View style={[styles.photoWidgetListImg, { alignItems: 'center', justifyContent: 'center' }]}>
-                      <Ionicons name="alert-circle-outline" size={40} color="#f00" />
-                      <Text style={{ color: '#f00', fontSize: 12, textAlign: 'center' }}>Failed to load</Text>
-                    </View>
-                  )}
-                  <View style={styles.photoWidgetOverlay} />
-                  <TouchableOpacity
-                    style={styles.photoDeleteBtnWidget}
-                    onPress={() => handleAnimatedDeletePhoto(currentAlbum, index)}
-                    accessibilityLabel="Delete photo"
-                    activeOpacity={0.7}
+                  <TouchableOpacity 
+                    onPress={() => setSelectedPhoto(item)}
+                    activeOpacity={0.9}
+                    style={{ flex: 1 }}
                   >
-                    <Ionicons name="close" size={18} color="#fff" />
+                    {!hasError ? (
+                      <Image
+                        source={{ uri: item.uri }}
+                        style={styles.photoWidgetListImg}
+                        onError={() => handleImageError(item.uri)}
+                      />
+                    ) : (
+                      <View style={[styles.photoWidgetListImg, { alignItems: 'center', justifyContent: 'center' }]}>
+                        <Ionicons name="alert-circle-outline" size={40} color="#f00" />
+                        <Text style={{ color: '#f00', fontSize: 12, textAlign: 'center' }}>Failed to load</Text>
+                      </View>
+                    )}
+                    <View style={styles.photoWidgetOverlay} />
                   </TouchableOpacity>
+                  
+                  {/* Photo action buttons container */}
+                  <View style={styles.photoButtonsContainer}>
+                    <TouchableOpacity
+                      style={styles.downloadPhotoButton}
+                      onPress={() => handleDownloadPhoto(item)}
+                      accessibilityLabel="Save photo"
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="save-outline" size={16} color="#fff" />
+                      <Text style={styles.downloadPhotoText}>Save</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={styles.photoDeleteBtnWidget}
+                      onPress={() => handleAnimatedDeletePhoto(currentAlbum, index)}
+                      accessibilityLabel="Delete photo"
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="close" size={18} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
                 </Animated.View>
               );
             }}
@@ -1121,6 +1216,50 @@ export default function GalleryManagement() {
                 </View>
               </View>
             </KeyboardAvoidingView>
+          </Modal>
+          
+          {/* Full-Screen Photo Modal */}
+          <Modal
+            visible={!!selectedPhoto}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setSelectedPhoto(null)}
+          >
+            <View style={styles.photoModalOverlay}>
+              <View style={styles.photoModalHeader}>
+                <TouchableOpacity 
+                  style={styles.modalCloseButton}
+                  onPress={() => setSelectedPhoto(null)}
+                >
+                  <Ionicons name="close" size={24} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.downloadButton}
+                  onPress={() => selectedPhoto && handleDownloadPhoto(selectedPhoto)}
+                >
+                  <Ionicons name="save-outline" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity 
+                style={styles.photoModalContent}
+                onPress={() => setSelectedPhoto(null)}
+                activeOpacity={1}
+              >
+                {selectedPhoto && (
+                  <Image 
+                    source={{ uri: selectedPhoto.uri }} 
+                    style={styles.fullScreenPhoto}
+                    resizeMode="contain"
+                    onError={() => {
+                      console.error('❌ Modal image load error for:', selectedPhoto.uri);
+                    }}
+                    onLoad={() => {
+                      console.log('✅ Modal image loaded successfully:', selectedPhoto.uri);
+                    }}
+                  />
+                )}
+              </TouchableOpacity>
+            </View>
           </Modal>
         </SafeAreaView>
       );
@@ -1665,12 +1804,35 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(34,34,34,0.18)',
   },
   photoDeleteBtnWidget: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: 'rgba(34,34,34,0.82)',
+    backgroundColor: 'rgba(255, 59, 48, 0.8)',
     borderRadius: 16,
-    padding: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
+  // Photo buttons container and save button styles (from user gallery)
+  photoButtonsContainer: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  downloadPhotoButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  downloadPhotoText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
   },
 
   // Add styles for vertical list
@@ -1955,5 +2117,50 @@ const styles = StyleSheet.create({
   },
   addPhotoBtn: {
     backgroundColor: '#34C759',
+  },
+  
+  // Full-screen photo modal styles (from user gallery)
+  photoModalOverlay: {
+    flex: 1,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoModalContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenPhoto: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').width,
+    resizeMode: 'contain',
+  },
+  photoModalHeader: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    zIndex: 10,
+  },
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  downloadButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 }); 
